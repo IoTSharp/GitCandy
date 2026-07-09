@@ -61,12 +61,12 @@ public sealed class GitCandyApplicationOptions
     public bool AllowRepositoryCreation { get; set; } = true;
 
     /// <summary>
-    /// 仓库存储路径。路径解析和边界检查由后续路径配置切片完成。
+    /// 仓库存储路径。运行时通过 <see cref="IGitCandyApplicationPaths" /> 解析为绝对路径。
     /// </summary>
     public string RepositoryPath { get; set; } = "App_Data/Repos";
 
     /// <summary>
-    /// GitCandy 缓存路径。路径解析和边界检查由后续路径配置切片完成。
+    /// GitCandy 缓存路径。运行时通过 <see cref="IGitCandyApplicationPaths" /> 解析为绝对路径。
     /// </summary>
     public string CachePath { get; set; } = "App_Data/Caches";
 

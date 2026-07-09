@@ -5,6 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddGitCandyWebShell(builder.Configuration);
 
 var app = builder.Build();
+app.ConfigureGitCandyLegacyLogger();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

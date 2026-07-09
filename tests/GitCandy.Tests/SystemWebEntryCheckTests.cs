@@ -13,6 +13,12 @@ public sealed class SystemWebEntryCheckTests
         "System.Data.Entity"
     ];
 
+    private static readonly string[] ForbiddenMigrationSourceTokens =
+    [
+        "HttpRuntime.Cache",
+        "System.Web.Caching"
+    ];
+
     private static readonly string[] SourceFileExtensions =
     [
         ".cs",
@@ -72,6 +78,15 @@ public sealed class SystemWebEntryCheckTests
                     {
                         failures.Add(
                             $"{ToRepositoryRelativePath(repositoryRoot, filePath)}:{lineNumber}: contains {forbiddenName}");
+                    }
+                }
+
+                foreach (var forbiddenToken in ForbiddenMigrationSourceTokens)
+                {
+                    if (line.Contains(forbiddenToken, StringComparison.Ordinal))
+                    {
+                        failures.Add(
+                            $"{ToRepositoryRelativePath(repositoryRoot, filePath)}:{lineNumber}: contains {forbiddenToken}");
                     }
                 }
             }

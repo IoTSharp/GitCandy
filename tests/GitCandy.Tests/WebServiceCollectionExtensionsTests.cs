@@ -1,4 +1,5 @@
 using GitCandy.Configuration;
+using GitCandy.Caching;
 using GitCandy.Data;
 using GitCandy.Data.Identity;
 using Microsoft.AspNetCore.Authentication;
@@ -10,6 +11,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,6 +56,9 @@ public sealed class WebServiceCollectionExtensionsTests
 
             var sessionOptions = serviceProvider.GetRequiredService<IOptions<SessionOptions>>().Value;
             Assert.AreEqual(".GitCandy.Session", sessionOptions.Cookie.Name);
+
+            Assert.IsNotNull(serviceProvider.GetRequiredService<IMemoryCache>());
+            Assert.IsNotNull(serviceProvider.GetRequiredService<IApplicationCache>());
 
             var localizationOptions = serviceProvider.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value;
             Assert.AreEqual("en-US", localizationOptions.DefaultRequestCulture.Culture.Name);

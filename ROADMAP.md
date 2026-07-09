@@ -355,9 +355,9 @@ ASP.NET Core 中间件和后台能力：
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
 | ✅ #020 | 配置迁移 | 已新增 `GitCandy:Application` appsettings 配置、`GitCandyApplicationOptions`、启动期校验和旧 `LogPathFormat` / `UserConfiguration` 别名 |
-| ⬜ #021 | 路径配置抽象 | `Server.MapPath` 改为 `IWebHostEnvironment.ContentRootPath/WebRootPath` |
-| ⬜ #022 | 日志适配 | 旧 `Logger` 改为 `ILogger<T>` 或兼容 adapter |
-| ⬜ #023 | 缓存替换 | `HttpRuntime.Cache` 改为 `IMemoryCache` |
+| ✅ #021 | 路径配置抽象 | 已新增 `IGitCandyApplicationPaths`，将应用路径解析收敛到 `IWebHostEnvironment.ContentRootPath/WebRootPath` |
+| ✅ #022 | 日志适配 | 已新增迁移期 `GitCandy.Log.Logger` 兼容 adapter，绑定 ASP.NET Core `ILoggerFactory` |
+| ✅ #023 | 缓存替换 | 已注册 `IMemoryCache`，新增 `IApplicationCache`/`MemoryApplicationCache` 作为旧 `HttpRuntime.Cache` 迁移入口，并补充门禁和缓存行为测试 |
 | ⬜ #024 | DI 替换 MEF | `MembershipService`、`RepositoryService`、Git services、scheduler jobs 改为 ASP.NET Core DI 注册 |
 | ⬜ #025 | Scheduler hosted service | Scheduler 改为 `IHostedService` 或 `BackgroundService` |
 | ⬜ #026 | SSH 生命周期占位 | SSH Server 启停改为 hosted service 形态，支持 graceful shutdown |

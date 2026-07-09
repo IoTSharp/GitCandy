@@ -38,4 +38,4 @@
 
 - 配置键发生迁移：新宿主优先读取 `GitCandy:Application:*`，并暂时接受旧根级 `LogPathFormat`、`UserConfiguration` 作为别名。
 - 旧 XML 中的 SSH host key 私钥不迁入 JSON 配置，避免把密钥内容提交到仓库或普通部署配置。
-- repository、cache、日志路径目前仍是字符串配置；路径归一化、content root/web root 解析和边界检查在 M2 #021/#029 中继续完成。
+- repository、cache、日志路径仍保留为可配置字符串；content root/web root 解析已由 M2 #021 统一，路径边界检查在 M2 #029 继续完成。

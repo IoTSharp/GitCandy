@@ -1,4 +1,5 @@
 using System.Globalization;
+using GitCandy.Caching;
 using GitCandy.Data;
 using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
@@ -39,6 +40,7 @@ public static class WebServiceCollectionExtensions
 
         services.AddControllersWithViews();
         services.AddGitCandyApplicationOptions(configuration);
+        services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
 
@@ -63,6 +65,8 @@ public static class WebServiceCollectionExtensions
                     .RequireRole(RoleNames.Administrator));
         });
 
+        services.AddMemoryCache();
+        services.TryAddSingleton<IApplicationCache, MemoryApplicationCache>();
         services.AddDistributedMemoryCache();
         services.AddSession(options =>
         {
