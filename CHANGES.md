@@ -32,6 +32,10 @@
  - Added the M2 #027 ASP.NET Core request profiler middleware and DI accessor for replacing legacy `Application_BeginRequest` profiler startup.
  - Added the M2 #028 host startup/shutdown diagnostics, including clearer SSH runtime and Quartz scheduler startup failure logs.
  - Added the M2 #029 startup path validation for ASP.NET Core content/web root based configuration and repository/cache boundary checks.
+ - Added the M3 #032 SQLite EF Core `InitialIdentitySchema` migration and model snapshot for ASP.NET Core Identity standard tables.
+ - Added a migration-backed SQLite Identity schema smoke test that uses `MigrateAsync` and verifies `AspNetUsers`, `AspNetRoles`, claims, logins, roles, tokens, Identity indexes, and `__EFMigrationsHistory`.
+ - Added the M3 #033 GitCandy domain table model for repositories, teams, user/team repository roles, team membership roles, and SSH public keys.
+ - Added migration-backed SQLite domain table smoke coverage for table/index creation, SSH key persistence, Identity user id foreign keys, and duplicate SSH fingerprint rejection.
 
 #### Migration
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
@@ -43,6 +47,7 @@
  - Migrated the new host's lightweight request profiler from `Application_BeginRequest` to ASP.NET Core middleware backed by `HttpContext.Items`.
  - Migrated startup/shutdown diagnostics to ASP.NET Core hosted-service lifecycle logging for the new host.
  - Hardened the new host's path semantics so relative application paths must stay under the ASP.NET Core content/web root; external repository/cache/log locations should be configured as fully qualified paths.
+ - Established the first migration-backed database creation path for the ASP.NET Core migration line; early `EnsureCreated` tests remain smoke coverage only, not release schema evidence.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
  - Calibrated the database migration strategy so short-term business implementation and validation use SQLite first; SQL Server, PostgreSQL, and SonnetDB remain visible follow-up provider work after the main migration path is working end to end.
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).

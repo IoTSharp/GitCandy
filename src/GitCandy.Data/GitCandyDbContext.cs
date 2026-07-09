@@ -36,6 +36,11 @@ public sealed class GitCandyDbContext(DbContextOptions<GitCandyDbContext> option
     /// </summary>
     public DbSet<GitCandyUserTeamRole> UserTeamRoles => Set<GitCandyUserTeamRole>();
 
+    /// <summary>
+    /// SSH 公钥领域表。
+    /// </summary>
+    public DbSet<GitCandySshKey> SshKeys => Set<GitCandySshKey>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -175,6 +180,41 @@ public sealed class GitCandyDbContext(DbContextOptions<GitCandyDbContext> option
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(role => role.TeamId);
+        });
+
+        builder.Entity<GitCandySshKey>(entity =>
+        {
+            entity.ToTable("SshKeys");
+
+            entity.HasKey(sshKey => sshKey.Id);
+
+            entity.Property(sshKey => sshKey.KeyType)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.Property(sshKey => sshKey.Fingerprint)
+                .IsRequired()
+                .IsFixedLength()
+                .HasMaxLength(47);
+
+            entity.Property(sshKey => sshKey.PublicKey)
+                .IsRequired()
+                .HasMaxLength(600);
+
+            entity.Property(sshKey => sshKey.ImportedAtUtc)
+                .IsRequired();
+
+            entity.Property(sshKey => sshKey.LastUsedAtUtc);
+
+            entity.HasOne(sshKey => sshKey.User)
+                .WithMany(user => user.SshKeys)
+                .HasForeignKey(sshKey => sshKey.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(sshKey => sshKey.UserId);
+
+            entity.HasIndex(sshKey => sshKey.Fingerprint)
+                .IsUnique();
         });
     }
 

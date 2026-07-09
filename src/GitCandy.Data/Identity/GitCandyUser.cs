@@ -27,4 +27,9 @@ public sealed class GitCandyUser : IdentityUser
     /// 用户所属团队角色。
     /// </summary>
     public ICollection<GitCandyUserTeamRole> TeamRoles { get; set; } = [];
+
+    /// <summary>
+    /// 用户导入的 SSH 公钥。
+    /// </summary>
+    public ICollection<GitCandySshKey> SshKeys { get; set; } = [];
 }

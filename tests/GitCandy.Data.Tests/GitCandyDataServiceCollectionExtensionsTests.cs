@@ -1,3 +1,4 @@
+using System.Data;
 using GitCandy.Data.Configuration;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
@@ -13,6 +14,112 @@ namespace GitCandy.Data.Tests;
 [TestClass]
 public sealed class GitCandyDataServiceCollectionExtensionsTests
 {
+    private const string SshFingerprint = "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99";
+    private const string SshPublicKey = "AAAAB3NzaC1yc2EAAAADAQABAAABAQCgitcandytests";
+
+    [TestMethod]
+    public async Task AddGitCandyData_WithSqliteMigrations_CreatesIdentityAndDomainSchema()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sqlite",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using var scope = serviceProvider.CreateAsyncScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await dbContext.Database.MigrateAsync();
+
+            var tables = await ReadSqliteNamesAsync(
+                dbContext,
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                """);
+
+            CollectionAssert.IsSubsetOf(
+                new[]
+                {
+                    "__EFMigrationsHistory",
+                    "AspNetUsers",
+                    "AspNetRoles",
+                    "AspNetRoleClaims",
+                    "AspNetUserClaims",
+                    "AspNetUserLogins",
+                    "AspNetUserRoles",
+                    "AspNetUserTokens",
+                    "Repositories",
+                    "Teams",
+                    "UserRepositoryRoles",
+                    "TeamRepositoryRoles",
+                    "UserTeamRoles",
+                    "SshKeys"
+                },
+                tables.ToList());
+
+            CollectionAssert.DoesNotContain(tables.ToList(), "Users");
+            CollectionAssert.DoesNotContain(tables.ToList(), "AuthorizationLog");
+
+            var indexes = await ReadSqliteNamesAsync(
+                dbContext,
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'index'
+                """);
+
+            CollectionAssert.IsSubsetOf(
+                new[]
+                {
+                    "EmailIndex",
+                    "UserNameIndex",
+                    "RoleNameIndex",
+                    "IX_Repositories_NormalizedName",
+                    "IX_Teams_NormalizedName",
+                    "IX_SshKeys_Fingerprint",
+                    "IX_SshKeys_UserId",
+                    "IX_UserRepositoryRoles_RepositoryId",
+                    "IX_TeamRepositoryRoles_RepositoryId",
+                    "IX_UserTeamRoles_TeamId"
+                },
+                indexes.ToList());
+
+            var migrations = await ReadSqliteNamesAsync(
+                dbContext,
+                """
+                SELECT MigrationId
+                FROM __EFMigrationsHistory
+                """);
+
+            Assert.IsTrue(
+                migrations.Any(static migration =>
+                    migration.EndsWith("_InitialIdentitySchema", StringComparison.Ordinal)),
+                "SQLite schema must be created from the InitialIdentitySchema migration.");
+        }
+        finally
+        {
+            if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
     [TestMethod]
     public async Task AddGitCandyData_WithSqliteProvider_CreatesIdentityDatabase()
     {
@@ -67,7 +174,7 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
     }
 
     [TestMethod]
-    public async Task AddGitCandyData_WithDomainRoles_CreatesReadsWritesAndQueriesPermissions()
+    public async Task AddGitCandyData_WithDomainTables_CreatesReadsWritesAndQueriesPermissions()
     {
         var databasePath = Path.Combine(
             Path.GetTempPath(),
@@ -91,7 +198,7 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
             await using var scope = serviceProvider.CreateAsyncScope();
 
             var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.MigrateAsync();
 
             var alice = new GitCandyUser
             {
@@ -138,10 +245,19 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                 Description = "Core maintainers",
                 CreatedAtUtc = DateTime.UtcNow
             };
+            var sshKey = new GitCandySshKey
+            {
+                UserId = alice.Id,
+                KeyType = "ssh-rsa",
+                Fingerprint = SshFingerprint,
+                PublicKey = SshPublicKey,
+                ImportedAtUtc = DateTime.UtcNow
+            };
 
             dbContext.Users.AddRange(alice, bob, carol);
             dbContext.Repositories.AddRange(publicRepository, privateRepository);
             dbContext.Teams.Add(coreTeam);
+            dbContext.SshKeys.Add(sshKey);
             await dbContext.SaveChangesAsync();
 
             dbContext.UserRepositoryRoles.Add(new GitCandyUserRepositoryRole
@@ -170,6 +286,15 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                 .SingleAsync(repository => repository.Name == "private-demo");
             Assert.AreEqual("PRIVATE-DEMO", savedRepository.NormalizedName);
 
+            var savedSshKey = await dbContext.SshKeys
+                .Include(key => key.User)
+                .SingleAsync(key => key.Fingerprint == SshFingerprint);
+            Assert.AreEqual(alice.Id, savedSshKey.UserId);
+            Assert.AreEqual("ssh-rsa", savedSshKey.KeyType);
+            Assert.AreEqual(SshPublicKey, savedSshKey.PublicKey);
+            Assert.AreEqual("alice", savedSshKey.User.UserName);
+            Assert.IsNull(savedSshKey.LastUsedAtUtc);
+
             var permissionQuery = scope.ServiceProvider.GetRequiredService<IGitCandyRepositoryPermissionQuery>();
 
             Assert.IsTrue(await permissionQuery.CanReadRepositoryAsync("PUBLIC-DEMO", null, isAdministrator: false));
@@ -180,6 +305,83 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
             Assert.IsTrue(await permissionQuery.CanWriteRepositoryAsync("private-demo", bob.Id, isAdministrator: false));
             Assert.IsFalse(await permissionQuery.CanReadRepositoryAsync("private-demo", carol.Id, isAdministrator: false));
             Assert.IsTrue(await permissionQuery.CanReadRepositoryAsync("PRIVATE-DEMO", carol.Id, isAdministrator: true));
+        }
+        finally
+        {
+            if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyData_WithDuplicateSshFingerprint_RejectsDuplicateKey()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sqlite",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using var scope = serviceProvider.CreateAsyncScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await dbContext.Database.MigrateAsync();
+
+            dbContext.Users.AddRange(
+                new GitCandyUser
+                {
+                    Id = "user-alice",
+                    UserName = "alice",
+                    NormalizedUserName = "ALICE"
+                },
+                new GitCandyUser
+                {
+                    Id = "user-bob",
+                    UserName = "bob",
+                    NormalizedUserName = "BOB"
+                });
+
+            dbContext.SshKeys.AddRange(
+                new GitCandySshKey
+                {
+                    UserId = "user-alice",
+                    KeyType = "ssh-rsa",
+                    Fingerprint = SshFingerprint,
+                    PublicKey = SshPublicKey,
+                    ImportedAtUtc = DateTime.UtcNow
+                },
+                new GitCandySshKey
+                {
+                    UserId = "user-bob",
+                    KeyType = "ssh-rsa",
+                    Fingerprint = SshFingerprint,
+                    PublicKey = SshPublicKey,
+                    ImportedAtUtc = DateTime.UtcNow
+                });
+
+            try
+            {
+                await dbContext.SaveChangesAsync();
+                Assert.Fail("Duplicate SSH fingerprints must be rejected by the domain schema.");
+            }
+            catch (DbUpdateException)
+            {
+            }
         }
         finally
         {
@@ -222,5 +424,28 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
 
         Assert.ThrowsExactly<NotSupportedException>(
             () => services.AddGitCandyData(configuration, builder => builder.AddSqlite()));
+    }
+
+    private static async Task<IReadOnlySet<string>> ReadSqliteNamesAsync(
+        GitCandyDbContext dbContext,
+        string commandText)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = commandText;
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            names.Add(reader.GetString(0));
+        }
+
+        return names;
     }
 }
