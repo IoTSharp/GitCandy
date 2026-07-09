@@ -1,7 +1,11 @@
+using GitCandy.Application;
 using GitCandy.Configuration;
 using GitCandy.Caching;
 using GitCandy.Data;
+using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Git;
+using GitCandy.Schedules;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -82,6 +86,110 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<GitCandyDbContext>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<UserManager<GitCandyUser>>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
+            Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IMembershipService>());
+            Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRepositoryService>());
+            Assert.IsTrue(scope.ServiceProvider.GetServices<ISchedulerJob>().Any(job => job is LogRotationJob));
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyWebShell_WithMefReplacementServices_ResolvesApplicationGitAndSchedulerServices()
+    {
+        var tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            Guid.NewGuid().ToString("N"));
+        var databasePath = Path.Combine(tempRoot, "GitCandy.db");
+
+        try
+        {
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                ContentRootPath = GetWebProjectRoot(),
+                EnvironmentName = Environments.Development
+            });
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GitCandy:Database:Provider"] = "sqlite",
+                ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+            });
+            builder.Services.AddGitCandyWebShell(builder.Configuration);
+
+            await using var app = builder.Build();
+            await using var scope = app.Services.CreateAsyncScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await dbContext.Database.EnsureCreatedAsync();
+
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<GitCandyUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+            var adminRoleResult = await roleManager.CreateAsync(new IdentityRole(RoleNames.Administrator));
+            Assert.IsTrue(adminRoleResult.Succeeded);
+
+            var user = new GitCandyUser
+            {
+                Id = "user-admin",
+                UserName = "admin",
+                Email = "admin@gitcandy.local"
+            };
+            var createUserResult = await userManager.CreateAsync(user);
+            Assert.IsTrue(createUserResult.Succeeded);
+
+            var addRoleResult = await userManager.AddToRoleAsync(user, RoleNames.Administrator);
+            Assert.IsTrue(addRoleResult.Succeeded);
+
+            var now = DateTime.UtcNow;
+            dbContext.Repositories.AddRange(
+                new GitCandyRepository
+                {
+                    Name = "public-demo",
+                    Description = "Public repository",
+                    CreatedAtUtc = now,
+                    AllowAnonymousRead = true
+                },
+                new GitCandyRepository
+                {
+                    Name = "private-demo",
+                    Description = "Private repository",
+                    CreatedAtUtc = now,
+                    IsPrivate = true
+                });
+            await dbContext.SaveChangesAsync();
+
+            var membershipService = scope.ServiceProvider.GetRequiredService<IMembershipService>();
+            var foundByEmail = await membershipService.FindUserAsync("admin@gitcandy.local");
+            Assert.IsNotNull(foundByEmail);
+            Assert.IsTrue(await membershipService.IsAdministratorAsync(foundByEmail.Id));
+
+            var repositoryService = scope.ServiceProvider.GetRequiredService<IRepositoryService>();
+            var repository = await repositoryService.FindRepositoryAsync("PUBLIC-DEMO");
+            Assert.IsNotNull(repository);
+            Assert.AreEqual("public-demo", repository.Name);
+            Assert.IsTrue(await repositoryService.CanReadRepositoryAsync("public-demo", null, isAdministrator: false));
+            Assert.IsFalse(await repositoryService.CanReadRepositoryAsync("private-demo", null, isAdministrator: false));
+
+            var visibleRepositories = await repositoryService.GetVisibleRepositoriesAsync(null, isAdministrator: false);
+            Assert.AreEqual(1, visibleRepositories.Count);
+            Assert.AreEqual("public-demo", visibleRepositories[0].Name);
+
+            var gitFactory = scope.ServiceProvider.GetRequiredService<IGitServiceFactory>();
+            var gitContext = gitFactory.Create("public-demo");
+            Assert.AreEqual("public-demo", gitContext.RepositoryName);
+            StringAssert.EndsWith(
+                gitContext.RepositoryPath,
+                Path.Combine("App_Data", "Repos", "public-demo"));
+            Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create(@"..\escape"));
+
+            var jobs = scope.ServiceProvider.GetServices<ISchedulerJob>().ToArray();
+            Assert.AreEqual(1, jobs.Length);
+            Assert.AreEqual("LegacyLogRotation", jobs[0].Name);
         }
         finally
         {

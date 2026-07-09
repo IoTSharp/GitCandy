@@ -1,9 +1,12 @@
 using System.Globalization;
+using GitCandy.Application;
 using GitCandy.Caching;
 using GitCandy.Data;
 using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
+using GitCandy.Git;
+using GitCandy.Schedules;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
@@ -48,6 +51,8 @@ public static class WebServiceCollectionExtensions
             .AddEntityFrameworkStores<GitCandyDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddGitCandyMigrationServices();
+
         services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = ".GitCandy.Identity";
@@ -82,6 +87,17 @@ public static class WebServiceCollectionExtensions
             options.SupportedCultures = SupportedCultures;
             options.SupportedUICultures = SupportedCultures;
         });
+
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyMigrationServices(this IServiceCollection services)
+    {
+        services.TryAddScoped<IMembershipService, MembershipService>();
+        services.TryAddScoped<IRepositoryService, RepositoryService>();
+        services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
+        services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, LogRotationJob>());
 
         return services;
     }

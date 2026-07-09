@@ -10,7 +10,9 @@ public sealed class SystemWebEntryCheckTests
         "System.Web",
         "System.Web.Mvc",
         "System.Web.Optimization",
-        "System.Data.Entity"
+        "System.Data.Entity",
+        "System.Composition",
+        "System.ComponentModel.Composition"
     ];
 
     private static readonly string[] ForbiddenMigrationSourceTokens =
