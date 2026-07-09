@@ -8,6 +8,9 @@ namespace GitCandy.Configuration;
 /// </summary>
 public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
 {
+    private const string RelativePathEscapesRootMessage =
+        "Configured relative paths must stay inside their host root. Use a fully qualified path for external locations.";
+
     /// <summary>
     /// 初始化 GitCandy 应用路径解析结果。
     /// </summary>
@@ -73,6 +76,18 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
         return ResolvePath(configuredPath, WebRootPath);
     }
 
+    /// <inheritdoc />
+    public string ResolvePathWithinRepositoryRoot(string path)
+    {
+        return ResolvePathWithinRoot(path, RepositoryPath, "repository");
+    }
+
+    /// <inheritdoc />
+    public string ResolvePathWithinCacheRoot(string path)
+    {
+        return ResolvePathWithinRoot(path, CachePath, "cache");
+    }
+
     private static string ResolvePath(string configuredPath, string rootPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(configuredPath);
@@ -101,7 +116,30 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
             return Path.GetFullPath(path);
         }
 
-        return Path.GetFullPath(path, rootPath);
+        var fullPath = Path.GetFullPath(path, rootPath);
+        if (!IsPathWithinRoot(rootPath, fullPath))
+        {
+            throw new InvalidOperationException(RelativePathEscapesRootMessage);
+        }
+
+        return fullPath;
+    }
+
+    private static string ResolvePathWithinRoot(
+        string path,
+        string rootPath,
+        string rootName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        var fullPath = ResolvePath(path, rootPath);
+        if (!IsPathWithinRoot(rootPath, fullPath))
+        {
+            throw new InvalidOperationException(
+                $"Resolved {rootName} path escapes the configured {rootName} root.");
+        }
+
+        return fullPath;
     }
 
     private static string NormalizeRootPath(string path)
@@ -117,5 +155,22 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
             .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
             .Replace('\\', Path.DirectorySeparatorChar)
             .Replace('/', Path.DirectorySeparatorChar);
+    }
+
+    private static bool IsPathWithinRoot(string rootPath, string path)
+    {
+        var relativePath = Path.GetRelativePath(
+            NormalizeRootPath(rootPath),
+            Path.GetFullPath(NormalizeDirectorySeparators(path)));
+
+        return relativePath.Equals(".", StringComparison.Ordinal)
+            || (!IsParentTraversal(relativePath) && !Path.IsPathRooted(relativePath));
+    }
+
+    private static bool IsParentTraversal(string relativePath)
+    {
+        return relativePath.Equals("..", StringComparison.Ordinal)
+            || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+            || relativePath.StartsWith($"..{Path.AltDirectorySeparatorChar}", StringComparison.Ordinal);
     }
 }

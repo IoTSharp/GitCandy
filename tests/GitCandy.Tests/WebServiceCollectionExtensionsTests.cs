@@ -4,6 +4,7 @@ using GitCandy.Caching;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Diagnostics;
 using GitCandy.Git;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
@@ -53,6 +54,9 @@ public sealed class WebServiceCollectionExtensionsTests
             services.AddLogging();
             services.AddGitCandyWebShell(configuration);
 
+            Assert.IsTrue(services.Any(service =>
+                service.ServiceType == typeof(IHostedService)
+                && service.ImplementationType == typeof(GitCandyHostDiagnosticsHostedService)));
             Assert.IsTrue(services.Any(service =>
                 service.ServiceType == typeof(IHostedService)
                 && service.ImplementationType == typeof(SshServerHostedService)));
@@ -427,6 +431,30 @@ public sealed class WebServiceCollectionExtensionsTests
 
         ResetQuartzLogging();
         await Assert.ThrowsExactlyAsync<OptionsValidationException>(() => app.StartAsync());
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyWebShell_WithEscapingRelativeApplicationPath_FailsOnHostStart()
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ContentRootPath = GetWebProjectRoot(),
+            EnvironmentName = Environments.Development,
+        });
+        builder.WebHost.UseKestrel();
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["GitCandy:Application:RepositoryPath"] = "../Repos",
+            ["GitCandy:Database:Provider"] = "sqlite",
+            ["ConnectionStrings:GitCandy"] = "Data Source=:memory:"
+        });
+        builder.Services.AddGitCandyWebShell(builder.Configuration);
+
+        await using var app = builder.Build();
+
+        ResetQuartzLogging();
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => app.StartAsync());
     }
 
     private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)

@@ -53,4 +53,18 @@ public interface IGitCandyApplicationPaths
     /// <param name="configuredPath">配置中的路径值。</param>
     /// <returns>绝对路径。</returns>
     string ResolveWebRootPath(string configuredPath);
+
+    /// <summary>
+    /// 将路径解析到仓库存储根目录内，并验证解析结果没有逃逸仓库根目录。
+    /// </summary>
+    /// <param name="path">相对仓库根目录的路径，或已经位于仓库根目录内的绝对路径。</param>
+    /// <returns>仓库根目录内的绝对路径。</returns>
+    string ResolvePathWithinRepositoryRoot(string path);
+
+    /// <summary>
+    /// 将路径解析到缓存根目录内，并验证解析结果没有逃逸缓存根目录。
+    /// </summary>
+    /// <param name="path">相对缓存根目录的路径，或已经位于缓存根目录内的绝对路径。</param>
+    /// <returns>缓存根目录内的绝对路径。</returns>
+    string ResolvePathWithinCacheRoot(string path);
 }

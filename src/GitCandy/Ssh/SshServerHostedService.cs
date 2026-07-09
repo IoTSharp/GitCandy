@@ -34,8 +34,27 @@ public sealed class SshServerHostedService(
         }
 
         _logger.LogInformation("Starting built-in SSH server lifecycle on port {SshPort}.", applicationOptions.SshPort);
-        await _serverRuntime.StartAsync(applicationOptions.SshPort, cancellationToken);
-        _started = true;
+        try
+        {
+            await _serverRuntime.StartAsync(applicationOptions.SshPort, cancellationToken);
+            _started = true;
+            _logger.LogInformation("Built-in SSH server lifecycle started on port {SshPort}.", applicationOptions.SshPort);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "Built-in SSH server startup was canceled before port {SshPort} became active.",
+                applicationOptions.SshPort);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to start built-in SSH server on port {SshPort}. Check whether the port is already in use and host key configuration is valid.",
+                applicationOptions.SshPort);
+            throw;
+        }
     }
 
     /// <inheritdoc />
@@ -47,7 +66,22 @@ public sealed class SshServerHostedService(
         }
 
         _logger.LogInformation("Stopping built-in SSH server lifecycle.");
-        await _serverRuntime.StopAsync(cancellationToken);
-        _started = false;
+        try
+        {
+            await _serverRuntime.StopAsync(cancellationToken);
+            _started = false;
+            _logger.LogInformation("Built-in SSH server lifecycle stopped.");
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(
+                "Built-in SSH server shutdown was canceled before the runtime confirmed it had stopped.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to stop built-in SSH server cleanly.");
+            throw;
+        }
     }
 }

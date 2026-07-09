@@ -14,10 +14,6 @@ public sealed class GitRepositoryPathResolver(IGitCandyApplicationPaths applicat
         Path.AltDirectorySeparatorChar
     ];
 
-    private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
-        ? StringComparison.OrdinalIgnoreCase
-        : StringComparison.Ordinal;
-
     private readonly IGitCandyApplicationPaths _applicationPaths = applicationPaths;
 
     /// <inheritdoc />
@@ -37,14 +33,7 @@ public sealed class GitRepositoryPathResolver(IGitCandyApplicationPaths applicat
                 nameof(repositoryName));
         }
 
-        var rootPath = RepositoryRootPath;
-        var repositoryPath = Path.GetFullPath(Path.Combine(rootPath, safeRepositoryName));
-        if (!repositoryPath.StartsWith(rootPath, PathComparison))
-        {
-            throw new InvalidOperationException("Resolved repository path escapes the configured repository root.");
-        }
-
-        return repositoryPath;
+        return _applicationPaths.ResolvePathWithinRepositoryRoot(safeRepositoryName);
     }
 
     private static string EnsureTrailingDirectorySeparator(string path)

@@ -363,8 +363,8 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #025 | Quartz.NET Scheduler hosted service | 已引入 Quartz.NET in-memory scheduler，使用 `AddQuartz` / `AddQuartzHostedService` 接入 ASP.NET Core 生命周期，并通过 bridge job 执行 DI 注册的 `ISchedulerJob` |
 | ✅ #026 | SSH 生命周期占位 | 已新增 `SshServerHostedService`、`ISshServerRuntime` 和占位 runtime，将内置 SSH 启停接入 ASP.NET Core hosted service，并保留 graceful shutdown 取消令牌入口 |
 | ✅ #027 | Profiler 迁移 | `Profiler` 改为 middleware 或 action filter |
-| ⬜ #028 | 启停诊断 | 应用启动、停止、后台任务启动失败日志清晰 |
-| ⬜ #029 | 跨宿主路径验证 | 配置路径在 Windows、IIS、Kestrel 下可预测 |
+| ✅ #028 | 启停诊断 | 已新增 host lifecycle 启停日志，并为 SSH runtime 与 Quartz scheduler job 注册失败补充结构化诊断日志 |
+| ✅ #029 | 跨宿主路径验证 | 已新增启动期路径验证和 repository/cache 根目录边界解析，配置路径在 Windows、IIS、Kestrel 下可预测 |
 
 验收：
 

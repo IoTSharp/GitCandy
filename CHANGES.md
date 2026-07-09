@@ -30,6 +30,8 @@
  - Added the M2 #025 Quartz.NET in-memory scheduler hosted service, including a bridge for DI-registered `ISchedulerJob` tasks.
  - Added the M2 #026 SSH lifecycle placeholder hosted service, including an injectable `ISshServerRuntime` and tests for enabled/disabled startup and graceful shutdown token flow.
  - Added the M2 #027 ASP.NET Core request profiler middleware and DI accessor for replacing legacy `Application_BeginRequest` profiler startup.
+ - Added the M2 #028 host startup/shutdown diagnostics, including clearer SSH runtime and Quartz scheduler startup failure logs.
+ - Added the M2 #029 startup path validation for ASP.NET Core content/web root based configuration and repository/cache boundary checks.
 
 #### Migration
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
@@ -39,6 +41,8 @@
  - Migrated the ASP.NET Core host scheduler lifecycle to Quartz.NET `AddQuartz` / `AddQuartzHostedService`; Quartz persistence, clustering, and scheduler UI remain out of scope for the first migration slice.
  - Migrated the new host's SSH lifecycle entry point to an ASP.NET Core `IHostedService` placeholder; the real SSH protocol listener and clone/fetch/push behavior remain scoped to M7.
  - Migrated the new host's lightweight request profiler from `Application_BeginRequest` to ASP.NET Core middleware backed by `HttpContext.Items`.
+ - Migrated startup/shutdown diagnostics to ASP.NET Core hosted-service lifecycle logging for the new host.
+ - Hardened the new host's path semantics so relative application paths must stay under the ASP.NET Core content/web root; external repository/cache/log locations should be configured as fully qualified paths.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
  - Calibrated the database migration gate to require SQLite by default plus a viable SQL Server schema/migration path; PostgreSQL and SonnetDB are optional provider extensions.
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).

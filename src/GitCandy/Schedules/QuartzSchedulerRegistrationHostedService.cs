@@ -30,29 +30,53 @@ internal sealed class QuartzSchedulerRegistrationHostedService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await using var scope = _serviceScopeFactory.CreateAsyncScope();
-        var jobs = scope.ServiceProvider.GetServices<ISchedulerJob>().ToArray();
-        if (jobs.Length == 0)
+        try
         {
-            _logger.LogInformation("No GitCandy scheduler jobs are registered.");
-            return;
-        }
+            await using var scope = _serviceScopeFactory.CreateAsyncScope();
+            var jobs = scope.ServiceProvider.GetServices<ISchedulerJob>().ToArray();
+            if (jobs.Length == 0)
+            {
+                _logger.LogInformation("No GitCandy scheduler jobs are registered.");
+                return;
+            }
 
-        ValidateJobNames(jobs);
-
-        var scheduler = await _schedulerFactory.GetScheduler(cancellationToken).ConfigureAwait(false);
-        foreach (var job in jobs)
-        {
-            var jobDetail = QuartzSchedulerJob.CreateJobDetail(job.Name);
-            await scheduler.AddJob(jobDetail, replace: true, cancellationToken).ConfigureAwait(false);
-            await scheduler.ScheduleJob(
-                QuartzSchedulerJob.CreateInitialTrigger(job.Name),
-                cancellationToken).ConfigureAwait(false);
+            ValidateJobNames(jobs);
 
             _logger.LogInformation(
-                "Registered scheduler job {JobName} ({JobType}) with Quartz.NET.",
-                job.Name,
-                job.JobType);
+                "Registering {SchedulerJobCount} GitCandy scheduler jobs with Quartz.NET.",
+                jobs.Length);
+
+            var scheduler = await _schedulerFactory.GetScheduler(cancellationToken).ConfigureAwait(false);
+            foreach (var job in jobs)
+            {
+                var jobDetail = QuartzSchedulerJob.CreateJobDetail(job.Name);
+                await scheduler.AddJob(jobDetail, replace: true, cancellationToken).ConfigureAwait(false);
+                await scheduler.ScheduleJob(
+                    QuartzSchedulerJob.CreateInitialTrigger(job.Name),
+                    cancellationToken).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    "Registered scheduler job {JobName} ({JobType}) with Quartz.NET.",
+                    job.Name,
+                    job.JobType);
+            }
+
+            _logger.LogInformation(
+                "Registered {SchedulerJobCount} GitCandy scheduler jobs with Quartz.NET.",
+                jobs.Length);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "GitCandy scheduler job registration was canceled during application startup.");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to register GitCandy scheduler jobs during application startup. Background scheduler startup is aborted.");
+            throw;
         }
     }
 

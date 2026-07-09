@@ -81,6 +81,68 @@ public sealed class GitCandyApplicationPathsTests
     }
 
     [TestMethod]
+    public void GitCandyApplicationPaths_WithIisAndKestrelRoots_ResolvesRelativePathsFromContentRoot()
+    {
+        AssertHostRootResolution(CreateTestPath("iis", "inetpub", "wwwroot", "GitCandy"));
+        AssertHostRootResolution(CreateTestPath("kestrel", "publish", "GitCandy"));
+    }
+
+    [TestMethod]
+    public void GitCandyApplicationPaths_WithRelativePathEscapingHostRoot_Throws()
+    {
+        var contentRoot = CreateTestPath("content");
+        var options = new GitCandyApplicationOptions
+        {
+            RepositoryPath = "../Repos"
+        };
+
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            new GitCandyApplicationPaths(
+                CreateEnvironment(contentRoot, Path.Combine(contentRoot, "wwwroot")),
+                Options.Create(options)));
+    }
+
+    [TestMethod]
+    public void GitCandyApplicationPaths_WithInvalidVirtualPath_Throws()
+    {
+        var paths = new GitCandyApplicationPaths(
+            CreateEnvironment(CreateTestPath("content"), webRootPath: string.Empty),
+            Options.Create(new GitCandyApplicationOptions()));
+
+        Assert.ThrowsExactly<ArgumentException>(() => paths.ResolveContentPath("~App_Data/config.xml"));
+    }
+
+    [TestMethod]
+    public void GitCandyApplicationPaths_WithRepositoryAndCacheChildPaths_RequiresRootBoundary()
+    {
+        var contentRoot = CreateTestPath("content");
+        var paths = new GitCandyApplicationPaths(
+            CreateEnvironment(contentRoot, Path.Combine(contentRoot, "wwwroot")),
+            Options.Create(new GitCandyApplicationOptions
+            {
+                RepositoryPath = "data/repositories",
+                CachePath = "data/cache"
+            }));
+
+        Assert.AreEqual(
+            FullPath(contentRoot, "data", "repositories", "public-demo", "objects"),
+            paths.ResolvePathWithinRepositoryRoot("public-demo/objects"));
+        Assert.AreEqual(
+            FullPath(contentRoot, "data", "repositories", "private-demo.git"),
+            paths.ResolvePathWithinRepositoryRoot(FullPath(contentRoot, "data", "repositories", "private-demo.git")));
+        Assert.AreEqual(
+            FullPath(contentRoot, "data", "cache", "archives", "public-demo.zip"),
+            paths.ResolvePathWithinCacheRoot("archives/public-demo.zip"));
+
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            paths.ResolvePathWithinRepositoryRoot("../repositories-sibling/public-demo.git"));
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            paths.ResolvePathWithinRepositoryRoot(FullPath(contentRoot, "data", "repositories-sibling", "public-demo.git")));
+        Assert.ThrowsExactly<InvalidOperationException>(() =>
+            paths.ResolvePathWithinCacheRoot("../cache-sibling/archive.zip"));
+    }
+
+    [TestMethod]
     public void GitCandyApplicationPaths_WithWebRoot_ResolvesWebRootPaths()
     {
         var contentRoot = CreateTestPath("content");
@@ -125,6 +187,18 @@ public sealed class GitCandyApplicationPathsTests
         Assert.AreEqual(FullPath(contentRoot, "data", "cache"), paths.CachePath);
     }
 
+    private static void AssertHostRootResolution(string contentRoot)
+    {
+        var paths = new GitCandyApplicationPaths(
+            CreateEnvironment(contentRoot, Path.Combine(contentRoot, "wwwroot")),
+            Options.Create(new GitCandyApplicationOptions()));
+
+        Assert.AreEqual(FullPath(contentRoot, "App_Data", "{0}.log"), paths.LogPathFormat);
+        Assert.AreEqual(FullPath(contentRoot, "App_Data", "config.xml"), paths.UserConfigurationPath);
+        Assert.AreEqual(FullPath(contentRoot, "App_Data", "Repos"), paths.RepositoryPath);
+        Assert.AreEqual(FullPath(contentRoot, "App_Data", "Caches"), paths.CachePath);
+    }
+
     private static IConfiguration BuildConfiguration(Dictionary<string, string?> values)
     {
         var configurationValues = new Dictionary<string, string?>(values)
@@ -147,14 +221,17 @@ public sealed class GitCandyApplicationPathsTests
         };
     }
 
-    private static string CreateTestPath(string segment)
+    private static string CreateTestPath(params string[] segments)
     {
-        return Path.Combine(
+        var rootSegments = new[]
+        {
             Path.GetTempPath(),
             "GitCandy.Tests",
             "Paths",
-            Guid.NewGuid().ToString("N"),
-            segment);
+            Guid.NewGuid().ToString("N")
+        };
+
+        return Path.Combine([.. rootSegments, .. segments]);
     }
 
     private static string FullPath(params string[] paths)

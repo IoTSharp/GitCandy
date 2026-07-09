@@ -5,6 +5,7 @@ using GitCandy.Data;
 using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
+using GitCandy.Diagnostics;
 using GitCandy.Git;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
@@ -48,7 +49,11 @@ public static class WebServiceCollectionExtensions
         services.AddControllersWithViews();
         services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, GitCandyApplicationPathValidationHostedService>());
         services.TryAddSingleton<IRequestProfilerAccessor, HttpContextRequestProfilerAccessor>();
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
