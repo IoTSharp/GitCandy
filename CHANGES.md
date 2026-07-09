@@ -1,6 +1,19 @@
 ﻿## GitCandy Changes
 
 ---
+### Unreleased
+#### Added
+ - Added the ASP.NET Core migration data-layer baseline with provider-neutral `GitCandyDbContext` and `GitCandyUser`.
+ - Added EF Core provider registration projects for SQLite, PostgreSQL/pgsql, and SonnetDB, with separate migration assembly boundaries.
+ - Added SQLite data-layer smoke tests for database creation and Identity user read/write.
+
+#### Migration
+ - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
+ - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
+ - Calibrated the database migration gate to require SQLite by default plus a viable SQL Server schema/migration path; PostgreSQL and SonnetDB are optional provider extensions.
+ - Standardized the code intelligence roadmap label as P10/Phase 10.
+
+---
 ### GitCandy v0.2 - [view diff](http://github.com/Aimeast/GitCandy/compare/v0.1...v0.2) - Jul 27, 2016
 #### Features
  - SSH transport protocol
