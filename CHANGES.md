@@ -16,12 +16,14 @@
  - Added the M0 #007 legacy MVC smoke test baseline script and documentation for home, repository list, login, main forms, and error page coverage.
  - Added the M0 #008 repeatable Git HTTP integration script for local clone, fetch, push, and authorization failure smoke coverage.
  - Added the M0 #009 migration security baseline and pull request validation template for Identity, cookie, security stamp, private repository access, and compatibility checks.
+ - Added the M1 #010 `src/GitCandy` SDK-style ASP.NET Core 10 MVC host as the single GitCandy main process project.
 
 #### Migration
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
  - Calibrated the database migration gate to require SQLite by default plus a viable SQL Server schema/migration path; PostgreSQL and SonnetDB are optional provider extensions.
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).
+ - Renamed the planned ASP.NET Core host path from `src/GitCandy.Web` to `src/GitCandy` to reflect the single-process main-program architecture.
 
 ---
 ### GitCandy v0.2 - [view diff](http://github.com/Aimeast/GitCandy/compare/v0.1...v0.2) - Jul 27, 2016

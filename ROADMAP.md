@@ -184,7 +184,7 @@ GitCandy/
 ├── Directory.Build.props
 ├── Directory.Packages.props
 ├── src/
-│   ├── GitCandy.Web/          # ASP.NET Core 10 MVC app
+│   ├── GitCandy/              # 唯一 ASP.NET Core 10 MVC 主程序和 host
 │   ├── GitCandy.Core/         # 领域模型、权限、配置抽象、通用服务
 │   ├── GitCandy.Data/         # EF Core DbContext、migrations、repositories
 │   ├── GitCandy.Git/          # LibGit2Sharp、git.exe transport、cache
@@ -196,7 +196,7 @@ GitCandy/
 └── Sql/
 ```
 
-如果希望降低第一轮改造成本，也可以先只创建 `src/GitCandy.Web` 一个 SDK-style 项目，把旧目录按原名搬入并替换 API；待测试跑通后再拆 `Core/Data/Git/Ssh`。不要同时重写架构、UI 和协议层。
+如果希望降低第一轮改造成本，也可以先只创建 `src/GitCandy` 一个 SDK-style 主程序项目，把 Web UI、Git HTTP、内置 SSH、scheduler 和后台入口都收敛到这个 host；待测试跑通后再拆 `Core/Data/Git/Ssh`。不要同时重写架构、UI 和协议层。
 
 解决方案规则：
 
@@ -324,7 +324,7 @@ ASP.NET Core 中间件和后台能力：
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #010 | SDK-style Web 项目 | 创建 `src/GitCandy.Web` ASP.NET Core MVC 项目，目标 `net10.0` |
+| ✅ #010 | SDK-style 主程序项目 | 已创建 `src/GitCandy` ASP.NET Core MVC 主程序项目，目标 `net10.0`，作为唯一 GitCandy host |
 | ✅ #011 | SDK 固定策略 | 已新增 `global.json` 固定 .NET 10 SDK feature band，并 roll-forward 到 `latestFeature` |
 | 🚧 #012 | Solution 迁移 | 已新增 `GitCandy.slnx` 作为迁移主线；旧 `GitCandy.sln` 暂作行为参考，CI/命令固定到 `.slnx` 后闭环 |
 | ✅ #013 | 构建公共属性 | 已新增 `Directory.Build.props`，新项目启用 `ImplicitUsings`、`Nullable` 和 `TreatWarningsAsErrors` |
@@ -671,7 +671,7 @@ ASP.NET Core 中间件和后台能力：
 | 编号 | 工作项 |
 | --- | --- |
 | ✅ #000 到 ✅ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
-| ⬜ #010 | 新建 `src/GitCandy.Web` ASP.NET Core 10 MVC 项目 |
+| ✅ #010 | 新建 `src/GitCandy` ASP.NET Core 10 MVC 主程序项目 |
 | ⬜ #011 到 ⬜ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
 | ⬜ #015 到 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline 和空路由 |
 | ⬜ #030 到 ⬜ #039 | 建立 EF Core `GitCandyDbContext` + Identity schema，先完成新库创建和管理员 seed |
@@ -684,7 +684,7 @@ ASP.NET Core 中间件和后台能力：
 
 当前校准后的短线顺序：
 
-1. 完成 ⬜ #010 与 ⬜ #015 到 ⬜ #017，建立可运行的 `src/GitCandy.Web` 和标准 ASP.NET Core MVC pipeline。
+1. 完成 ✅ #010 与 ⬜ #015 到 ⬜ #017，建立可运行的 `src/GitCandy` 和标准 ASP.NET Core MVC pipeline。
 2. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
 3. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。
 

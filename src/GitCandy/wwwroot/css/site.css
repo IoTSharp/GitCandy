@@ -1,0 +1,53 @@
+html {
+  min-height: 100%;
+}
+
+body {
+  background: #f7f7f5;
+  color: #202124;
+  font-family: "Segoe UI", Arial, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.site-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #deded8;
+  display: flex;
+  height: 56px;
+  padding: 0 24px;
+}
+
+.site-brand {
+  font-size: 18px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-main {
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 40px 24px;
+}
+
+.host-shell h1 {
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.host-shell p {
+  color: #62645f;
+  margin: 0;
+}
+
+.site-footer {
+  border-top: 1px solid #deded8;
+  color: #62645f;
+  padding: 16px 24px;
+}

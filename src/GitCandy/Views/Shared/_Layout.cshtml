@@ -1,0 +1,23 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - GitCandy</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="site-header">
+        <a class="site-brand" asp-area="" asp-controller="Home" asp-action="Index">GitCandy</a>
+    </header>
+    <main class="site-main" role="main">
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        &copy; 2026 - GitCandy
+    </footer>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
