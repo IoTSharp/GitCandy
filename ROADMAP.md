@@ -281,7 +281,7 @@ ASP.NET Core 中间件和后台能力：
 
 ## Milestone 路线图
 
-### ⬜ Milestone 0：基线冻结与迁移保护网
+### 🚧 Milestone 0：基线冻结与迁移保护网
 
 目标：先知道“什么算没迁坏”。
 
@@ -294,7 +294,7 @@ ASP.NET Core 中间件和后台能力：
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #000 | 迁移分支与旧项目冻结 | 建立迁移分支，保留当前 MVC5 项目为行为参考，并记录工作区基线 |
+| ✅ #000 | 迁移分支与旧项目冻结 | 已建立 `migration/aspnet-core-10`，保留当前 MVC5 项目为行为参考，并在 `docs/migration/m0-000-baseline.md` 记录工作区基线 |
 | ⬜ #001 | 测试数据与样例仓库 | 准备新库样例数据、bare git repository、管理员、普通用户、团队、公有仓库和私有仓库 |
 | ⬜ #002 | Web 行为清单 | 记录登录、登出、注册、改密码、用户/团队/仓库 CRUD、仓库浏览页面行为 |
 | ⬜ #003 | Git HTTP 行为清单 | 记录 `clone`、`fetch`、`push`、认证失败、权限不足、仓库不存在和 service 不支持行为 |
@@ -652,7 +652,7 @@ ASP.NET Core 中间件和后台能力：
 
 | 里程碑 | 优先级含义 | 完成口径 |
 | --- | --- | --- |
-| ⬜ M0 | 最高优先级，先冻结行为 | 完成基线测试数据、行为清单、迁移分支和 PR 验证模板 |
+| 🚧 M0 | 最高优先级，先冻结行为 | 完成基线测试数据、行为清单、迁移分支和 PR 验证模板 |
 | ⬜ M1 | 新 host 起步 | 新 ASP.NET Core 10 MVC 空壳可运行 |
 | ⬜ M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
 | ⬜ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建，并能生成 SQL Server migration SQL；登录/授权 smoke test 通过 |
@@ -670,7 +670,7 @@ ASP.NET Core 中间件和后台能力：
 
 | 编号 | 工作项 |
 | --- | --- |
-| ⬜ #000 到 ⬜ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
+| ✅ #000，⬜ #001 到 ⬜ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
 | ⬜ #010 | 新建 `src/GitCandy.Web` ASP.NET Core 10 MVC 项目 |
 | ⬜ #011 到 ⬜ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
 | ⬜ #015 到 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline 和空路由 |
@@ -684,7 +684,7 @@ ASP.NET Core 中间件和后台能力：
 
 当前校准后的短线顺序：
 
-1. 先补 ⬜ #000 到 ⬜ #009 的行为保护网，尤其是 Git HTTP/SSH 行为清单和本地 `clone/fetch/push` 脚本。
+1. 继续补 ⬜ #001 到 ⬜ #009 的行为保护网，尤其是 Git HTTP/SSH 行为清单和本地 `clone/fetch/push` 脚本。
 2. 然后完成 ⬜ #010 与 ⬜ #015 到 ⬜ #017，建立可运行的 `src/GitCandy.Web` 和标准 ASP.NET Core MVC pipeline。
 3. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
 4. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。

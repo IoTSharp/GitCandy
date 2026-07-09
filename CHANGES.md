@@ -6,6 +6,7 @@
  - Added the ASP.NET Core migration data-layer baseline with provider-neutral `GitCandyDbContext` and `GitCandyUser`.
  - Added EF Core provider registration projects for SQLite, PostgreSQL/pgsql, and SonnetDB, with separate migration assembly boundaries.
  - Added SQLite data-layer smoke tests for database creation and Identity user read/write.
+ - Added the M0 #000 migration branch and legacy MVC5 freeze baseline record.
 
 #### Migration
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
