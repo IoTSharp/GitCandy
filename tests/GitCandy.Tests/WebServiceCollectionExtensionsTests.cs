@@ -5,6 +5,7 @@ using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Git;
+using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
@@ -70,6 +71,8 @@ public sealed class WebServiceCollectionExtensionsTests
 
             Assert.IsNotNull(serviceProvider.GetRequiredService<IMemoryCache>());
             Assert.IsNotNull(serviceProvider.GetRequiredService<IApplicationCache>());
+            Assert.IsNotNull(serviceProvider.GetRequiredService<IHttpContextAccessor>());
+            Assert.IsNotNull(serviceProvider.GetRequiredService<IRequestProfilerAccessor>());
             Assert.IsNotNull(serviceProvider.GetRequiredService<ISshServerRuntime>());
 
             var localizationOptions = serviceProvider.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value;

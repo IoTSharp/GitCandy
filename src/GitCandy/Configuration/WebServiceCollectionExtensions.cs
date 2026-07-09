@@ -6,6 +6,7 @@ using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
 using GitCandy.Git;
+using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Identity;
@@ -45,8 +46,10 @@ public static class WebServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddControllersWithViews();
+        services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
+        services.TryAddSingleton<IRequestProfilerAccessor, HttpContextRequestProfilerAccessor>();
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
 

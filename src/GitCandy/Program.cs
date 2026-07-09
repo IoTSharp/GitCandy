@@ -1,4 +1,5 @@
 using GitCandy.Configuration;
+using GitCandy.Profiling;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +7,7 @@ builder.Services.AddGitCandyWebShell(builder.Configuration);
 
 var app = builder.Build();
 app.ConfigureGitCandyLegacyLogger();
+app.UseGitCandyRequestProfiler();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

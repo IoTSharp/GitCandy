@@ -15,7 +15,7 @@
         @RenderBody()
     </main>
 
-    <footer class="site-footer">
+    <footer class="site-footer" title="@Context.GetGitCandyRequestProfiler()?.Elapsed">
         &copy; 2026 - GitCandy
     </footer>
     @await RenderSectionAsync("Scripts", required: false)
