@@ -267,7 +267,8 @@ ASP.NET Core 中间件和后台能力：
 - SSH 使用 public key auth，并直接接入 Identity 用户、SSH key、权限服务和审计。
 - Git endpoints 禁止响应 buffering，不能全局压缩 pack 响应，不能把 pack 完整读入内存。
 - 对登录、API、Git HTTP、SSH 分别设置限流、请求体限制、超时、日志脱敏和审计。
-- 后台任务使用 `BackgroundService`、队列、`CancellationToken`、`IDbContextFactory` 和清晰的 graceful shutdown。
+- Scheduler 采用 Quartz.NET 并作为 ASP.NET Core hosted service 随 GitCandy host 启停；第一阶段使用内存调度，避免把 Quartz 持久化 schema 混入 EF/Identity 迁移，后续若需要持久化、集群或管理 UI 再作为独立任务评估。
+- 后台任务使用 Quartz.NET job、`CancellationToken`、`IDbContextFactory` 和清晰的 graceful shutdown。
 
 ## 竞品参考学习对象
 
@@ -359,7 +360,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #022 | 日志适配 | 已新增迁移期 `GitCandy.Log.Logger` 兼容 adapter，绑定 ASP.NET Core `ILoggerFactory` |
 | ✅ #023 | 缓存替换 | 已注册 `IMemoryCache`，新增 `IApplicationCache`/`MemoryApplicationCache` 作为旧 `HttpRuntime.Cache` 迁移入口，并补充门禁和缓存行为测试 |
 | ✅ #024 | DI 替换 MEF | 已新增 `IMembershipService`、`IRepositoryService`、`IGitServiceFactory`、`IGitRepositoryPathResolver` 和 `ISchedulerJob` DI 注册，补充 MEF 门禁与迁移记录 |
-| ⬜ #025 | Scheduler hosted service | Scheduler 改为 `IHostedService` 或 `BackgroundService` |
+| ⬜ #025 | Quartz.NET Scheduler hosted service | 引入 Quartz.NET 作为应用内 scheduler 组件，通过 `AddQuartz` / `AddQuartzHostedService` 接入 ASP.NET Core 生命周期 |
 | ⬜ #026 | SSH 生命周期占位 | SSH Server 启停改为 hosted service 形态，支持 graceful shutdown |
 | ⬜ #027 | Profiler 迁移 | `Profiler` 改为 middleware 或 action filter |
 | ⬜ #028 | 启停诊断 | 应用启动、停止、后台任务启动失败日志清晰 |
@@ -521,7 +522,7 @@ ASP.NET Core 中间件和后台能力：
 | ⬜ #073 | 后台 DbContext 边界 | 后台线程访问数据库使用 `IDbContextFactory` |
 | ⬜ #074 | SSH 配置迁移 | 保留端口、host keys、开关配置迁移路径 |
 | ⬜ #075 | SSH 安全评估 | 评估自写 SSH 协议实现的安全性、算法兼容性、host key 管理和禁用交互 shell/SFTP/端口转发的策略 |
-| ⬜ #076 | Scheduler 取消支持 | Scheduler 改为 hosted service，任务取消支持 `CancellationToken` |
+| ⬜ #076 | Scheduler 取消支持 | Quartz.NET job 支持 `CancellationToken`，应用停止时等待或取消后台任务并记录诊断日志 |
 | ⬜ #077 | 启停日志与失败诊断 | 端口占用、host key 缺失、后台任务异常日志可诊断 |
 | ⬜ #078 | SSH clone/fetch/push 验证 | SSH clone、fetch、push 通过 |
 | ⬜ #079 | 关闭与端口冲突验证 | 应用停止时 SSH listener 和 scheduler 正常退出；端口被占用时应用行为明确 |
