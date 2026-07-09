@@ -295,7 +295,7 @@ ASP.NET Core 中间件和后台能力：
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
 | ✅ #000 | 迁移分支与旧项目冻结 | 已建立 `migration/aspnet-core-10`，保留当前 MVC5 项目为行为参考，并在 `docs/migration/m0-000-baseline.md` 记录工作区基线 |
-| ⬜ #001 | 测试数据与样例仓库 | 准备新库样例数据、bare git repository、管理员、普通用户、团队、公有仓库和私有仓库 |
+| ✅ #001 | 测试数据与样例仓库 | 已新增 `tools/migration/m0-001/New-M0SampleData.ps1` 和 `docs/migration/m0-001-test-data-and-sample-repositories.md`，可重复生成新库样例数据规格、管理员、普通用户、团队、公有仓库、私有仓库和 bare git repository |
 | ⬜ #002 | Web 行为清单 | 记录登录、登出、注册、改密码、用户/团队/仓库 CRUD、仓库浏览页面行为 |
 | ⬜ #003 | Git HTTP 行为清单 | 记录 `clone`、`fetch`、`push`、认证失败、权限不足、仓库不存在和 service 不支持行为 |
 | ⬜ #004 | SSH 行为清单 | 若启用 SSH，记录 SSH clone/fetch/push、host key、端口和认证行为 |
