@@ -1,3 +1,4 @@
+using GitCandy.Data.Domain;
 using Microsoft.AspNetCore.Identity;
 
 namespace GitCandy.Data.Identity;
@@ -16,4 +17,14 @@ public sealed class GitCandyUser : IdentityUser
     /// 用户个人说明。
     /// </summary>
     public string? Description { get; set; }
+
+    /// <summary>
+    /// 用户直接拥有的仓库角色。
+    /// </summary>
+    public ICollection<GitCandyUserRepositoryRole> RepositoryRoles { get; set; } = [];
+
+    /// <summary>
+    /// 用户所属团队角色。
+    /// </summary>
+    public ICollection<GitCandyUserTeamRole> TeamRoles { get; set; } = [];
 }

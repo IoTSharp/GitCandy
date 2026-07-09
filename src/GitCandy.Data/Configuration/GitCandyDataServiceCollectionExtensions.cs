@@ -1,6 +1,8 @@
+using GitCandy.Data.Permissions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace GitCandy.Data.Configuration;
@@ -28,6 +30,7 @@ public static class GitCandyDataServiceCollectionExtensions
 
         var options = GitCandyDatabaseOptionsReader.Read(configuration);
         services.AddSingleton<IOptions<GitCandyDatabaseOptions>>(Options.Create(options));
+        services.TryAddScoped<IGitCandyRepositoryPermissionQuery, GitCandyRepositoryPermissionQuery>();
 
         var builder = new GitCandyDatabaseBuilder(services, configuration);
         configureProviders(builder);

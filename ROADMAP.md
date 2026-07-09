@@ -296,14 +296,14 @@ ASP.NET Core 中间件和后台能力：
 | --- | --- | --- |
 | ✅ #000 | 迁移分支与旧项目冻结 | 已建立 `migration/aspnet-core-10`，保留当前 MVC5 项目为行为参考，并在 `docs/migration/m0-000-baseline.md` 记录工作区基线 |
 | ✅ #001 | 测试数据与样例仓库 | 已新增 `tools/migration/m0-001/New-M0SampleData.ps1` 和 `docs/migration/m0-001-test-data-and-sample-repositories.md`，可重复生成新库样例数据规格、管理员、普通用户、团队、公有仓库、私有仓库和 bare git repository |
-| ⬜ #002 | Web 行为清单 | 记录登录、登出、注册、改密码、用户/团队/仓库 CRUD、仓库浏览页面行为 |
-| ⬜ #003 | Git HTTP 行为清单 | 记录 `clone`、`fetch`、`push`、认证失败、权限不足、仓库不存在和 service 不支持行为 |
-| ⬜ #004 | SSH 行为清单 | 若启用 SSH，记录 SSH clone/fetch/push、host key、端口和认证行为 |
-| ⬜ #005 | Identity 与领域 schema smoke test 骨架 | 建立可运行的新数据库创建、读取、写入和权限查询 smoke test 入口 |
-| ⬜ #006 | 权限服务测试基线 | 覆盖匿名、公有仓库、私有仓库、owner、team、administrator 权限语义 |
-| ⬜ #007 | MVC smoke test 基线 | 覆盖首页、仓库列表、登录页、主要表单和错误页 |
-| ⬜ #008 | Git HTTP integration script | 建立可重复运行的 `git clone/fetch/push` 本地脚本 |
-| ⬜ #009 | 安全与 PR 验证模板 | 记录 Identity 密码策略、cookie 生命周期、安全戳、私有仓库匿名访问规则和迁移 PR 验证模板 |
+| ✅ #002 | Web 行为清单 | 已新增 `docs/migration/m0-002-web-behavior-checklist.md`，记录登录、登出、注册、改密码、用户/团队/仓库 CRUD、仓库浏览页面行为 |
+| ✅ #003 | Git HTTP 行为清单 | 已新增 `docs/migration/m0-003-git-http-behavior-checklist.md`，记录 `clone`、`fetch`、`push`、认证失败、权限不足、仓库不存在和 service 不支持行为 |
+| ✅ #004 | SSH 行为清单 | 已新增 `docs/migration/m0-004-ssh-behavior-checklist.md`，记录 SSH clone/fetch/push、host key、端口、public key 认证、Git 命令分派和权限行为 |
+| ✅ #005 | Identity 与领域 schema smoke test 骨架 | 已新增 `docs/migration/m0-005-identity-domain-schema-smoke-tests.md`，建立可运行的新数据库创建、Identity/领域数据读取写入和基础权限查询 smoke test 入口 |
+| ✅ #006 | 权限服务测试基线 | 已新增 `docs/migration/m0-006-permission-service-test-baseline.md` 和 `GitCandyRepositoryPermissionQueryTests`，覆盖匿名、公有仓库、私有仓库、owner、team、administrator 权限语义 |
+| ✅ #007 | MVC smoke test 基线 | 已新增 `tools/migration/m0-007/Invoke-M0MvcSmokeTests.ps1` 和 `docs/migration/m0-007-mvc-smoke-test-baseline.md`，覆盖首页、仓库列表、登录页、主要表单和错误页 |
+| ✅ #008 | Git HTTP integration script | 已新增 `tools/migration/m0-008/Invoke-GitHttpIntegration.ps1` 和 `docs/migration/m0-008-git-http-integration-script.md`，可重复运行本地 Git HTTP `clone`、`fetch`、`push` 集成脚本 |
+| ✅ #009 | 安全与 PR 验证模板 | 已新增 `docs/migration/m0-009-security-and-pr-validation-template.md` 和 `.github/PULL_REQUEST_TEMPLATE.md`，记录 Identity 密码策略、cookie 生命周期、安全戳、私有仓库匿名访问规则和迁移 PR 验证模板 |
 
 验收：
 
@@ -670,7 +670,7 @@ ASP.NET Core 中间件和后台能力：
 
 | 编号 | 工作项 |
 | --- | --- |
-| ✅ #000，⬜ #001 到 ⬜ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
+| ✅ #000 到 ✅ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
 | ⬜ #010 | 新建 `src/GitCandy.Web` ASP.NET Core 10 MVC 项目 |
 | ⬜ #011 到 ⬜ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
 | ⬜ #015 到 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline 和空路由 |
@@ -684,10 +684,9 @@ ASP.NET Core 中间件和后台能力：
 
 当前校准后的短线顺序：
 
-1. 继续补 ⬜ #001 到 ⬜ #009 的行为保护网，尤其是 Git HTTP/SSH 行为清单和本地 `clone/fetch/push` 脚本。
-2. 然后完成 ⬜ #010 与 ⬜ #015 到 ⬜ #017，建立可运行的 `src/GitCandy.Web` 和标准 ASP.NET Core MVC pipeline。
-3. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
-4. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。
+1. 完成 ⬜ #010 与 ⬜ #015 到 ⬜ #017，建立可运行的 `src/GitCandy.Web` 和标准 ASP.NET Core MVC pipeline。
+2. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
+3. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。
 
 ⬜ M10 的代码智能能力进入第二波实施：等 Git Smart HTTP、SSH/scheduler、部署路径稳定后，再从 ⬜ #150 schema 和 ⬜ #151 ingest 垂直切片开始推进。
 

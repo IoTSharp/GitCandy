@@ -8,6 +8,14 @@
  - Added SQLite data-layer smoke tests for database creation and Identity user read/write.
  - Added the M0 #000 migration branch and legacy MVC5 freeze baseline record.
  - Added the M0 #001 repeatable sample data and bare repository fixture generator.
+ - Added the M0 #002 legacy MVC5 Web behavior checklist for account, team, repository, and repository browsing migration coverage.
+ - Added the M0 #003 legacy Git Smart HTTP behavior checklist for clone, fetch, push, authentication failure, authorization failure, missing repository, and unsupported service coverage.
+ - Added the M0 #004 legacy SSH behavior checklist for clone, fetch, push, host key, port, public key authentication, Git command dispatch, and authorization coverage.
+ - Added the M0 #005 Identity and domain schema smoke-test skeleton with repository/team role tables and a reusable repository permission query entry point.
+ - Added the M0 #006 repository permission service test baseline for anonymous, public, private, owner, team, administrator, and no-role access semantics.
+ - Added the M0 #007 legacy MVC smoke test baseline script and documentation for home, repository list, login, main forms, and error page coverage.
+ - Added the M0 #008 repeatable Git HTTP integration script for local clone, fetch, push, and authorization failure smoke coverage.
+ - Added the M0 #009 migration security baseline and pull request validation template for Identity, cookie, security stamp, private repository access, and compatibility checks.
 
 #### Migration
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
