@@ -20,6 +20,9 @@
  - Added the M1 #012 `GitCandy.slnx` validation script and GitHub Actions workflow so migration restore/build/test commands use the active `.slnx` solution.
  - Added the M1 #015 standard ASP.NET Core MVC pipeline with controller views, routing, static assets, error handling, HSTS, and HTTPS redirection.
  - Added the M1 #016 ASP.NET Core Identity, authentication cookie, authorization policy, session, and localization placeholders without migrating legacy authentication.
+ - Added the M1 #017 ASP.NET Core compatibility placeholder routes for `/`, `/Repository`, `/Account/Login`, and legacy Git Smart HTTP URL shapes.
+ - Added the M1 #018 `System.Web` entry-gate tests so new migration projects cannot reference legacy ASP.NET MVC5 or EF6 APIs.
+ - Added the M1 #019 shell build validation record for `dotnet build GitCandy.slnx`.
 
 #### Migration
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.

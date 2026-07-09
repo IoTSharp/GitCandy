@@ -311,7 +311,7 @@ ASP.NET Core 中间件和后台能力：
 - 当前项目关键行为被文档化。
 - 后续任何迁移 PR 都能说明是否影响 Git 协议、数据库 schema、公开路由。
 
-### ⬜ Milestone 1：新 ASP.NET Core 10 MVC 外壳
+### ✅ Milestone 1：新 ASP.NET Core 10 MVC 外壳
 
 目标：建立可运行的新项目壳，不迁业务。
 
@@ -320,7 +320,7 @@ ASP.NET Core 中间件和后台能力：
 - 只搭建 host、solution、基础项目和占位路由。
 - 不搬迁旧业务代码，不提前做 UI redesign。
 
-#### ⬜ M1 拆分
+#### ✅ M1 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
@@ -331,9 +331,9 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #014 | Central Package Management | 已新增 `Directory.Packages.props` 管理包版本 |
 | ✅ #015 | 标准 MVC pipeline | 已在 `Program.cs` 建立 `AddControllersWithViews`、routing、static assets、错误处理、HSTS 和 HTTPS 重定向基础管线 |
 | ✅ #016 | 认证/授权占位 | 已加入 Identity、认证 cookie、授权策略、session/localization 的占位配置，不迁旧认证 |
-| ⬜ #017 | 兼容占位路由 | 暂建 `/`、`/Repository`、`/Account/Login` 等占位路由 |
-| ⬜ #018 | `System.Web` 入口检查 | 确认新项目不引用 `System.Web`、`System.Web.Mvc`、`System.Web.Optimization`、`System.Data.Entity` |
-| ⬜ #019 | 空壳构建验证 | `dotnet build` 能构建新空壳 |
+| ✅ #017 | 兼容占位路由 | 已新增 `/`、`/Repository`、`/Account/Login`、Git Smart HTTP 等兼容占位路由，并用 HTTP smoke test 保护 |
+| ✅ #018 | `System.Web` 入口检查 | 已新增 `SystemWebEntryCheckTests`，在 `GitCandy.slnx` 测试中确认新项目不引用 `System.Web`、`System.Web.Mvc`、`System.Web.Optimization`、`System.Data.Entity` |
+| ✅ #019 | 空壳构建验证 | `dotnet build .\GitCandy.slnx` 已通过，Debug 构建 0 警告/0 错误 |
 
 验收：
 
@@ -653,7 +653,7 @@ ASP.NET Core 中间件和后台能力：
 | 里程碑 | 优先级含义 | 完成口径 |
 | --- | --- | --- |
 | 🚧 M0 | 最高优先级，先冻结行为 | 完成基线测试数据、行为清单、迁移分支和 PR 验证模板 |
-| ⬜ M1 | 新 host 起步 | 新 ASP.NET Core 10 MVC 空壳可运行 |
+| ✅ M1 | 新 host 起步 | 新 ASP.NET Core 10 MVC 空壳可运行 |
 | ⬜ M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
 | ⬜ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建，并能生成 SQL Server migration SQL；登录/授权 smoke test 通过 |
 | ⬜ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
@@ -672,8 +672,8 @@ ASP.NET Core 中间件和后台能力：
 | --- | --- |
 | ✅ #000 到 ✅ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
 | ✅ #010 | 新建 `src/GitCandy` ASP.NET Core 10 MVC 主程序项目 |
-| ⬜ #011 到 ⬜ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
-| ✅ #015 到 ✅ #016 与 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline、认证/授权占位和空路由 |
+| ✅ #011 到 ✅ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
+| ✅ #015 到 ✅ #019 | 建立新 `Program.cs`、标准 pipeline、认证/授权占位、空路由、`System.Web` 门禁和空壳构建验证 |
 | ⬜ #030 到 ⬜ #039 | 建立 EF Core `GitCandyDbContext` + Identity schema，先完成新库创建和管理员 seed |
 | ⬜ #040 到 ⬜ #049 | 迁移登录、当前用户和权限服务，打通 Web 登录/登出 |
 | ⬜ #050 到 ⬜ #059 | 迁移登录页和 `Repository/Index` 作为垂直切片 |
@@ -684,7 +684,7 @@ ASP.NET Core 中间件和后台能力：
 
 当前校准后的短线顺序：
 
-1. 完成 ✅ #010、✅ #015 与 ⬜ #016 到 ⬜ #017，建立可运行的 `src/GitCandy` 和标准 ASP.NET Core MVC pipeline。
+1. ✅ M1 已完成：`src/GitCandy` 空壳、标准 ASP.NET Core MVC pipeline、兼容占位路由、`System.Web` 门禁和 `.slnx` 构建验证已闭环。
 2. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
 3. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。
 
