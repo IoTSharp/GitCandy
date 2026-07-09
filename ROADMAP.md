@@ -391,12 +391,12 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #031 | Provider 配置 | 短期约定先锁定 SQLite 作为业务实现与验收 provider；现有 PgSQL/SonnetDB provider 保留但不扩大范围，SQL Server 及多 provider migration/schema 差异等整体迁移跑通后再回补 |
 | ✅ #032 | Identity 标准 schema | 已新增 SQLite `InitialIdentitySchema` migration/snapshot，并用 `MigrateAsync` smoke test 验证 `AspNetUsers`、`AspNetRoles`、claims、logins、tokens、Identity 索引和 `__EFMigrationsHistory` |
 | ✅ #033 | GitCandy 领域表 | 已重新建模 `Teams`、`Repositories`、用户/团队角色和 `SshKeys`，并用 SQLite migration-backed smoke test 覆盖表/索引创建、读写、Identity user id 外键和 SSH fingerprint 唯一约束 |
-| ⬜ #034 | Identity user id 外键 | 领域表中的用户外键使用 Identity user id |
+| ✅ #034 | Identity user id 外键 | `UserRepositoryRoles.UserId`、`UserTeamRoles.UserId`、`SshKeys.UserId` 均使用 Identity `AspNetUsers.Id`，并用 SQLite FK 元数据、孤儿 user id 写入失败和删除用户级联清理验证 |
 | ⬜ #035 | 约束与索引 | 显式配置长度、required、PK/FK、唯一索引、大小写不敏感规则 |
 | ⬜ #036 | Lazy loading 决策 | 默认不引入 lazy loading proxies，显式修正查询 |
 | ⬜ #037 | DbContext 注入边界 | 服务使用 `GitCandyDbContext` 或 `IDbContextFactory<GitCandyDbContext>`，后台线程不跨线程复用 scoped context |
 | ⬜ #038 | Migration 策略 | 初始 migration 代表新系统 schema，旧用户表不作为 baseline；SQLite 和 SQL Server migration SQL 是第一阶段门槛，旧元数据导入另做工具 |
-| 🚧 #039 | 数据层 smoke tests | 已覆盖 SQLite `EnsureCreated`、Identity 用户读写、migration-backed Identity/领域 schema 创建、团队/仓库/SSH key CRUD、权限查询和 SSH key 唯一约束；SQL Server migration SQL 待后续，PgSQL/SonnetDB 作为可选 provider 验证 |
+| 🚧 #039 | 数据层 smoke tests | 已覆盖 SQLite `EnsureCreated`、Identity 用户读写、migration-backed Identity/领域 schema 创建、团队/仓库/SSH key CRUD、权限查询、Identity user id 外键和 SSH key 唯一约束；SQL Server migration SQL 待后续，PgSQL/SonnetDB 作为可选 provider 验证 |
 
 验收：
 

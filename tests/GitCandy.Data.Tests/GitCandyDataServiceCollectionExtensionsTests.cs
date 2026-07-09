@@ -393,6 +393,170 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    public async Task AddGitCandyData_WithDomainUserForeignKeys_UsesIdentityUserIds()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sqlite",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using var scope = serviceProvider.CreateAsyncScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await dbContext.Database.MigrateAsync();
+
+            await AssertHasIdentityUserForeignKeyAsync(dbContext, "UserRepositoryRoles");
+            await AssertHasIdentityUserForeignKeyAsync(dbContext, "UserTeamRoles");
+            await AssertHasIdentityUserForeignKeyAsync(dbContext, "SshKeys");
+
+            var repository = new GitCandyRepository
+            {
+                Name = "private-demo",
+                Description = "Private demo repository",
+                CreatedAtUtc = DateTime.UtcNow,
+                IsPrivate = true
+            };
+            var team = new GitCandyTeam
+            {
+                Name = "core",
+                Description = "Core maintainers",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            dbContext.Repositories.Add(repository);
+            dbContext.Teams.Add(team);
+            await dbContext.SaveChangesAsync();
+
+            await Assert.ThrowsExactlyAsync<DbUpdateException>(
+                () => SaveUserRepositoryRoleWithMissingUserAsync(serviceProvider, repository.Id));
+            await Assert.ThrowsExactlyAsync<DbUpdateException>(
+                () => SaveUserTeamRoleWithMissingUserAsync(serviceProvider, team.Id));
+            await Assert.ThrowsExactlyAsync<DbUpdateException>(
+                () => SaveSshKeyWithMissingUserAsync(serviceProvider));
+        }
+        finally
+        {
+            if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyData_WithDeletedIdentityUser_CascadesDomainUserForeignKeys()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sqlite",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using var scope = serviceProvider.CreateAsyncScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await dbContext.Database.MigrateAsync();
+
+            var alice = new GitCandyUser
+            {
+                Id = "user-alice",
+                UserName = "alice",
+                NormalizedUserName = "ALICE",
+                Email = "alice@example.com",
+                NormalizedEmail = "ALICE@EXAMPLE.COM"
+            };
+            var repository = new GitCandyRepository
+            {
+                Name = "private-demo",
+                Description = "Private demo repository",
+                CreatedAtUtc = DateTime.UtcNow,
+                IsPrivate = true
+            };
+            var team = new GitCandyTeam
+            {
+                Name = "core",
+                Description = "Core maintainers",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            dbContext.Users.Add(alice);
+            dbContext.Repositories.Add(repository);
+            dbContext.Teams.Add(team);
+            await dbContext.SaveChangesAsync();
+
+            dbContext.UserRepositoryRoles.Add(new GitCandyUserRepositoryRole
+            {
+                UserId = alice.Id,
+                RepositoryId = repository.Id,
+                AllowRead = true,
+                AllowWrite = true,
+                IsOwner = true
+            });
+            dbContext.UserTeamRoles.Add(new GitCandyUserTeamRole
+            {
+                UserId = alice.Id,
+                TeamId = team.Id,
+                IsAdministrator = true
+            });
+            dbContext.SshKeys.Add(new GitCandySshKey
+            {
+                UserId = alice.Id,
+                KeyType = "ssh-rsa",
+                Fingerprint = SshFingerprint,
+                PublicKey = SshPublicKey,
+                ImportedAtUtc = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+
+            dbContext.ChangeTracker.Clear();
+
+            var savedUser = await dbContext.Users.SingleAsync(user => user.Id == alice.Id);
+            dbContext.Users.Remove(savedUser);
+            await dbContext.SaveChangesAsync();
+
+            Assert.AreEqual(0, await dbContext.UserRepositoryRoles.CountAsync());
+            Assert.AreEqual(0, await dbContext.UserTeamRoles.CountAsync());
+            Assert.AreEqual(0, await dbContext.SshKeys.CountAsync());
+            Assert.AreEqual(1, await dbContext.Repositories.CountAsync());
+            Assert.AreEqual(1, await dbContext.Teams.CountAsync());
+        }
+        finally
+        {
+            if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
+    [TestMethod]
     public void AddGitCandyData_WithUnregisteredProvider_ThrowsNotSupportedException()
     {
         var configuration = new ConfigurationBuilder()
@@ -448,4 +612,102 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
 
         return names;
     }
+
+    private static async Task AssertHasIdentityUserForeignKeyAsync(
+        GitCandyDbContext dbContext,
+        string tableName)
+    {
+        var foreignKeys = await ReadSqliteForeignKeysAsync(dbContext, tableName);
+
+        Assert.IsTrue(
+            foreignKeys.Any(static foreignKey =>
+                string.Equals(foreignKey.PrincipalTable, "AspNetUsers", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(foreignKey.ForeignKeyColumn, "UserId", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(foreignKey.PrincipalColumn, "Id", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(foreignKey.OnDelete, "CASCADE", StringComparison.OrdinalIgnoreCase)),
+            $"{tableName}.UserId must reference AspNetUsers.Id with cascade delete.");
+    }
+
+    private static async Task<IReadOnlyList<SqliteForeignKey>> ReadSqliteForeignKeysAsync(
+        GitCandyDbContext dbContext,
+        string tableName)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        await using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA foreign_key_list('{tableName.Replace("'", "''", StringComparison.Ordinal)}')";
+
+        var foreignKeys = new List<SqliteForeignKey>();
+        await using var reader = await command.ExecuteReaderAsync();
+        while (await reader.ReadAsync())
+        {
+            foreignKeys.Add(new SqliteForeignKey(
+                reader.GetString(2),
+                reader.GetString(3),
+                reader.GetString(4),
+                reader.GetString(6)));
+        }
+
+        return foreignKeys;
+    }
+
+    private static async Task SaveUserRepositoryRoleWithMissingUserAsync(
+        IServiceProvider serviceProvider,
+        long repositoryId)
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+
+        dbContext.UserRepositoryRoles.Add(new GitCandyUserRepositoryRole
+        {
+            UserId = "missing-identity-user",
+            RepositoryId = repositoryId,
+            AllowRead = true
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task SaveUserTeamRoleWithMissingUserAsync(
+        IServiceProvider serviceProvider,
+        long teamId)
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+
+        dbContext.UserTeamRoles.Add(new GitCandyUserTeamRole
+        {
+            UserId = "missing-identity-user",
+            TeamId = teamId
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task SaveSshKeyWithMissingUserAsync(IServiceProvider serviceProvider)
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+
+        dbContext.SshKeys.Add(new GitCandySshKey
+        {
+            UserId = "missing-identity-user",
+            KeyType = "ssh-rsa",
+            Fingerprint = "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
+            PublicKey = SshPublicKey,
+            ImportedAtUtc = DateTime.UtcNow
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private sealed record SqliteForeignKey(
+        string PrincipalTable,
+        string ForeignKeyColumn,
+        string PrincipalColumn,
+        string OnDelete);
 }

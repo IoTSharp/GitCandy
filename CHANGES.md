@@ -36,6 +36,7 @@
  - Added a migration-backed SQLite Identity schema smoke test that uses `MigrateAsync` and verifies `AspNetUsers`, `AspNetRoles`, claims, logins, roles, tokens, Identity indexes, and `__EFMigrationsHistory`.
  - Added the M3 #033 GitCandy domain table model for repositories, teams, user/team repository roles, team membership roles, and SSH public keys.
  - Added migration-backed SQLite domain table smoke coverage for table/index creation, SSH key persistence, Identity user id foreign keys, and duplicate SSH fingerprint rejection.
+ - Added the M3 #034 Identity user id foreign key validation for `UserRepositoryRoles.UserId`, `UserTeamRoles.UserId`, and `SshKeys.UserId` against `AspNetUsers.Id`, including orphan user rejection and cascade cleanup.
 
 #### Migration
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
