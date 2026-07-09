@@ -7,6 +7,7 @@ using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
 using GitCandy.Git;
 using GitCandy.Schedules;
+using GitCandy.Ssh;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
@@ -55,6 +56,7 @@ public static class WebServiceCollectionExtensions
 
         services.AddGitCandyMigrationServices();
         services.AddGitCandyScheduler();
+        services.AddGitCandySsh();
 
         services.ConfigureApplicationCookie(options =>
         {
@@ -128,6 +130,15 @@ public static class WebServiceCollectionExtensions
             options.AwaitApplicationStarted = true;
             options.WaitForJobsToComplete = true;
         });
+
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandySsh(this IServiceCollection services)
+    {
+        services.TryAddSingleton<ISshServerRuntime, PlaceholderSshServerRuntime>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, SshServerHostedService>());
 
         return services;
     }

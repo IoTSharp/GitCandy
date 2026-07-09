@@ -6,6 +6,7 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Git;
 using GitCandy.Schedules;
+using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -51,6 +52,10 @@ public sealed class WebServiceCollectionExtensionsTests
             services.AddLogging();
             services.AddGitCandyWebShell(configuration);
 
+            Assert.IsTrue(services.Any(service =>
+                service.ServiceType == typeof(IHostedService)
+                && service.ImplementationType == typeof(SshServerHostedService)));
+
             await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
 
             var schemeProvider = serviceProvider.GetRequiredService<IAuthenticationSchemeProvider>();
@@ -65,6 +70,7 @@ public sealed class WebServiceCollectionExtensionsTests
 
             Assert.IsNotNull(serviceProvider.GetRequiredService<IMemoryCache>());
             Assert.IsNotNull(serviceProvider.GetRequiredService<IApplicationCache>());
+            Assert.IsNotNull(serviceProvider.GetRequiredService<ISshServerRuntime>());
 
             var localizationOptions = serviceProvider.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value;
             Assert.AreEqual("en-US", localizationOptions.DefaultRequestCulture.Culture.Name);
@@ -271,6 +277,62 @@ public sealed class WebServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    public async Task SshServerHostedService_WithEnabledSsh_StartsAndStopsRuntimeWithConfiguredPort()
+    {
+        var runtime = new RecordingSshServerRuntime();
+        var configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["GitCandy:Application:EnableSsh"] = "true",
+                ["GitCandy:Application:SshPort"] = "2022"
+            });
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ISshServerRuntime>(runtime);
+        services.AddGitCandyWebShell(configuration);
+
+        await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var hostedService = ActivatorUtilities.CreateInstance<SshServerHostedService>(serviceProvider);
+
+        await hostedService.StartAsync(CancellationToken.None);
+
+        using var stopTokenSource = new CancellationTokenSource();
+        await hostedService.StopAsync(stopTokenSource.Token);
+
+        Assert.AreEqual(1, runtime.StartCalls);
+        Assert.AreEqual(2022, runtime.StartedPort);
+        Assert.AreEqual(1, runtime.StopCalls);
+        Assert.IsTrue(runtime.StopCancellationCanBeCanceled);
+    }
+
+    [TestMethod]
+    public async Task SshServerHostedService_WithDisabledSsh_DoesNotStartRuntime()
+    {
+        var runtime = new RecordingSshServerRuntime();
+        var configuration = BuildConfiguration(
+            new Dictionary<string, string?>
+            {
+                ["GitCandy:Application:EnableSsh"] = "false",
+                ["GitCandy:Application:SshPort"] = "2022"
+            });
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ISshServerRuntime>(runtime);
+        services.AddGitCandyWebShell(configuration);
+
+        await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var hostedService = ActivatorUtilities.CreateInstance<SshServerHostedService>(serviceProvider);
+
+        await hostedService.StartAsync(CancellationToken.None);
+        await hostedService.StopAsync(CancellationToken.None);
+
+        Assert.AreEqual(0, runtime.StartCalls);
+        Assert.AreEqual(0, runtime.StopCalls);
+    }
+
+    [TestMethod]
     public void AddGitCandyWebShell_WithApplicationConfiguration_BindsStronglyTypedOptions()
     {
         var configuration = BuildConfiguration(
@@ -416,6 +478,31 @@ public sealed class WebServiceCollectionExtensionsTests
         public TimeSpan GetNextInterval(SchedulerJobContext context)
         {
             return TimeSpan.MaxValue;
+        }
+    }
+
+    private sealed class RecordingSshServerRuntime : ISshServerRuntime
+    {
+        public int StartCalls { get; private set; }
+
+        public int StopCalls { get; private set; }
+
+        public int StartedPort { get; private set; }
+
+        public bool StopCancellationCanBeCanceled { get; private set; }
+
+        public Task StartAsync(int port, CancellationToken cancellationToken = default)
+        {
+            StartCalls++;
+            StartedPort = port;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            StopCalls++;
+            StopCancellationCanBeCanceled = cancellationToken.CanBeCanceled;
+            return Task.CompletedTask;
         }
     }
 
