@@ -23,8 +23,10 @@
  - Added the M1 #017 ASP.NET Core compatibility placeholder routes for `/`, `/Repository`, `/Account/Login`, and legacy Git Smart HTTP URL shapes.
  - Added the M1 #018 `System.Web` entry-gate tests so new migration projects cannot reference legacy ASP.NET MVC5 or EF6 APIs.
  - Added the M1 #019 shell build validation record for `dotnet build GitCandy.slnx`.
+ - Added the M2 #020 `GitCandy:Application` options model for migrated application configuration.
 
 #### Migration
+ - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
  - Calibrated the database migration gate to require SQLite by default plus a viable SQL Server schema/migration path; PostgreSQL and SonnetDB are optional provider extensions.

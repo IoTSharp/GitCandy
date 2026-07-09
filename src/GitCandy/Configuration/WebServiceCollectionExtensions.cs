@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace GitCandy.Configuration;
 
@@ -36,6 +38,7 @@ public static class WebServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddControllersWithViews();
+        services.AddGitCandyApplicationOptions(configuration);
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
 
@@ -75,6 +78,23 @@ public static class WebServiceCollectionExtensions
             options.SupportedCultures = SupportedCultures;
             options.SupportedUICultures = SupportedCultures;
         });
+
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyApplicationOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<GitCandyApplicationOptions>()
+            .Bind(configuration.GetSection(GitCandyApplicationOptions.SectionName))
+            .ValidateOnStart();
+
+        services.PostConfigure<GitCandyApplicationOptions>(options =>
+            GitCandyApplicationOptionsConfiguration.ApplyLegacyAliases(options, configuration));
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<GitCandyApplicationOptions>, GitCandyApplicationOptionsValidator>());
 
         return services;
     }

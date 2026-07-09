@@ -341,7 +341,7 @@ ASP.NET Core 中间件和后台能力：
 - `/`、`/Repository`、`/Account/Login` 等占位路由存在。
 - 没有旧 `System.Web` 引用进入新项目。
 
-### ⬜ Milestone 2：配置、日志、缓存、DI 和后台生命周期
+### 🚧 Milestone 2：配置、日志、缓存、DI 和后台生命周期
 
 目标：先把横切基础设施从 `Global.asax` 转成 ASP.NET Core 形态。
 
@@ -354,7 +354,7 @@ ASP.NET Core 中间件和后台能力：
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #020 | 配置迁移 | `Web.config appSettings` 迁移到 `appsettings.json` + options pattern |
+| ✅ #020 | 配置迁移 | 已新增 `GitCandy:Application` appsettings 配置、`GitCandyApplicationOptions`、启动期校验和旧 `LogPathFormat` / `UserConfiguration` 别名 |
 | ⬜ #021 | 路径配置抽象 | `Server.MapPath` 改为 `IWebHostEnvironment.ContentRootPath/WebRootPath` |
 | ⬜ #022 | 日志适配 | 旧 `Logger` 改为 `ILogger<T>` 或兼容 adapter |
 | ⬜ #023 | 缓存替换 | `HttpRuntime.Cache` 改为 `IMemoryCache` |
@@ -654,7 +654,7 @@ ASP.NET Core 中间件和后台能力：
 | --- | --- | --- |
 | 🚧 M0 | 最高优先级，先冻结行为 | 完成基线测试数据、行为清单、迁移分支和 PR 验证模板 |
 | ✅ M1 | 新 host 起步 | 新 ASP.NET Core 10 MVC 空壳可运行 |
-| ⬜ M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
+| 🚧 M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
 | ⬜ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建，并能生成 SQL Server migration SQL；登录/授权 smoke test 通过 |
 | ⬜ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
 | ⬜ M5 | Web 垂直切片 | 账户、团队、仓库 CRUD 页面迁移完成 |
