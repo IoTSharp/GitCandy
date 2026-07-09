@@ -16,7 +16,7 @@
 
 - 当前已有一部分数据层骨架先行落地（`GitCandyDbContext`、SQLite/PgSQL/SonnetDB provider 注册和 SQLite smoke tests）。这只作为受控垂直切片保留，后续继续扩大数据层前必须补回 M0 行为保护网和 M1 ASP.NET Core Web host。
 - .NET 迁移主线以 `GitCandy.slnx` 为准；旧 `GitCandy.sln` 只作为 MVC5 行为参考，不能作为新 SDK-style 项目的构建入口或 CI 默认入口。
-- 第一轮数据库验收门槛为 SQLite 默认可用，并保持 SQL Server schema/migration SQL 路径可行。PostgreSQL 和 SonnetDB 可以保留为可选 provider 扩展，但不替代 SQL Server 可行性要求。
+- 当前短期数据库策略为 SQLite-first：业务实现、Identity/领域 schema、登录/仓库列表等垂直切片先只以 SQLite 作为实现和验收 provider。SQL Server、PostgreSQL 和 SonnetDB 的 provider 完成度、migration SQL、schema 差异和部署兼容性等整体迁移跑通后再作为独立工作回补；现有 PgSQL/SonnetDB provider 项目保留，不遮蔽也不扩大范围。
 
 ## 当前项目画像
 
@@ -379,8 +379,8 @@ ASP.NET Core 中间件和后台能力：
 定位：
 
 - 以新系统 schema 为目标，不兼容旧 `Users`、`AuthorizationLog`、`PasswordVersion`。
-- SQLite 是默认本地 provider，SQL Server 是第一轮迁移必须保持可行的部署路径；两者至少要能生成 migration SQL 并通过 schema smoke tests。
-- PostgreSQL 和 SonnetDB 作为可选 provider 扩展保留，迁移主线不得用它们替代 SQL Server 可行性验收。
+- SQLite 是当前业务实现和验收 provider；M3/M4/M5/M6/M7 的垂直切片先围绕 SQLite 打通。
+- SQL Server、PostgreSQL 和 SonnetDB 作为后续 provider 工作保留记录；迁移主线当前不扩大它们的 migration、schema 差异和部署验证范围。
 - Provider 配置参考 IoTSharp 的做法：基础 `DbContext` 保持 provider-neutral，按配置选择 provider，并为不同 provider 保留独立 migrations assembly。
 
 #### ⬜ M3 拆分
@@ -388,7 +388,7 @@ ASP.NET Core 中间件和后台能力：
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
 | ✅ #030 | `GitCandyDbContext` 基线 | 已新建 provider-neutral `GitCandyDbContext : IdentityDbContext<GitCandyUser>`，领域表待 #033 |
-| 🚧 #031 | Provider 配置 | 默认 SQLite 与 PgSQL/SonnetDB 可选 provider 已有；SQL Server provider 和 migration assembly 待补齐 |
+| ✅ #031 | Provider 配置 | 短期约定先锁定 SQLite 作为业务实现与验收 provider；现有 PgSQL/SonnetDB provider 保留但不扩大范围，SQL Server 及多 provider migration/schema 差异等整体迁移跑通后再回补 |
 | ⬜ #032 | Identity 标准 schema | 使用 `AspNetUsers`、`AspNetRoles`、claims、logins、tokens 等标准表；必须由 migration/snapshot 验证，不以 `EnsureCreated` 作为完成证据 |
 | ⬜ #033 | GitCandy 领域表 | 重新建模 teams、repositories、roles、ssh keys 等领域表 |
 | ⬜ #034 | Identity user id 外键 | 领域表中的用户外键使用 Identity user id |
@@ -656,7 +656,7 @@ ASP.NET Core 中间件和后台能力：
 | 🚧 M0 | 最高优先级，先冻结行为 | 完成基线测试数据、行为清单、迁移分支和 PR 验证模板 |
 | ✅ M1 | 新 host 起步 | 新 ASP.NET Core 10 MVC 空壳可运行 |
 | 🚧 M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
-| ⬜ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建，并能生成 SQL Server migration SQL；登录/授权 smoke test 通过 |
+| ⬜ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建；登录/授权 smoke test 通过；SQL Server/PgSQL/SonnetDB provider 验证后续独立回补 |
 | ⬜ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
 | ⬜ M5 | Web 垂直切片 | 账户、团队、仓库 CRUD 页面迁移完成 |
 | ⬜ M6 | Git HTTP 垂直切片 | Git Smart HTTP clone/fetch/push 完成 |
@@ -686,8 +686,8 @@ ASP.NET Core 中间件和后台能力：
 当前校准后的短线顺序：
 
 1. ✅ M1 已完成：`src/GitCandy` 空壳、标准 ASP.NET Core MVC pipeline、兼容占位路由、`System.Web` 门禁和 `.slnx` 构建验证已闭环。
-2. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
-3. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。
+2. 再回到 M3，以 SQLite 为唯一短期实现 provider，补 Identity 初始 migration、领域表和权限 smoke tests。
+3. 数据层继续扩展前，不再扩大 SQL Server/PgSQL/SonnetDB 范围；它们保留记录，不阻塞 Web/Git 核心垂直切片。
 
 ⬜ M10 的代码智能能力进入第二波实施：等 Git Smart HTTP、SSH/scheduler、部署路径稳定后，再从 ⬜ #150 schema 和 ⬜ #151 ingest 垂直切片开始推进。
 

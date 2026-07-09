@@ -44,7 +44,7 @@
  - Migrated startup/shutdown diagnostics to ASP.NET Core hosted-service lifecycle logging for the new host.
  - Hardened the new host's path semantics so relative application paths must stay under the ASP.NET Core content/web root; external repository/cache/log locations should be configured as fully qualified paths.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
- - Calibrated the database migration gate to require SQLite by default plus a viable SQL Server schema/migration path; PostgreSQL and SonnetDB are optional provider extensions.
+ - Calibrated the database migration strategy so short-term business implementation and validation use SQLite first; SQL Server, PostgreSQL, and SonnetDB remain visible follow-up provider work after the main migration path is working end to end.
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).
  - Renamed the planned ASP.NET Core host path from `src/GitCandy.Web` to `src/GitCandy` to reflect the single-process main-program architecture.
 
