@@ -11,9 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace GitCandy.Configuration;
 
 /// <summary>
-/// GitCandy ASP.NET Core host 服务注册扩展。
+/// ASP.NET Core host 服务注册扩展。
 /// </summary>
-public static class GitCandyWebServiceCollectionExtensions
+public static class WebServiceCollectionExtensions
 {
     private static readonly CultureInfo[] SupportedCultures =
     [
@@ -55,9 +55,9 @@ public static class GitCandyWebServiceCollectionExtensions
         services.AddAuthorization(options =>
         {
             options.AddPolicy(
-                GitCandyAuthorizationPolicies.Administrator,
+                AuthorizationPolicies.Administrator,
                 policy => policy.RequireAuthenticatedUser()
-                    .RequireRole(GitCandyRoleNames.Administrator));
+                    .RequireRole(RoleNames.Administrator));
         });
 
         services.AddDistributedMemoryCache();

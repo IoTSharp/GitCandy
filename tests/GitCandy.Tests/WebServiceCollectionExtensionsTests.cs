@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 namespace GitCandy.Tests;
 
 [TestClass]
-public sealed class GitCandyWebServiceCollectionExtensionsTests
+public sealed class WebServiceCollectionExtensionsTests
 {
     [TestMethod]
     public async Task AddGitCandyWebShell_WithSqliteProvider_RegistersAuthSessionAndLocalizationPlaceholders()
@@ -46,7 +46,7 @@ public sealed class GitCandyWebServiceCollectionExtensionsTests
             Assert.IsNotNull(identityScheme);
 
             var authorizationOptions = serviceProvider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
-            Assert.IsNotNull(authorizationOptions.GetPolicy(GitCandyAuthorizationPolicies.Administrator));
+            Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.Administrator));
 
             var sessionOptions = serviceProvider.GetRequiredService<IOptions<SessionOptions>>().Value;
             Assert.AreEqual(".GitCandy.Session", sessionOptions.Cookie.Name);

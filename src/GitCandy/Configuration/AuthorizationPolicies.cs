@@ -1,9 +1,9 @@
 namespace GitCandy.Configuration;
 
 /// <summary>
-/// GitCandy ASP.NET Core 授权策略名称。
+/// ASP.NET Core 授权策略名称。
 /// </summary>
-public static class GitCandyAuthorizationPolicies
+public static class AuthorizationPolicies
 {
     /// <summary>
     /// 系统管理员策略占位，用于后续迁移旧管理员过滤器。
