@@ -330,7 +330,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #013 | 构建公共属性 | 已新增 `Directory.Build.props`，新项目启用 `ImplicitUsings`、`Nullable` 和 `TreatWarningsAsErrors` |
 | ✅ #014 | Central Package Management | 已新增 `Directory.Packages.props` 管理包版本 |
 | ✅ #015 | 标准 MVC pipeline | 已在 `Program.cs` 建立 `AddControllersWithViews`、routing、static assets、错误处理、HSTS 和 HTTPS 重定向基础管线 |
-| ⬜ #016 | 认证/授权占位 | 加入 Identity、认证、授权、session/localization 的占位配置，不迁旧认证 |
+| ✅ #016 | 认证/授权占位 | 已加入 Identity、认证 cookie、授权策略、session/localization 的占位配置，不迁旧认证 |
 | ⬜ #017 | 兼容占位路由 | 暂建 `/`、`/Repository`、`/Account/Login` 等占位路由 |
 | ⬜ #018 | `System.Web` 入口检查 | 确认新项目不引用 `System.Web`、`System.Web.Mvc`、`System.Web.Optimization`、`System.Data.Entity` |
 | ⬜ #019 | 空壳构建验证 | `dotnet build` 能构建新空壳 |
@@ -673,7 +673,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #000 到 ✅ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
 | ✅ #010 | 新建 `src/GitCandy` ASP.NET Core 10 MVC 主程序项目 |
 | ⬜ #011 到 ⬜ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
-| ✅ #015 与 ⬜ #016 到 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline 和空路由 |
+| ✅ #015 到 ✅ #016 与 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline、认证/授权占位和空路由 |
 | ⬜ #030 到 ⬜ #039 | 建立 EF Core `GitCandyDbContext` + Identity schema，先完成新库创建和管理员 seed |
 | ⬜ #040 到 ⬜ #049 | 迁移登录、当前用户和权限服务，打通 Web 登录/登出 |
 | ⬜ #050 到 ⬜ #059 | 迁移登录页和 `Repository/Index` 作为垂直切片 |

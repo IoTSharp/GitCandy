@@ -19,6 +19,7 @@
  - Added the M1 #010 `src/GitCandy` SDK-style ASP.NET Core 10 MVC host as the single GitCandy main process project.
  - Added the M1 #012 `GitCandy.slnx` validation script and GitHub Actions workflow so migration restore/build/test commands use the active `.slnx` solution.
  - Added the M1 #015 standard ASP.NET Core MVC pipeline with controller views, routing, static assets, error handling, HSTS, and HTTPS redirection.
+ - Added the M1 #016 ASP.NET Core Identity, authentication cookie, authorization policy, session, and localization placeholders without migrating legacy authentication.
 
 #### Migration
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.

@@ -1,7 +1,8 @@
+using GitCandy.Configuration;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddGitCandyWebShell(builder.Configuration);
 
 var app = builder.Build();
 
@@ -15,6 +16,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseRequestLocalization();
+app.UseSession();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();

@@ -8,5 +8,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GitCandy.Data.Tests/GitCandy.Data.Tests.csproj" />
+    <Project Path="tests/GitCandy.Tests/GitCandy.Tests.csproj" />
   </Folder>
 </Solution>
