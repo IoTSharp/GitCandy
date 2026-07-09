@@ -27,12 +27,14 @@
  - Added the M2 #021 `IGitCandyApplicationPaths` abstraction for content-root and web-root based application path resolution.
  - Added the M2 #022 legacy `GitCandy.Log.Logger` adapter for routing migrated static logger calls through ASP.NET Core logging.
  - Added the M2 #023 ASP.NET Core `IMemoryCache` registration and `IApplicationCache` wrapper for replacing legacy `HttpRuntime.Cache` usage.
+ - Added the M2 #025 Quartz.NET in-memory scheduler hosted service, including a bridge for DI-registered `ISchedulerJob` tasks.
 
 #### Migration
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
  - Replaced legacy `Server.MapPath`-style path assumptions in the ASP.NET Core host with `IWebHostEnvironment.ContentRootPath` and `WebRootPath` semantics.
  - Migrated the new host's legacy logger compatibility entry point to `ILoggerFactory`; log sinks are now controlled by ASP.NET Core `Logging` providers instead of the old static file writer.
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
+ - Migrated the ASP.NET Core host scheduler lifecycle to Quartz.NET `AddQuartz` / `AddQuartzHostedService`; Quartz persistence, clustering, and scheduler UI remain out of scope for the first migration slice.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.
  - Calibrated the database migration gate to require SQLite by default plus a viable SQL Server schema/migration path; PostgreSQL and SonnetDB are optional provider extensions.
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).

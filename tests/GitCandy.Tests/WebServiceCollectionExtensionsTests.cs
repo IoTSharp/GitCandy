@@ -20,6 +20,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Quartz;
+using Quartz.Logging;
 
 namespace GitCandy.Tests;
 
@@ -201,6 +203,74 @@ public sealed class WebServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    public async Task AddGitCandyWebShell_WithQuartzScheduler_StartsAndExecutesRegisteredSchedulerJob()
+    {
+        var tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            Guid.NewGuid().ToString("N"));
+        var databasePath = Path.Combine(tempRoot, "GitCandy.db");
+        var completion = new TaskCompletionSource<SchedulerJobContext>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        try
+        {
+            var webProjectRoot = GetWebProjectRoot();
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                ContentRootPath = webProjectRoot,
+                EnvironmentName = Environments.Development
+            });
+            builder.WebHost.UseKestrel();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GitCandy:Database:Provider"] = "sqlite",
+                ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+            });
+            builder.Services.AddSingleton(completion);
+            builder.Services.AddGitCandyWebShell(builder.Configuration);
+            builder.Services.AddScoped<ISchedulerJob, RecordingSchedulerJob>();
+
+            await using var app = builder.Build();
+            await app.StartAsync();
+
+            try
+            {
+                var completedTask = await Task.WhenAny(
+                    completion.Task,
+                    Task.Delay(TimeSpan.FromSeconds(10)));
+                Assert.AreSame(completion.Task, completedTask);
+
+                var schedulerFactory = app.Services.GetRequiredService<ISchedulerFactory>();
+                var scheduler = await schedulerFactory.GetScheduler();
+                Assert.IsTrue(scheduler.IsStarted);
+
+                var jobDetail = await scheduler.GetJobDetail(
+                    new JobKey(RecordingSchedulerJob.JobName, "GitCandy.Scheduler"));
+                Assert.IsNotNull(jobDetail);
+
+                var schedulerContext = await completion.Task;
+                Assert.AreEqual(1, schedulerContext.ExecutionTimes);
+                Assert.IsNull(schedulerContext.UtcLastStart);
+                Assert.IsNull(schedulerContext.UtcLastEnd);
+            }
+            finally
+            {
+                await app.StopAsync();
+                ResetQuartzLogging();
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [TestMethod]
     public void AddGitCandyWebShell_WithApplicationConfiguration_BindsStronglyTypedOptions()
     {
         var configuration = BuildConfiguration(
@@ -290,6 +360,7 @@ public sealed class WebServiceCollectionExtensionsTests
 
         await using var app = builder.Build();
 
+        ResetQuartzLogging();
         await Assert.ThrowsExactlyAsync<OptionsValidationException>(() => app.StartAsync());
     }
 
@@ -316,5 +387,62 @@ public sealed class WebServiceCollectionExtensionsTests
 
         Assert.IsNotNull(directory);
         return Path.Combine(directory.FullName, "src", "GitCandy");
+    }
+
+    private static void ResetQuartzLogging()
+    {
+        LogProvider.SetCurrentLogProvider(new NoopQuartzLogProvider());
+    }
+
+    private sealed class RecordingSchedulerJob(
+        TaskCompletionSource<SchedulerJobContext> completion) : ISchedulerJob
+    {
+        public const string JobName = "RecordingSchedulerJob";
+
+        private readonly TaskCompletionSource<SchedulerJobContext> _completion = completion;
+
+        public string Name => JobName;
+
+        public SchedulerJobType JobType => SchedulerJobType.RealTime;
+
+        public ValueTask ExecuteAsync(
+            SchedulerJobContext context,
+            CancellationToken cancellationToken = default)
+        {
+            _completion.TrySetResult(context);
+            return ValueTask.CompletedTask;
+        }
+
+        public TimeSpan GetNextInterval(SchedulerJobContext context)
+        {
+            return TimeSpan.MaxValue;
+        }
+    }
+
+    private sealed class NoopQuartzLogProvider : ILogProvider
+    {
+        public Logger GetLogger(string name)
+        {
+            return (_, _, _, _) => false;
+        }
+
+        public IDisposable OpenNestedContext(string message)
+        {
+            return NullScope.Instance;
+        }
+
+        public IDisposable OpenMappedContext(string key, object value, bool destructure)
+        {
+            return NullScope.Instance;
+        }
+
+        private sealed class NullScope : IDisposable
+        {
+            public static readonly NullScope Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
     }
 }

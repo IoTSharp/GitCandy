@@ -16,6 +16,7 @@
     <PackageVersion Include="MSTest.TestAdapter" Version="4.1.0" />
     <PackageVersion Include="MSTest.TestFramework" Version="4.1.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
+    <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.18.2" />
     <PackageVersion Include="SonnetDB.EntityFrameworkCore" Version="3.0.1" />
   </ItemGroup>
 </Project>

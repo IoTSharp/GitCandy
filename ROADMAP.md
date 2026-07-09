@@ -360,7 +360,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #022 | 日志适配 | 已新增迁移期 `GitCandy.Log.Logger` 兼容 adapter，绑定 ASP.NET Core `ILoggerFactory` |
 | ✅ #023 | 缓存替换 | 已注册 `IMemoryCache`，新增 `IApplicationCache`/`MemoryApplicationCache` 作为旧 `HttpRuntime.Cache` 迁移入口，并补充门禁和缓存行为测试 |
 | ✅ #024 | DI 替换 MEF | 已新增 `IMembershipService`、`IRepositoryService`、`IGitServiceFactory`、`IGitRepositoryPathResolver` 和 `ISchedulerJob` DI 注册，补充 MEF 门禁与迁移记录 |
-| ⬜ #025 | Quartz.NET Scheduler hosted service | 引入 Quartz.NET 作为应用内 scheduler 组件，通过 `AddQuartz` / `AddQuartzHostedService` 接入 ASP.NET Core 生命周期 |
+| ✅ #025 | Quartz.NET Scheduler hosted service | 已引入 Quartz.NET in-memory scheduler，使用 `AddQuartz` / `AddQuartzHostedService` 接入 ASP.NET Core 生命周期，并通过 bridge job 执行 DI 注册的 `ISchedulerJob` |
 | ⬜ #026 | SSH 生命周期占位 | SSH Server 启停改为 hosted service 形态，支持 graceful shutdown |
 | ⬜ #027 | Profiler 迁移 | `Profiler` 改为 middleware 或 action filter |
 | ⬜ #028 | 启停诊断 | 应用启动、停止、后台任务启动失败日志清晰 |

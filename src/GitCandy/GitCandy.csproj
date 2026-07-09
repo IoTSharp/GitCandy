@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Quartz.Extensions.Hosting" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\GitCandy.Data\GitCandy.Data.csproj" />
     <ProjectReference Include="..\GitCandy.Data.Sqlite\GitCandy.Data.Sqlite.csproj" />
   </ItemGroup>

@@ -12,7 +12,9 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Quartz;
 
 namespace GitCandy.Configuration;
 
@@ -52,6 +54,7 @@ public static class WebServiceCollectionExtensions
             .AddDefaultTokenProviders();
 
         services.AddGitCandyMigrationServices();
+        services.AddGitCandyScheduler();
 
         services.ConfigureApplicationCookie(options =>
         {
@@ -98,6 +101,33 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, LogRotationJob>());
+
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyScheduler(this IServiceCollection services)
+    {
+        services.TryAddTransient<QuartzSchedulerJob>();
+
+        services.AddQuartz(options =>
+        {
+            options.SchedulerId = "GitCandy";
+            options.SchedulerName = "GitCandy Scheduler";
+            options.UseInMemoryStore(_ => { });
+            options.UseDefaultThreadPool(threadPool =>
+            {
+                threadPool.MaxConcurrency = Math.Max(2, Environment.ProcessorCount * 2);
+            });
+        });
+
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, QuartzSchedulerRegistrationHostedService>());
+
+        services.AddQuartzHostedService(options =>
+        {
+            options.AwaitApplicationStarted = true;
+            options.WaitForJobsToComplete = true;
+        });
 
         return services;
     }
