@@ -326,10 +326,10 @@ ASP.NET Core 中间件和后台能力：
 | --- | --- | --- |
 | ✅ #010 | SDK-style 主程序项目 | 已创建 `src/GitCandy` ASP.NET Core MVC 主程序项目，目标 `net10.0`，作为唯一 GitCandy host |
 | ✅ #011 | SDK 固定策略 | 已新增 `global.json` 固定 .NET 10 SDK feature band，并 roll-forward 到 `latestFeature` |
-| 🚧 #012 | Solution 迁移 | 已新增 `GitCandy.slnx` 作为迁移主线；旧 `GitCandy.sln` 暂作行为参考，CI/命令固定到 `.slnx` 后闭环 |
+| ✅ #012 | Solution 迁移 | 已新增 `GitCandy.slnx` 作为迁移主线；旧 `GitCandy.sln` 暂作行为参考；本地验证脚本和 CI workflow 均固定到 `.slnx` |
 | ✅ #013 | 构建公共属性 | 已新增 `Directory.Build.props`，新项目启用 `ImplicitUsings`、`Nullable` 和 `TreatWarningsAsErrors` |
 | ✅ #014 | Central Package Management | 已新增 `Directory.Packages.props` 管理包版本 |
-| ⬜ #015 | 标准 MVC pipeline | 在 `Program.cs` 建立 `AddControllersWithViews`、routing、static files、错误处理基础管线 |
+| ✅ #015 | 标准 MVC pipeline | 已在 `Program.cs` 建立 `AddControllersWithViews`、routing、static assets、错误处理、HSTS 和 HTTPS 重定向基础管线 |
 | ⬜ #016 | 认证/授权占位 | 加入 Identity、认证、授权、session/localization 的占位配置，不迁旧认证 |
 | ⬜ #017 | 兼容占位路由 | 暂建 `/`、`/Repository`、`/Account/Login` 等占位路由 |
 | ⬜ #018 | `System.Web` 入口检查 | 确认新项目不引用 `System.Web`、`System.Web.Mvc`、`System.Web.Optimization`、`System.Data.Entity` |
@@ -337,7 +337,7 @@ ASP.NET Core 中间件和后台能力：
 
 验收：
 
-- `dotnet build` 能构建新空壳。
+- `dotnet build GitCandy.slnx` 能构建新空壳。
 - `/`、`/Repository`、`/Account/Login` 等占位路由存在。
 - 没有旧 `System.Web` 引用进入新项目。
 
@@ -673,7 +673,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #000 到 ✅ #009 | 增加测试数据、行为清单、迁移分支和验证模板 |
 | ✅ #010 | 新建 `src/GitCandy` ASP.NET Core 10 MVC 主程序项目 |
 | ⬜ #011 到 ⬜ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
-| ⬜ #015 到 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline 和空路由 |
+| ✅ #015 与 ⬜ #016 到 ⬜ #017 | 建立新 `Program.cs`、标准 pipeline 和空路由 |
 | ⬜ #030 到 ⬜ #039 | 建立 EF Core `GitCandyDbContext` + Identity schema，先完成新库创建和管理员 seed |
 | ⬜ #040 到 ⬜ #049 | 迁移登录、当前用户和权限服务，打通 Web 登录/登出 |
 | ⬜ #050 到 ⬜ #059 | 迁移登录页和 `Repository/Index` 作为垂直切片 |
@@ -684,7 +684,7 @@ ASP.NET Core 中间件和后台能力：
 
 当前校准后的短线顺序：
 
-1. 完成 ✅ #010 与 ⬜ #015 到 ⬜ #017，建立可运行的 `src/GitCandy` 和标准 ASP.NET Core MVC pipeline。
+1. 完成 ✅ #010、✅ #015 与 ⬜ #016 到 ⬜ #017，建立可运行的 `src/GitCandy` 和标准 ASP.NET Core MVC pipeline。
 2. 再回到 M3，补 SQL Server provider/migration 路径、Identity 初始 migration、领域表和权限 smoke tests。
 3. 数据层继续扩展前，不再扩大 PgSQL/SonnetDB 范围；它们保持 optional provider，不阻塞 Web/Git 核心垂直切片。
 

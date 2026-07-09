@@ -1,0 +1,44 @@
+name: ASP.NET Core migration
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/aspnet-core-migration.yml"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "GitCandy.slnx"
+      - "global.json"
+      - "src/**"
+      - "tests/**"
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/aspnet-core-migration.yml"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - "GitCandy.slnx"
+      - "global.json"
+      - "src/**"
+      - "tests/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: Build and test GitCandy.slnx
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Validate migration solution
+        shell: pwsh
+        run: ./tools/migration/m1-012/Invoke-M1SolutionValidation.ps1 -Configuration Release
