@@ -1,6 +1,6 @@
 # M9 #090 UI 信息架构与双主题原型基线
 
-状态：进行中
+状态：已完成
 
 对应 ROADMAP：Milestone 9 / `#090`
 
@@ -39,6 +39,24 @@ GitCandy 是面向开发者和管理员的轻量自托管 Git 工作台。界面
 
 所有隐藏入口只改善界面噪声；服务端仍必须独立执行授权。
 
+### 2.1 角色可见性矩阵
+
+该矩阵以当前 controller authorization、应用配置和资源 policy 为准；“条件显示”不代表新增权限。
+
+| 导航或操作 | 匿名用户 | 普通用户 | Repository owner / Team administrator | Administrator |
+| --- | --- | --- | --- | --- |
+| Repository list/detail | 显示，服务端只返回公开且允许读取的仓库 | 显示，按用户权限过滤 | 显示，按用户权限过滤 | 显示全部可管理仓库 |
+| New repository | 隐藏 | `AllowRepositoryCreation` 启用时显示 | 与普通用户相同 | 显示 |
+| Login / Register | 显示；Register 受 `AllowRegisterUser` 控制 | 隐藏 | 隐藏 | 隐藏 |
+| Account / Logout / SSH keys | 隐藏 | 显示当前用户入口 | 显示当前用户入口 | 显示当前用户入口，并可从 Users 管理其他用户 |
+| Repository relationships/settings | 隐藏 | 隐藏 | 对拥有 owner policy 的仓库显示 | 显示 |
+| Team list/create/delete | 隐藏 | 隐藏 | 隐藏；从已有 team detail 进入上下文 | 显示 |
+| Team members/edit | 隐藏 | 隐藏 | 对拥有 team administrator policy 的团队显示 | 显示 |
+| Administration / Users / Settings | 隐藏 | 隐藏 | 隐藏 | 显示 |
+| Global search | `#090` 原型只预留布局 | `#090` 原型只预留布局 | `#090` 原型只预留布局 | `#090` 原型只预留布局 |
+
+`#100` 不得把原型中的全局搜索框实现为无效生产控件；只有对应搜索服务和授权过滤在独立任务中完成后才显示。普通用户的全局 Teams 列表同样不得绕过当前 administrator policy。
+
 ## 3. 信息架构
 
 ### 3.1 全局层级
@@ -64,8 +82,8 @@ GitCandy
 
 桌面端由三个稳定区域组成：
 
-1. 全局 header：品牌、全局搜索、创建命令、主题模式和账户入口。
-2. 左侧 primary navigation：Repositories、Teams；管理员额外显示 Administration 分组。
+1. 全局 header：品牌、预留搜索区域、按权限显示的创建命令、主题模式和账户入口。
+2. 左侧 primary navigation：Repositories；管理员额外显示 Teams 和 Administration 分组。
 3. 主内容区：breadcrumb、页面标题、主操作、筛选/视图控制和实际工作内容。
 
 进入仓库后，主内容区增加 repository context header 和二级导航，至少预留 Code、Commits、Branches、Tags、Settings；不得把仓库导航塞进全局导航。
@@ -114,7 +132,7 @@ Pagination / continuation (可选)
 | `text` | `#1b252c` | `#e7ecef` | 主文本 |
 | `text-muted` | `#65727c` | `#9aa7af` | 元数据和辅助文本 |
 | `border` | `#d7dee2` | `#313a41` | 分隔线和控件边界 |
-| `border-strong` | `#b9c4ca` | `#46525a` | hover、输入边界 |
+| `border-strong` | `#7d8a92` | `#66737b` | hover、输入边界 |
 | `brand` | `#176b4d` | `#66c99b` | 主命令、链接和选中状态 |
 | `brand-hover` | `#10543b` | `#83d8b0` | brand hover |
 | `accent` | `#14788a` | `#5eb8c8` | 信息状态、辅助数据 |
@@ -124,9 +142,26 @@ Pagination / continuation (可选)
 | `focus` | `#2d7fd3` | `#79b8ff` | 键盘焦点环 |
 | `code-surface` | `#edf1f3` | `#111619` | code/diff 背景 |
 
-色值在 `#100` 实现前必须通过 WCAG 2.2 AA 对比度检查。状态不得只靠颜色表达，必须同时提供文本、图标或形状。
+状态不得只靠颜色表达，必须同时提供文本、图标或形状。
 
-### 4.2 尺寸与密度
+### 4.2 WCAG 2.2 对比度核查
+
+2026-07-10 使用 WCAG relative luminance 公式核查正文、状态文字、主按钮和强控件边界。正文/状态文字门槛为 `4.5:1`，非文本强控件边界门槛为 `3:1`。
+
+| 组合 | Light | Dark | 结果 |
+| --- | --- | --- | --- |
+| `text` / `surface` | `15.58:1` | `14.42:1` | 通过 |
+| `text-muted` / `surface` | `4.94:1` | `6.96:1` | 通过 |
+| `brand` / `surface` | `6.47:1` | `8.50:1` | 通过 |
+| `accent` / `surface` | `5.14:1` | `7.49:1` | 通过 |
+| `warning` / `surface` | `5.86:1` | `9.09:1` | 通过 |
+| `danger` / `surface` | `6.47:1` | `6.01:1` | 通过 |
+| primary button text / `brand` | `6.47:1` | `8.22:1` | 通过 |
+| public status / soft background | `5.62:1` | `6.54:1` | 通过 |
+| private status / soft background | `5.31:1` | `6.84:1` | 通过 |
+| `border-strong` / `surface` | `3.55:1` | `3.52:1` | 通过 |
+
+### 4.3 尺寸与密度
 
 - 基础 spacing unit：`4px`；主要节奏使用 `8/12/16/24/32px`。
 - 应用 header：`56px`；桌面 sidebar：`224px`。
@@ -205,12 +240,12 @@ Pagination / continuation (可选)
 
 ## 10. #090 验收清单
 
-- [ ] 页面、角色和状态矩阵经评审确认。
-- [ ] Light/Dark semantic tokens 经对比度检查。
+- [x] 页面、角色和状态矩阵经评审确认。
+- [x] Light/Dark semantic tokens 经对比度检查。
 - [x] 桌面 `1440x900` 和移动 `390x844` 框架原型无重叠、截断和不可达操作。
 - [x] System/Light/Dark 切换、刷新持久化和键盘操作通过。
-- [ ] 匿名、普通用户、owner、administrator 的导航差异有原型或明确规范。
-- [x] `#096`、`#100` 到 `#105` 的边界和回滚方式已记录，等待评审确认。
+- [x] 匿名、普通用户、owner、administrator 的导航差异有原型或明确规范。
+- [x] `#096`、`#100` 到 `#105` 的边界和回滚方式已记录并确认。
 - [x] 未修改生产 Razor/CSS/JavaScript，未引入运行时依赖。
 
 ### 2026-07-10 验证记录
@@ -222,3 +257,6 @@ Pagination / continuation (可选)
 - Dark 模式刷新持久化：通过，prototype local storage 值保持 `dark`。
 - 干净浏览器会话 console：0 errors，0 warnings。
 - Playwright 截图只用于本次评审检查，验证后已删除，未作为仓库产物提交。
+- 角色可见性矩阵已对照 `AccountController`、`RepositoryController`、`TeamController` 和 `SettingController` authorization 边界复核。
+- WCAG relative luminance 核查发现并修正 Light/Dark `border-strong`；修正后分别为 `3.55:1` 和 `3.52:1`。
+- 修正后再次验证 Light `1440x900` 与 Dark `390x844`：视觉层级正常，移动端无水平溢出，console 0 errors / 0 warnings。
