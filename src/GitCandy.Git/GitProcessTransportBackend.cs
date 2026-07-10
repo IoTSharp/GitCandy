@@ -11,6 +11,7 @@ namespace GitCandy.Git;
 /// </summary>
 public sealed class GitProcessTransportBackend(
     IGitRepositoryPathResolver pathResolver,
+    IManagedGitRepositoryService repositoryService,
     IGitExecutableResolver executableResolver,
     IOptions<GitSmartHttpOptions> options,
     ILogger<GitProcessTransportBackend> logger)
@@ -18,6 +19,7 @@ public sealed class GitProcessTransportBackend(
 {
     private const int MaxCapturedStandardErrorLength = 8192;
     private readonly IGitRepositoryPathResolver _pathResolver = pathResolver;
+    private readonly IManagedGitRepositoryService _repositoryService = repositoryService;
     private readonly IGitExecutableResolver _executableResolver = executableResolver;
     private readonly GitSmartHttpOptions _options = options.Value;
     private readonly ILogger<GitProcessTransportBackend> _logger = logger;
@@ -26,7 +28,7 @@ public sealed class GitProcessTransportBackend(
     /// <inheritdoc />
     public void EnsureRepositoryExists(GitRepositoryContext repository)
     {
-        _ = ResolveExistingRepositoryPath(repository);
+        _ = _repositoryService.ResolveExistingPath(repository);
     }
 
     /// <inheritdoc />
@@ -103,7 +105,7 @@ public sealed class GitProcessTransportBackend(
             request.ActorName,
             request.AdvertiseRefs);
 
-        var repositoryPath = ResolveExistingRepositoryPath(request.Repository);
+        var repositoryPath = _repositoryService.ResolveExistingPath(request.Repository);
         var startInfo = CreateStartInfo(request, repositoryPath);
 
         using var process = new Process { StartInfo = startInfo };
@@ -219,76 +221,6 @@ public sealed class GitProcessTransportBackend(
         }
 
         return startInfo;
-    }
-
-    private string ResolveExistingRepositoryPath(GitRepositoryContext repository)
-    {
-        ArgumentNullException.ThrowIfNull(repository);
-
-        var repositoryName = repository.RepositoryName.Trim();
-        var legacyPath = _pathResolver.ResolveRepositoryPath(repositoryName);
-        var dotGitPath = _pathResolver.ResolveRepositoryPath($"{repositoryName}.git");
-        var configuredPath = Path.GetFullPath(repository.RepositoryPath);
-
-        if (!PathsEqual(configuredPath, legacyPath)
-            && !PathsEqual(configuredPath, dotGitPath))
-        {
-            throw new InvalidOperationException(
-                "The Git repository context did not originate from the configured repository root.");
-        }
-
-        foreach (var candidate in EnumerateDistinctPaths(configuredPath, legacyPath, dotGitPath))
-        {
-            if (!Directory.Exists(candidate))
-            {
-                continue;
-            }
-
-            EnsureResolvedPathWithinRoot(candidate);
-            return candidate;
-        }
-
-        throw new GitRepositoryNotFoundException(repository.RepositoryName);
-    }
-
-    private void EnsureResolvedPathWithinRoot(string repositoryPath)
-    {
-        var rootPath = ResolveFinalDirectoryTarget(_pathResolver.RepositoryRootPath);
-        var resolvedRepositoryPath = ResolveFinalDirectoryTarget(repositoryPath);
-        var relativePath = Path.GetRelativePath(rootPath, resolvedRepositoryPath);
-
-        if (relativePath.Equals("..", StringComparison.Ordinal)
-            || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
-            || Path.IsPathRooted(relativePath))
-        {
-            throw new InvalidOperationException(
-                "The resolved Git repository path escapes the configured repository root.");
-        }
-    }
-
-    private static string ResolveFinalDirectoryTarget(string path)
-    {
-        var directory = new DirectoryInfo(path);
-        var target = directory.ResolveLinkTarget(returnFinalTarget: true);
-        return Path.GetFullPath(target?.FullName ?? directory.FullName);
-    }
-
-    private static IEnumerable<string> EnumerateDistinctPaths(params string[] paths)
-    {
-        var comparer = OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase
-            : StringComparer.Ordinal;
-        return paths.Distinct(comparer);
-    }
-
-    private static bool PathsEqual(string left, string right)
-    {
-        return string.Equals(
-            Path.GetFullPath(left),
-            Path.GetFullPath(right),
-            OperatingSystem.IsWindows()
-                ? StringComparison.OrdinalIgnoreCase
-                : StringComparison.Ordinal);
     }
 
     private static string GetCommandName(GitTransportService service)

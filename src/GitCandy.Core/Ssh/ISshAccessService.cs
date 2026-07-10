@@ -20,6 +20,18 @@ public interface ISshAccessService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 使用 OpenSSH SHA-256 fingerprint 解析已由 sshd 验证的 public key 和 Identity 用户。
+    /// </summary>
+    /// <param name="fingerprint">带或不带 <c>SHA256:</c> 前缀的 fingerprint。</param>
+    /// <param name="recordUsage">是否记录本次 key 使用时间。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>已登记 key；不存在时为 <see langword="null" />。</returns>
+    Task<SshAuthorizedKey?> FindAuthorizedKeyAsync(
+        string fingerprint,
+        bool recordUsage = false,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 判断已认证 SSH 用户能否执行指定仓库操作。
     /// </summary>
     /// <param name="principal">已认证用户。</param>

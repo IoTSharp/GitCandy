@@ -20,9 +20,23 @@ public static class GitCandySshServiceCollectionExtensions
 
         services.TryAddSingleton<ISshHostKeyProvider, FileSshHostKeyProvider>();
         services.TryAddSingleton<ISshServerRuntime, BuiltInSshServerRuntime>();
+        services.AddGitCandyOpenSshAdapter();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, SshServerHostedService>());
 
+        return services;
+    }
+
+    /// <summary>
+    /// 只注册外部 OpenSSH 命令适配，不注册内置 listener hosted service。
+    /// </summary>
+    /// <param name="services">服务集合。</param>
+    /// <returns>同一个服务集合。</returns>
+    public static IServiceCollection AddGitCandyOpenSshAdapter(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddScoped<IOpenSshAdapter, OpenSshAdapter>();
         return services;
     }
 }

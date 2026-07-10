@@ -166,6 +166,12 @@ public sealed class SshRuntimeTests
                 publicKey,
                 recordUsage: false);
             Assert.IsNotNull(queryPrincipal);
+            var authorizedKey = await accessService.FindAuthorizedKeyAsync(
+                $"SHA256:{fingerprint}",
+                recordUsage: false);
+            Assert.IsNotNull(authorizedKey);
+            Assert.AreEqual("ssh-reader", authorizedKey.Principal.UserName);
+            Assert.AreEqual(Convert.ToBase64String(publicKey), authorizedKey.PublicKey);
 
             await using (var queryVerificationScope = app.Services.CreateAsyncScope())
             {

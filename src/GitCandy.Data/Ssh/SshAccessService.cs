@@ -36,6 +36,44 @@ internal sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCo
             return null;
         }
 
+        return (await CreateAuthorizedKeyAsync(
+            dbContext,
+            key,
+            recordUsage,
+            cancellationToken))?.Principal;
+    }
+
+    /// <inheritdoc />
+    public async Task<SshAuthorizedKey?> FindAuthorizedKeyAsync(
+        string fingerprint,
+        bool recordUsage = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fingerprint);
+
+        var normalizedFingerprint = NormalizeFingerprint(fingerprint);
+        if (normalizedFingerprint is null)
+        {
+            return null;
+        }
+
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var key = await dbContext.SshKeys
+            .Include(item => item.User)
+            .SingleOrDefaultAsync(
+                item => item.Fingerprint == normalizedFingerprint,
+                cancellationToken);
+        return key is null
+            ? null
+            : await CreateAuthorizedKeyAsync(dbContext, key, recordUsage, cancellationToken);
+    }
+
+    private static async Task<SshAuthorizedKey?> CreateAuthorizedKeyAsync(
+        GitCandyDbContext dbContext,
+        GitCandy.Data.Domain.GitCandySshKey key,
+        bool recordUsage,
+        CancellationToken cancellationToken)
+    {
         var userName = key.User?.UserName;
         if (userName is null)
         {
@@ -57,7 +95,11 @@ internal sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCo
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        return new SshPrincipal(key.UserId, userName, isAdministrator);
+        return new SshAuthorizedKey(
+            new SshPrincipal(key.UserId, userName, isAdministrator),
+            key.KeyType,
+            key.PublicKey,
+            key.Fingerprint);
     }
 
     /// <inheritdoc />
@@ -96,6 +138,32 @@ internal sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCo
         catch (FormatException)
         {
             return false;
+        }
+    }
+
+    private static string? NormalizeFingerprint(string fingerprint)
+    {
+        var normalized = fingerprint.Trim();
+        const string openSshPrefix = "SHA256:";
+        if (normalized.StartsWith(openSshPrefix, StringComparison.Ordinal))
+        {
+            normalized = normalized[openSshPrefix.Length..];
+        }
+
+        normalized = normalized.TrimEnd('=');
+        if (normalized.Length != 43)
+        {
+            return null;
+        }
+
+        try
+        {
+            _ = Convert.FromBase64String(normalized + "=");
+            return normalized;
+        }
+        catch (FormatException)
+        {
+            return null;
         }
     }
 }

@@ -112,8 +112,10 @@ public sealed class ObservabilityTests
                     new Measurement(instrument.Name, value, CopyTags(tags))));
             meterListener.Start();
 
+            var pathResolver = new TestPathResolver(repositoryRoot);
             using var backend = new GitProcessTransportBackend(
-                new TestPathResolver(repositoryRoot),
+                pathResolver,
+                new LibGit2RepositoryService(pathResolver),
                 new TestExecutableResolver(),
                 Options.Create(new GitSmartHttpOptions()),
                 NullLogger<GitProcessTransportBackend>.Instance);

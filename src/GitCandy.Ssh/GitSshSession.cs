@@ -1,6 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using GitCandy.Git;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
@@ -10,11 +8,6 @@ namespace GitCandy.Ssh;
 
 internal sealed class GitSshSession : IDisposable
 {
-    private static readonly Regex GitCommandPattern = new(
-        "^(?<command>git-upload-pack|git-receive-pack|git-upload-archive) '/?git/(?<repository>[^/\\\\'\\r\\n]+)\\.git'$",
-        RegexOptions.CultureInvariant | RegexOptions.Compiled,
-        TimeSpan.FromSeconds(1));
-
     private readonly SshServerSession _session;
     private readonly ISshAccessService _accessService;
     private readonly IGitRepositoryPathResolver _pathResolver;
@@ -210,7 +203,7 @@ internal sealed class GitSshSession : IDisposable
         }
 
         var commandRequest = args.Request.ConvertTo<CommandRequestMessage>();
-        if (!TryParseCommand(commandRequest.Command, out var parsedCommand))
+        if (!GitSshCommandParser.TryParse(commandRequest.Command, out var parsedCommand))
         {
             return;
         }
@@ -369,30 +362,6 @@ internal sealed class GitSshSession : IDisposable
     {
         _sessionCancellation.Cancel();
     }
-
-    private static bool TryParseCommand(
-        string? commandText,
-        [NotNullWhen(true)] out ParsedGitCommand? parsedCommand)
-    {
-        var match = GitCommandPattern.Match(commandText ?? string.Empty);
-        if (!match.Success)
-        {
-            parsedCommand = null;
-            return false;
-        }
-
-        var service = match.Groups["command"].Value switch
-        {
-            "git-upload-pack" => GitTransportService.UploadPack,
-            "git-receive-pack" => GitTransportService.ReceivePack,
-            "git-upload-archive" => GitTransportService.UploadArchive,
-            _ => throw new InvalidOperationException("The SSH Git command was not recognized.")
-        };
-        parsedCommand = new ParsedGitCommand(service, match.Groups["repository"].Value);
-        return true;
-    }
-
-    private sealed record ParsedGitCommand(GitTransportService Service, string RepositoryName);
 
     private sealed record AuthorizedGitCommand(
         GitRepositoryContext Repository,

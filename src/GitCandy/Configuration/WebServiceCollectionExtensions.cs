@@ -60,6 +60,7 @@ public static class WebServiceCollectionExtensions
             .AddViewLocalization();
         services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
+        services.AddGitCandyOpenSshOptions(configuration);
         services.AddDataProtection()
             .SetApplicationName("GitCandy")
             .PersistKeysToFileSystem(new DirectoryInfo(
@@ -193,6 +194,30 @@ public static class WebServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// 注册 OpenSSH 短生命周期命令所需的最小数据、路径和 Git transport 服务。
+    /// </summary>
+    /// <param name="services">服务集合。</param>
+    /// <param name="configuration">应用配置。</param>
+    /// <returns>同一个服务集合。</returns>
+    public static IServiceCollection AddGitCandyOpenSshCommand(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddGitCandyApplicationOptions(configuration);
+        services.AddGitCandyOpenSshOptions(configuration);
+        services.AddGitSmartHttpOptions(configuration);
+        services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
+        services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+        services.AddGitCandyApplicationServices();
+        services.AddGitCandyGit();
+        services.AddGitCandyOpenSshAdapter();
+        return services;
+    }
+
     private static IServiceCollection AddGitCandyScheduler(this IServiceCollection services)
     {
         services.TryAddTransient<QuartzSchedulerJob>();
@@ -235,6 +260,23 @@ public static class WebServiceCollectionExtensions
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<GitCandyApplicationOptions>, GitCandyApplicationOptionsValidator>());
+
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyOpenSshOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<GitCandyOpenSshOptions>()
+            .Bind(configuration.GetSection(GitCandyOpenSshOptions.SectionName))
+            .Validate(
+                options => !options.Enabled
+                    || (Path.IsPathFullyQualified(options.ExecutablePath)
+                        && !options.ExecutablePath.Contains('\r')
+                        && !options.ExecutablePath.Contains('\n')),
+                "Enabled OpenSSH adaptation requires an absolute GitCandy executable path without line breaks.")
+            .ValidateOnStart();
 
         return services;
     }

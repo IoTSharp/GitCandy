@@ -68,6 +68,8 @@
  - Added M9 #094 architecture dependency gates for the Core, Data, Git, SSH, provider, and Web projects.
  - Added M9 #095 OpenTelemetry tracing, metrics, and structured logging providers for ASP.NET Core requests, .NET runtime, Git transport, and Quartz jobs.
  - Added optional OTLP and diagnostic Console exporters with configuration validation and sanitized Git telemetry tags.
+ - Added LibGit2Sharp 0.31.0 managed repository operations for bare initialization, repository validation, and HEAD/commit/branch/tag snapshots.
+ - Added an optional, disabled-by-default OpenSSH AuthorizedKeysCommand and key-specific forced-command adapter that reuses Identity SSH keys, repository permissions, path validation, and the shared Git transport backend.
 
 #### Changed
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
@@ -91,6 +93,7 @@
  - Strengthened the default Identity password policy to 12 characters with at least four unique characters, uppercase, lowercase, digit, and non-alphanumeric requirements; the policy is configurable under `GitCandy:Identity:Password`.
  - Split framework-independent contracts into `GitCandy.Core`, Git transport into `GitCandy.Git`, EF/Identity application implementations into `GitCandy.Data`, and the complete hosted SSH runtime into `GitCandy.Ssh`; `GitCandy` remains the single-process MVC host and composition root.
  - Git transport and scheduler operations now emit low-cardinality duration, active-operation, result, and error telemetry without repository, user, or physical-path attributes.
+ - Git transport now delegates repository discovery and validity checks to the managed LibGit2Sharp repository service; external process launches remain limited to the three official Git wire-protocol helpers and readiness checking.
 
 #### Removed
  - Removed the migrated host's static `GitCandy.Log.Logger` compatibility adapter, legacy log rotation job, and unused `LogPathFormat` setting. Runtime logging now uses only dependency-injected `ILogger<T>` instances and ASP.NET Core logging providers.
@@ -124,6 +127,7 @@
  - OpenID Connect remains disabled by default. Enabling it requires provider authority/client settings and a protected client secret; rollback is configuration-only and does not require a database downgrade.
  - OpenTelemetry providers are enabled by default, while network and Console exporters remain disabled until configured under `GitCandy:Observability`; deployments may enable OTLP without changing application routes or persistence.
  - Release deployments persist SQLite, repositories, SSH host keys, and Data Protection keys outside the application directory; backup and rollback must treat them as one versioned recovery set.
+ - External OpenSSH remains opt-in under `GitCandy:OpenSsh`; deployments using it must configure a dedicated OS account and `AuthorizedKeysCommand`, while rollback only requires disabling the adapter and restoring the built-in SSH listener.
 
 ---
 ### GitCandy v0.2 - [view diff](http://github.com/Aimeast/GitCandy/compare/v0.1...v0.2) - Jul 27, 2016

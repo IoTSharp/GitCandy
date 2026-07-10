@@ -109,6 +109,44 @@ public sealed class ArchitectureDependencyTests
             $"The Web host must remain a presentation/composition module: {string.Join(", ", failures)}");
     }
 
+    [TestMethod]
+    public void MigrationProjects_WithProcessLaunches_KeepThemInsideTransportAndReadinessBoundaries()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var sourceRoot = Path.Combine(repositoryRoot, "src");
+        var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            Path.Combine(sourceRoot, "GitCandy.Git", "GitProcessTransportBackend.cs"),
+            Path.Combine(sourceRoot, "GitCandy", "Operations", "GitBackendHealthCheck.cs")
+        };
+        var processMarkers = new[] { "new Process", "Process.Start", "new ProcessStartInfo" };
+        var failures = Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(path => !path.Contains(
+                $"{Path.DirectorySeparatorChar}Protocol{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase))
+            .Where(path => !allowedFiles.Contains(path))
+            .Where(path => processMarkers.Any(marker =>
+                File.ReadAllText(path).Contains(marker, StringComparison.Ordinal)))
+            .Select(path => Path.GetRelativePath(repositoryRoot, path))
+            .ToArray();
+
+        Assert.HasCount(0, failures,
+            "External processes are limited to the Git wire-protocol backend and its readiness check: "
+            + string.Join(", ", failures));
+
+        var transportSource = File.ReadAllText(
+            Path.Combine(sourceRoot, "GitCandy.Git", "GitProcessTransportBackend.cs"));
+        StringAssert.Contains(transportSource, "GitTransportService.UploadPack => \"upload-pack\"");
+        StringAssert.Contains(transportSource, "GitTransportService.ReceivePack => \"receive-pack\"");
+        StringAssert.Contains(transportSource, "GitTransportService.UploadArchive => \"upload-archive\"");
+    }
+
     private static IEnumerable<string> GetSourceProjectPaths(string repositoryRoot)
     {
         var sourceRoot = Path.Combine(repositoryRoot, "src");
