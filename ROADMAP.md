@@ -553,7 +553,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #083 | 文件系统路径指南 | 说明 repository、cache、git-core、SSH host keys、Data Protection keys、logs 路径 |
 | ✅ #084 | Health checks | 增加数据库连接、repository path、cache path、Git backend、SSH listener 检查 |
 | ✅ #085 | 备份策略 | 明确数据库、repositories、cache、host keys 和 key ring 的备份和恢复策略 |
-| ✅ #086 | Migration SQL | Release CI 生成 SQLite/SQL Server migration SQL；生产启动不自动改库 |
+| ✅ #086 | Migration SQL | Release CI 生成 SQLite/SQL Server migration SQL；生产启动先检测并自动应用 pending migrations |
 | ✅ #087 | 回滚方案 | 有可执行的版本固定、schema 快照恢复和前置备份要求 |
 | ✅ #088 | 文档/CHANGES 更新 | 面向用户、部署者、数据库、认证、公开 URL 的变更同步文档 |
 

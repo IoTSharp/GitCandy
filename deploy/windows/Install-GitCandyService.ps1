@@ -45,11 +45,6 @@ if ($isNewSettings) {
 }
 
 $executable = Join-Path $installPath 'GitCandy.exe'
-& $executable --migrate --environment Production
-if ($LASTEXITCODE -ne 0) {
-  throw "Database migration failed with exit code $LASTEXITCODE."
-}
-
 if ($null -eq $existingService) {
   & sc.exe create $serviceName binPath= "`"$executable`"" start= auto obj= 'NT SERVICE\GitCandy'
   if ($LASTEXITCODE -ne 0) {

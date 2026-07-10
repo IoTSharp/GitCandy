@@ -19,9 +19,9 @@ docker compose up -d
 docker compose ps
 ```
 
-在源码目录可执行 `docker compose up --build -d`，构建参数已经写入 `docker-compose.yml` 的 `build` 段；Release 部署通常直接拉取预构建镜像。
+在源码目录可执行 `docker compose up --build -d`，Compose 会自动加载 `docker-compose.override.yml` 中的构建参数。Release Compose 包不包含该重载文件，默认直接拉取预构建镜像。
 
-一次性的 `migrate` 服务会先创建或升级 SQLite/Identity 数据库，成功后才启动主应用。持久状态位于 `gitcandy-data` volume；HTTP 和 SSH 默认映射到宿主机 `8080` 与 `2222` 端口。
+GitCandy 会在 Web、SSH 和后台服务启动前检查 EF Core pending migrations，并自动创建或升级 SQLite/Identity 数据库。持久状态位于 `gitcandy-data` volume；HTTP 和 SSH 默认映射到宿主机 `8080` 与 `2222` 端口。
 
 两个镜像仓库都可以拉取：
 
@@ -36,7 +36,7 @@ docker pull iotsharp/gitcandy:latest
 
 - 存活检查：`/health/live`
 - 就绪检查：`/health/ready`
-- 显式数据库迁移：`GitCandy --migrate`
+- 可选的仅迁移命令：`GitCandy --migrate`
 - 部署、配置、备份、恢复与回滚：[docs/deployment.md](docs/deployment.md)
 - 数据库 provider 说明：[docs/database-providers.md](docs/database-providers.md)
 - 迁移路线图：[ROADMAP.md](ROADMAP.md)

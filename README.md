@@ -19,9 +19,9 @@ docker compose up -d
 docker compose ps
 ```
 
-From a source checkout, `docker compose up --build -d` builds with the `build` section in `docker-compose.yml`. Release deployments normally pull the prebuilt image.
+From a source checkout, `docker compose up --build -d` automatically loads the build settings from `docker-compose.override.yml`. The Release Compose package omits that override and pulls the prebuilt image.
 
-The one-shot `migrate` service creates or upgrades the SQLite/Identity database before the application starts. Persistent state is stored in the `gitcandy-data` volume. HTTP and SSH default to host ports `8080` and `2222`.
+GitCandy checks for pending EF Core migrations and upgrades the SQLite/Identity database before Web, SSH, and background services start. Persistent state is stored in the `gitcandy-data` volume. HTTP and SSH default to host ports `8080` and `2222`.
 
 Images are published to both registries:
 
@@ -36,7 +36,7 @@ Tagged GitHub Releases also contain Linux and Windows service packages, migratio
 
 - Liveness: `/health/live`
 - Readiness: `/health/ready`
-- Explicit database migration: `GitCandy --migrate`
+- Optional migration-only command: `GitCandy --migrate`
 - Detailed deployment, configuration, backup, restore, and rollback guide: [docs/deployment.md](docs/deployment.md)
 - Database provider notes: [docs/database-providers.md](docs/database-providers.md)
 - Migration roadmap: [ROADMAP.md](ROADMAP.md)

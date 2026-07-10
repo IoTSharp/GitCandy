@@ -11,7 +11,7 @@
 | `gitcandy-{version}-linux-x64.tar.gz` | Linux x64 自包含应用、systemd unit 和安装脚本 |
 | `gitcandy-{version}-win-x64.zip` | Windows x64 自包含应用和 Windows Service 脚本 |
 | `gitcandy-{version}-migration-sql.zip` | SQLite 建库 SQL 和 SQL Server idempotent migration SQL |
-| `gitcandy-{version}-compose.zip` | `docker-compose.yml` 与环境变量样例 |
+| `gitcandy-{version}-compose.zip` | `docker-compose.yml` 与镜像、宿主机端口变量样例 |
 | `gitcandy-{version}-linux-amd64-image.tar.gz` | 可离线下载并通过 `docker load` 导入的镜像 |
 
 在线镜像使用相同版本 tag：
@@ -42,11 +42,13 @@ docker compose ps
 curl --fail http://127.0.0.1:8080/health/ready
 ```
 
-`migrate` 是一次性服务。它显式执行 `GitCandy --migrate`，创建运行目录并应用 EF Core migration；只有迁移成功后，主 `gitcandy` 服务才启动。正常应用启动不会自动修改数据库。
+GitCandy 主程序会在 Web、SSH、Quartz 和其他 hosted service 启动前检查 EF Core pending migrations；有待应用版本时自动迁移，没有时直接继续。迁移失败会让进程以失败状态退出，不会在旧 schema 上开始监听。`GitCandy --migrate` 仍可用于只执行迁移后退出，但 Compose 不再需要单独的迁移服务。
 
-仓库中的 `docker-compose.yml` 已包含 `build.context` 和 `build.dockerfile`，源码构建可使用 `docker compose up --build -d`。Release 部署先执行 `docker compose pull`，随后使用同一文件启动预构建镜像。
+源码仓库使用标准 `docker-compose.override.yml` 保存 `build.context` 和 `build.dockerfile`，执行 `docker compose up --build -d` 时会自动加载。Release Compose 包不包含该重载文件；Release 部署先执行 `docker compose pull`，随后使用基础 `docker-compose.yml` 启动预构建镜像。
 
 默认端口为 HTTP `8080`、SSH `2222`，持久状态位于 `gitcandy-data` volume。可在 `.env` 修改宿主机映射端口，不要修改容器内 SSH 端口而不同步 `GitCandy__Application__SshPort`。
+
+容器内端口、SQLite、repository、cache、日志、SSH host key 和 Data Protection key ring 的生产默认值统一定义在主程序的 `appsettings.json`，`docker-compose.yml` 不再重复列出这些应用配置。需要修改时可通过 Compose override 文件把自定义 `appsettings.Production.json` 只读挂载到 `/app/appsettings.Production.json`，也可继续使用 ASP.NET Core 环境变量；环境变量把 `:` 替换为 `__`，并覆盖 JSON 配置。不要把密码、token 或私钥写入 Compose 文件或提交到仓库。
 
 Web 登录 cookie 始终带 `Secure`。公网部署必须在 `8080` 前放置支持长请求和流式响应的 TLS reverse proxy，并正确转发 scheme、host 和客户端地址。Git Smart HTTP 的 request body 上限和 timeout 也要在代理层设置为不低于 GitCandy 的 `GitCandy:GitHttp` 配置。不要对 pack 响应启用代理缓冲。
 
@@ -66,8 +68,7 @@ sudo journalctl -u gitcandy -n 200 --no-pager
 - 创建无登录 shell 的 `gitcandy` 系统账户。
 - 安装程序到 `/opt/gitcandy`，数据放到 `/var/lib/gitcandy`。
 - 仅在配置文件不存在时安装 `appsettings.Production.json`，升级不会覆盖现有配置。
-- 以 `gitcandy` 账户显式运行一次 `GitCandy --migrate`。
-- 安装并启动 `gitcandy.service`。
+- 安装并启动 `gitcandy.service`；服务进程在开始监听前自动应用 pending migrations。
 
 systemd unit 使用只读系统目录、独立临时目录和 `NoNewPrivileges`，仅允许写 `/var/lib/gitcandy`。默认 SSH 端口 `2222` 不需要授予低端口 capability；若对外使用 22，优先通过防火墙/NAT 转发 22 到 2222。
 
@@ -82,7 +83,7 @@ Get-Service GitCandy
 Invoke-WebRequest http://127.0.0.1:8080/health/ready
 ```
 
-默认程序目录为 `%ProgramFiles%\GitCandy`，数据目录为 `%ProgramData%\GitCandy`。安装脚本先停止旧服务、保留现有配置和数据、复制新程序、显式执行 migration，然后以 `NT SERVICE\GitCandy` 虚拟账户启动服务并授予数据目录修改权限。
+默认程序目录为 `%ProgramFiles%\GitCandy`，数据目录为 `%ProgramData%\GitCandy`。安装脚本先停止旧服务、保留现有配置和数据、复制新程序，然后以 `NT SERVICE\GitCandy` 虚拟账户启动服务并授予数据目录修改权限；服务进程在开始监听前自动应用 pending migrations。
 
 移除服务但保留程序和数据：
 
@@ -92,7 +93,7 @@ Invoke-WebRequest http://127.0.0.1:8080/health/ready
 
 ## 配置迁移
 
-ASP.NET Core 配置优先使用 `appsettings.Production.json` 或环境变量。环境变量把 `:` 替换为 `__`，例如 `GitCandy:Application:RepositoryPath` 对应 `GitCandy__Application__RepositoryPath`。
+主程序 `appsettings.json` 提供 Linux/容器生产默认值；本地 `Development` 环境由 `appsettings.Development.json` 覆盖为 content root 下的 `App_Data`。生产修改优先使用 `appsettings.Production.json` 或环境变量。环境变量把 `:` 替换为 `__`，例如 `GitCandy:Application:RepositoryPath` 对应 `GitCandy__Application__RepositoryPath`；`ASPNETCORE_HTTP_PORTS` 可覆盖默认 HTTP `8080` 监听端口。
 
 | 旧 MVC5 配置 | ASP.NET Core 配置 | 说明 |
 | --- | --- | --- |
@@ -140,7 +141,7 @@ Release workflow 用固定在 `.config/dotnet-tools.json` 的 `dotnet-ef` 生成
 - `sqlite.sql`：从空数据库创建当前 SQLite schema。
 - `sqlserver-idempotent.sql`：用于 SQL Server schema 审阅和后续独立部署验证；当前主 host 仍是 SQLite-first。
 
-生产升级前先审阅对应版本 SQL 和 migration 差异，并完成备份。`GitCandy --migrate` 是管理员明确执行的变更入口；普通 `GitCandy` 启动不会调用 `Database.Migrate` 或 `EnsureCreated`。
+生产升级前先审阅对应版本 SQL 和 migration 差异，并完成备份。普通 GitCandy 启动会检测并自动应用 pending migrations；`GitCandy --migrate` 保留为只迁移后退出的运维入口。自动迁移只处理当前 EF Core schema，不导入或改写旧 MVC5 用户数据库。
 
 ## 备份和恢复
 
@@ -168,7 +169,7 @@ docker compose start gitcandy
 
 1. 固定当前运行版本并完成一致性备份。
 2. 下载新版本产物，审阅 CHANGES 和 migration SQL。
-3. 停止旧服务，显式运行新版本 `--migrate`，再启动新版本。
+3. 停止旧服务并启动新版本；新进程会在开放 Web/SSH 端口前自动应用 pending migrations。
 4. 验证 `/health/ready`、登录、公开/私有权限、HTTP clone/fetch/push 和 SSH clone/fetch/push。
 
 回滚：

@@ -57,13 +57,16 @@
  - Added the real in-process SSH listener for the ASP.NET Core host, with public-key Identity authentication, repository authorization, and shared `IGitTransportBackend` streaming.
  - Added persistent RSA SSH host-key generation and one-time import from the legacy user configuration XML.
  - Added real Git/OpenSSH clone, fetch, and push coverage plus listener lifecycle, occupied-port, host-key migration, and Quartz shutdown tests.
- - Added Docker Compose deployment with an explicit one-shot migration service and persistent application data volume.
+ - Added Docker Compose deployment with automatic startup migration and a persistent application data volume.
  - Added self-contained Linux systemd and Windows Service release packages and installation scripts.
  - Added liveness and readiness endpoints covering the database, repository/cache storage, Git backend, and built-in SSH listener.
  - Added tag-based release automation for Linux/Windows packages, migration SQL, a downloadable image archive, GHCR, and Docker Hub.
  - Added a persistent ASP.NET Core Data Protection key ring so Identity cookies survive container and service restarts.
 
 #### Changed
+ - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, logs, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
+ - Moved source-image build settings from the release Compose definition into the automatically loaded `docker-compose.override.yml`.
+ - GitCandy now detects and applies pending EF Core migrations before Web, SSH, Quartz, and other hosted services start; `--migrate` remains available as a migration-only compatibility command.
  - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
  - Removed the unused ASP.NET Core Session registration and middleware; the migrated host and Git Basic authentication no longer emit or depend on `.GitCandy.Session`.
  - Private repositories now reject anonymous access even if inconsistent data enables anonymous read/write flags.
@@ -78,7 +81,6 @@
  - The migrated SSH compatibility stack now advertises only group14-SHA1, RSA, AES-CTR, and HMAC-SHA1, removing group1, DSA, CBC, 3DES, and HMAC-MD5 from the new host.
  - Quartz now interrupts cancellation-aware jobs during host shutdown and waits for their cleanup to complete.
  - Deployment support now targets Docker Compose, Linux systemd, and Windows Service only; IIS is no longer supported.
- - Database migration is now an explicit `GitCandy --migrate` operation and remains separate from normal application startup.
  - Pinned the SQLite native runtime to `SQLitePCLRaw.lib.e_sqlite3` 3.53.3 because fresh release restores reject the vulnerable 2.1.11 transitive version.
 
 #### Migration

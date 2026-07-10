@@ -14,7 +14,7 @@ namespace GitCandy.Tests;
 public sealed class OperationsHealthCheckTests
 {
     [TestMethod]
-    public async Task MigrateGitCandyDatabaseAsync_WithEmptyDataDirectory_CreatesReadyApplication()
+    public async Task MigrateGitCandyDatabaseAsync_WithEmptyDataDirectory_CreatesReadyApplicationAndIsIdempotent()
     {
         var tempRoot = CreateTempDirectory();
         try
@@ -37,6 +37,7 @@ public sealed class OperationsHealthCheckTests
             services.AddGitCandyWebShell(configuration);
 
             await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await serviceProvider.MigrateGitCandyDatabaseAsync();
             await serviceProvider.MigrateGitCandyDatabaseAsync();
 
             var healthCheckService = serviceProvider.GetRequiredService<HealthCheckService>();

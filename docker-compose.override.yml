@@ -1,0 +1,5 @@
+services:
+  gitcandy:
+    build:
+      context: .
+      dockerfile: Dockerfile

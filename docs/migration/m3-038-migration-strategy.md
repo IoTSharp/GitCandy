@@ -7,7 +7,7 @@
 - SQLite 与 SQL Server 分别由 `GitCandy.Data.Sqlite`、`GitCandy.Data.SqlServer` 持有独立 `InitialIdentitySchema` migration 和 model snapshot。
 - 两个初始 migration 都代表 ASP.NET Core 迁移主线的新 Identity + GitCandy 领域 schema，不把旧 `Users`、`AuthorizationLog`、`PasswordVersion` 当作 baseline。
 - SQL Server provider 可生成 idempotent migration SQL；smoke test 离线审阅 Identity/领域表、主外键、唯一索引和 provider 类型，不要求测试机运行 SQL Server。
-- 主程序仍只注册 SQLite provider，不在应用启动时自动执行 production migration；切换运行 provider 属于后续部署切片。
+- M3 当时主程序只注册 SQLite provider，尚未在启动时执行 production migration；M8 部署闭环后已改为启动时检测并自动应用 pending migrations。切换运行 provider 仍属于独立部署任务。
 - 旧仓库、团队和非密码资料若需要迁移，必须通过独立导入工具读取旧库并写入新 schema；旧密码、cookie 和授权日志不导入。
 
 ## Provider 差异

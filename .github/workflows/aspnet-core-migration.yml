@@ -8,6 +8,7 @@ on:
       - ".config/dotnet-tools.json"
       - "Dockerfile"
       - "docker-compose.yml"
+      - "docker-compose.override.yml"
       - ".dockerignore"
       - "deploy/**"
       - "docs/**"
@@ -26,6 +27,7 @@ on:
       - ".config/dotnet-tools.json"
       - "Dockerfile"
       - "docker-compose.yml"
+      - "docker-compose.override.yml"
       - ".dockerignore"
       - "deploy/**"
       - "docs/**"
@@ -66,7 +68,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Validate Compose
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          docker compose --file docker-compose.yml config --quiet
 
       - name: Build image
         run: docker build --tag gitcandy:ci .

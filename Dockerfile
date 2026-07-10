@@ -23,17 +23,6 @@ RUN mkdir -p /var/lib/gitcandy/repositories /var/lib/gitcandy/cache /var/lib/git
     && mkdir -p /var/lib/gitcandy/data-protection-keys \
     && chown -R "$APP_UID:$APP_UID" /var/lib/gitcandy
 
-ENV ASPNETCORE_ENVIRONMENT=Production \
-    ASPNETCORE_HTTP_PORTS=8080 \
-    GitCandy__Application__RepositoryPath=/var/lib/gitcandy/repositories \
-    GitCandy__Application__CachePath=/var/lib/gitcandy/cache \
-    GitCandy__Application__LogPathFormat=/var/lib/gitcandy/logs/gitcandy-{0}.log \
-    GitCandy__Application__UserConfigurationPath=/var/lib/gitcandy/config.xml \
-    GitCandy__Application__SshHostKeyPath=/var/lib/gitcandy/ssh-host-key.xml \
-    GitCandy__Application__DataProtectionKeysPath=/var/lib/gitcandy/data-protection-keys \
-    GitCandy__Application__SshPort=2222 \
-    ConnectionStrings__GitCandy="Data Source=/var/lib/gitcandy/GitCandy.db"
-
 VOLUME ["/var/lib/gitcandy"]
 EXPOSE 8080 2222
 USER $APP_UID

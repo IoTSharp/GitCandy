@@ -4,6 +4,8 @@ using GitCandy.Profiling;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Keep ASPNETCORE_HTTP_PORTS and other host settings as production overrides for JSON defaults.
+builder.Configuration.AddEnvironmentVariables(prefix: "ASPNETCORE_");
 builder.Host.UseSystemd();
 builder.Host.UseWindowsService(options => options.ServiceName = "GitCandy");
 builder.Services.AddGitCandyWebShell(builder.Configuration, builder.Environment.ContentRootPath);
@@ -11,9 +13,9 @@ builder.Services.AddGitCandyWebShell(builder.Configuration, builder.Environment.
 var app = builder.Build();
 app.ConfigureGitCandyLegacyLogger();
 
+await app.Services.MigrateGitCandyDatabaseAsync();
 if (args.Contains("--migrate", StringComparer.Ordinal))
 {
-    await app.Services.MigrateGitCandyDatabaseAsync();
     return;
 }
 

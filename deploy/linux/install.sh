@@ -36,7 +36,6 @@ fi
 
 chown -R root:gitcandy "${install_dir}"
 chmod 0755 "${install_dir}/GitCandy"
-runuser -u gitcandy -- env ASPNETCORE_ENVIRONMENT=Production "${install_dir}/GitCandy" --migrate
 
 install -m 0644 "${package_dir}/gitcandy.service" /etc/systemd/system/gitcandy.service
 systemctl daemon-reload
