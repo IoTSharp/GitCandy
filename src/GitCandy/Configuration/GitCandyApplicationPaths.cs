@@ -36,6 +36,7 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
         GitCorePath = string.IsNullOrWhiteSpace(value.GitCorePath)
             ? string.Empty
             : ResolveContentPath(value.GitCorePath);
+        SshHostKeyPath = ResolveContentPath(value.SshHostKeyPath);
     }
 
     /// <inheritdoc />
@@ -58,6 +59,9 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
 
     /// <inheritdoc />
     public string GitCorePath { get; }
+
+    /// <inheritdoc />
+    public string SshHostKeyPath { get; }
 
     /// <inheritdoc />
     public string ResolveContentPath(string configuredPath)

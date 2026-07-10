@@ -20,6 +20,7 @@ public sealed class GitCandyApplicationOptionsValidator : IValidateOptions<GitCa
         ValidateRequired(options.UserConfigurationPath, nameof(options.UserConfigurationPath), failures);
         ValidateRequired(options.RepositoryPath, nameof(options.RepositoryPath), failures);
         ValidateRequired(options.CachePath, nameof(options.CachePath), failures);
+        ValidateRequired(options.SshHostKeyPath, nameof(options.SshHostKeyPath), failures);
 
         ValidatePort(options.SslPort, nameof(options.SslPort), failures);
         ValidatePort(options.SshPort, nameof(options.SshPort), failures);

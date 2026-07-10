@@ -192,7 +192,10 @@ public sealed class UserAdministrationService(
 
         var user = await _userManager.FindByNameAsync(userName);
         var parts = publicKey.Trim().Split((char[]?)null, 3, StringSplitOptions.RemoveEmptyEntries);
-        if (user is null || parts.Length < 2 || parts[0].Length > 20 || parts[1].Length > 600)
+        if (user is null
+            || parts.Length < 2
+            || !string.Equals(parts[0], "ssh-rsa", StringComparison.Ordinal)
+            || parts[1].Length > 600)
         {
             return null;
         }

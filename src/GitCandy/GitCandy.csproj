@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GitCandy.Data\GitCandy.Data.csproj" />
     <ProjectReference Include="..\GitCandy.Data.Sqlite\GitCandy.Data.Sqlite.csproj" />
+    <ProjectReference Include="..\GitCandy.Ssh\GitCandy.Ssh.csproj" />
   </ItemGroup>
 
 </Project>

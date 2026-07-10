@@ -54,6 +54,9 @@
  - Added the ASP.NET Core Git Smart HTTP endpoint for both `/git/{repository}.git` and legacy no-suffix repository URLs.
  - Added a shared `IGitTransportBackend` with structured Git arguments, full-duplex streaming, cancellation, bounded diagnostics, and repository root/symlink boundary checks.
  - Added Git Smart HTTP protocol/header/gzip/authentication tests and real Kestrel/SQLite/Git client clone, fetch, authenticated push, and 24 MiB pack coverage.
+ - Added the real in-process SSH listener for the ASP.NET Core host, with public-key Identity authentication, repository authorization, and shared `IGitTransportBackend` streaming.
+ - Added persistent RSA SSH host-key generation and one-time import from the legacy user configuration XML.
+ - Added real Git/OpenSSH clone, fetch, and push coverage plus listener lifecycle, occupied-port, host-key migration, and Quartz shutdown tests.
 
 #### Changed
  - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
@@ -66,6 +69,9 @@
  - Replaced the Git Smart HTTP 501 placeholder with streaming upload-pack and receive-pack behavior, including Git protocol v2 forwarding.
  - Git HTTP now returns 401 for missing/invalid Basic credentials, 403 for authenticated users without permission, and 404 for missing metadata or physical repositories.
  - Git pack authorization now follows the actual URL verb, closing the legacy query-service/verb authorization mismatch.
+ - SSH now allows only `git-upload-pack`, `git-receive-pack`, and `git-upload-archive`; password login, shell, SFTP, forwarding, and arbitrary environment variables remain disabled.
+ - The migrated SSH compatibility stack now advertises only group14-SHA1, RSA, AES-CTR, and HMAC-SHA1, removing group1, DSA, CBC, 3DES, and HMAC-MD5 from the new host.
+ - Quartz now interrupts cancellation-aware jobs during host shutdown and waits for their cleanup to complete.
 
 #### Migration
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
@@ -91,6 +97,8 @@
  - Calibrated the database migration strategy so short-term business implementation and validation use SQLite first; SQL Server, PostgreSQL, and SonnetDB remain visible follow-up provider work after the main migration path is working end to end.
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).
  - Renamed the planned ASP.NET Core host path from `src/GitCandy.Web` to `src/GitCandy` to reflect the single-process main-program architecture.
+ - Replaced the M2 SSH lifecycle placeholder with the M7 in-process listener. Configure `GitCandy:Application:EnableSsh`, `SshPort`, and `SshHostKeyPath`; existing RSA host keys can be imported from `UserConfigurationPath`.
+ - Existing DSA and non-RSA user keys are not accepted by the migrated SSH stack. Current OpenSSH clients require explicit legacy SHA-1 algorithm opt-in until the separately scoped SSH protocol upgrade is completed.
 
 ---
 ### GitCandy v0.2 - [view diff](http://github.com/Aimeast/GitCandy/compare/v0.1...v0.2) - Jul 27, 2016

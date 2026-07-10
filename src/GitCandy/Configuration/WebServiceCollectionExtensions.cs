@@ -170,6 +170,8 @@ public static class WebServiceCollectionExtensions
         {
             options.SchedulerId = "GitCandy";
             options.SchedulerName = "GitCandy Scheduler";
+            options.InterruptJobsOnShutdown = true;
+            options.InterruptJobsOnShutdownWithWait = true;
             options.UseInMemoryStore(_ => { });
             options.UseDefaultThreadPool(threadPool =>
             {
@@ -191,7 +193,9 @@ public static class WebServiceCollectionExtensions
 
     private static IServiceCollection AddGitCandySsh(this IServiceCollection services)
     {
-        services.TryAddSingleton<ISshServerRuntime, PlaceholderSshServerRuntime>();
+        services.TryAddSingleton<ISshHostKeyProvider, FileSshHostKeyProvider>();
+        services.TryAddSingleton<ISshAccessService, SshAccessService>();
+        services.TryAddSingleton<ISshServerRuntime, BuiltInSshServerRuntime>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, SshServerHostedService>());
 

@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Quartz;
@@ -55,6 +56,7 @@ public sealed class WebServiceCollectionExtensionsTests
 
             var services = new ServiceCollection();
             services.AddLogging();
+            services.AddSingleton<IWebHostEnvironment>(new TestWebHostEnvironment(tempRoot));
             services.AddGitCandyWebShell(configuration);
 
             Assert.IsTrue(services.Any(service =>
@@ -99,7 +101,8 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsNotNull(serviceProvider.GetRequiredService<IApplicationCache>());
             Assert.IsNotNull(serviceProvider.GetRequiredService<IHttpContextAccessor>());
             Assert.IsNotNull(serviceProvider.GetRequiredService<IRequestProfilerAccessor>());
-            Assert.IsNotNull(serviceProvider.GetRequiredService<ISshServerRuntime>());
+            Assert.IsInstanceOfType<BuiltInSshServerRuntime>(
+                serviceProvider.GetRequiredService<ISshServerRuntime>());
 
             var localizationOptions = serviceProvider.GetRequiredService<IOptions<RequestLocalizationOptions>>().Value;
             Assert.AreEqual("en-US", localizationOptions.DefaultRequestCulture.Culture.Name);
@@ -118,6 +121,7 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsTrue(applicationOptions.AllowRegisterUser);
             Assert.IsTrue(applicationOptions.AllowRepositoryCreation);
             Assert.IsTrue(applicationOptions.EnableSsh);
+            Assert.AreEqual("App_Data/ssh-host-key.xml", applicationOptions.SshHostKeyPath);
 
             await using var scope = serviceProvider.CreateAsyncScope();
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<GitCandyDbContext>());
@@ -160,6 +164,7 @@ public sealed class WebServiceCollectionExtensionsTests
             builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["GitCandy:Database:Provider"] = "sqlite",
+                ["GitCandy:Application:EnableSsh"] = "false",
                 ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
             });
             builder.Services.AddGitCandyWebShell(builder.Configuration);
@@ -270,6 +275,7 @@ public sealed class WebServiceCollectionExtensionsTests
             builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["GitCandy:Database:Provider"] = "sqlite",
+                ["GitCandy:Application:EnableSsh"] = "false",
                 ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
             });
             builder.Services.AddSingleton(completion);
@@ -277,6 +283,7 @@ public sealed class WebServiceCollectionExtensionsTests
             builder.Services.AddScoped<ISchedulerJob, RecordingSchedulerJob>();
 
             await using var app = builder.Build();
+            ResetQuartzLogging();
             await app.StartAsync();
 
             try
@@ -307,6 +314,57 @@ public sealed class WebServiceCollectionExtensionsTests
         }
         finally
         {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyWebShell_WithRunningQuartzJob_CancelsAndWaitsDuringHostShutdown()
+    {
+        var tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            Guid.NewGuid().ToString("N"));
+        var signals = new SchedulerShutdownSignals();
+
+        try
+        {
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                ContentRootPath = GetWebProjectRoot(),
+                EnvironmentName = Environments.Development
+            });
+            builder.WebHost.UseKestrel();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GitCandy:Database:Provider"] = "sqlite",
+                ["GitCandy:Application:EnableSsh"] = "false",
+                ["ConnectionStrings:GitCandy"] =
+                    $"Data Source={Path.Combine(tempRoot, "GitCandy.db")};Pooling=False"
+            });
+            builder.Services.AddSingleton(signals);
+            builder.Services.AddGitCandyWebShell(builder.Configuration);
+            builder.Services.AddScoped<ISchedulerJob, BlockingSchedulerJob>();
+
+            await using var app = builder.Build();
+            ResetQuartzLogging();
+            await app.StartAsync();
+
+            var startedTask = await Task.WhenAny(
+                signals.Started.Task,
+                Task.Delay(TimeSpan.FromSeconds(10)));
+            Assert.AreSame(signals.Started.Task, startedTask);
+
+            await app.StopAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.IsTrue(await signals.Canceled.Task.WaitAsync(TimeSpan.FromSeconds(2)));
+        }
+        finally
+        {
+            ResetQuartzLogging();
             if (Directory.Exists(tempRoot))
             {
                 Directory.Delete(tempRoot, recursive: true);
@@ -391,7 +449,8 @@ public sealed class WebServiceCollectionExtensionsTests
                 ["GitCandy:Application:NumberOfItemsPerList"] = "15",
                 ["GitCandy:Application:NumberOfRepositoryContributors"] = "9",
                 ["GitCandy:Application:SshPort"] = "2022",
-                ["GitCandy:Application:EnableSsh"] = "false"
+                ["GitCandy:Application:EnableSsh"] = "false",
+                ["GitCandy:Application:SshHostKeyPath"] = "secrets/ssh-host-key.xml"
             });
 
         var services = new ServiceCollection();
@@ -417,6 +476,7 @@ public sealed class WebServiceCollectionExtensionsTests
         Assert.AreEqual(9, options.NumberOfRepositoryContributors);
         Assert.AreEqual(2022, options.SshPort);
         Assert.IsFalse(options.EnableSsh);
+        Assert.AreEqual("secrets/ssh-host-key.xml", options.SshHostKeyPath);
     }
 
     [TestMethod]
@@ -543,6 +603,44 @@ public sealed class WebServiceCollectionExtensionsTests
         }
     }
 
+    private sealed class BlockingSchedulerJob(SchedulerShutdownSignals signals) : ISchedulerJob
+    {
+        private readonly SchedulerShutdownSignals _signals = signals;
+
+        public string Name => "BlockingSchedulerJob";
+
+        public SchedulerJobType JobType => SchedulerJobType.RealTime;
+
+        public async ValueTask ExecuteAsync(
+            SchedulerJobContext context,
+            CancellationToken cancellationToken = default)
+        {
+            _signals.Started.TrySetResult(true);
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            finally
+            {
+                _signals.Canceled.TrySetResult(cancellationToken.IsCancellationRequested);
+            }
+        }
+
+        public TimeSpan GetNextInterval(SchedulerJobContext context)
+        {
+            return TimeSpan.MaxValue;
+        }
+    }
+
+    private sealed class SchedulerShutdownSignals
+    {
+        public TaskCompletionSource<bool> Started { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource<bool> Canceled { get; } = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+    }
+
     private sealed class RecordingSshServerRuntime : ISshServerRuntime
     {
         public int StartCalls { get; private set; }
@@ -566,6 +664,21 @@ public sealed class WebServiceCollectionExtensionsTests
             StopCancellationCanBeCanceled = cancellationToken.CanBeCanceled;
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class TestWebHostEnvironment(string contentRootPath) : IWebHostEnvironment
+    {
+        public string ApplicationName { get; set; } = "GitCandy.Tests";
+
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+
+        public string ContentRootPath { get; set; } = contentRootPath;
+
+        public string EnvironmentName { get; set; } = Environments.Development;
+
+        public string WebRootPath { get; set; } = contentRootPath;
+
+        public IFileProvider WebRootFileProvider { get; set; } = new NullFileProvider();
     }
 
     private sealed class NoopQuartzLogProvider : ILogProvider

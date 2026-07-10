@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/GitCandy.Ssh/GitCandy.Ssh.csproj" />
     <Project Path="src/GitCandy.Data.PostgreSql/GitCandy.Data.PostgreSql.csproj" />
     <Project Path="src/GitCandy.Data.SonnetDB/GitCandy.Data.SonnetDB.csproj" />
     <Project Path="src/GitCandy.Data.SqlServer/GitCandy.Data.SqlServer.csproj" />

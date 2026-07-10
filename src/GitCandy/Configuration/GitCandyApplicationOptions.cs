@@ -99,4 +99,9 @@ public sealed class GitCandyApplicationOptions
     /// 是否启用内置 SSH 服务。
     /// </summary>
     public bool EnableSsh { get; set; } = true;
+
+    /// <summary>
+    /// 内置 SSH server host key 文件路径。相对路径基于应用 content root。
+    /// </summary>
+    public string SshHostKeyPath { get; set; } = "App_Data/ssh-host-key.xml";
 }

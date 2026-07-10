@@ -501,7 +501,7 @@ ASP.NET Core 中间件和后台能力：
 - 大文件/较大 pack 流式传输。
 - 权限不足时 Git 客户端收到正确 401/403/404 行为。
 
-### ⬜ Milestone 7：SSH 和后台任务现代化
+### ✅ Milestone 7：SSH 和后台任务现代化
 
 目标：让 SSH Server 和任务调度适应 ASP.NET Core 生命周期。
 
@@ -512,20 +512,20 @@ ASP.NET Core 中间件和后台能力：
 - 外部 OpenSSH forced command 仅作为可选部署适配，放到迁移稳定后按独立任务评估。
 - SSH 协议栈替换或大升级放到迁移稳定后单独做。
 
-#### ⬜ M7 拆分
+#### ✅ M7 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #070 | 内置 SSH hosted service | `SshServerConfig` 改为 hosted service，随 GitCandy host 同进程启动和停止 |
-| ⬜ #071 | SSH DI 权限接入 | `GitSshService` 通过 DI 获取权限服务和配置 |
-| ⬜ #072 | SSH 与 Git backend 复用 | SSH clone/fetch/push 复用 `IGitTransportBackend`、仓库路径解析、权限判断、审计和 hook pipeline |
-| ⬜ #073 | 后台 DbContext 边界 | 后台线程访问数据库使用 `IDbContextFactory` |
-| ⬜ #074 | SSH 配置迁移 | 保留端口、host keys、开关配置迁移路径 |
-| ⬜ #075 | SSH 安全评估 | 评估自写 SSH 协议实现的安全性、算法兼容性、host key 管理和禁用交互 shell/SFTP/端口转发的策略 |
-| ⬜ #076 | Scheduler 取消支持 | Quartz.NET job 支持 `CancellationToken`，应用停止时等待或取消后台任务并记录诊断日志 |
-| ⬜ #077 | 启停日志与失败诊断 | 端口占用、host key 缺失、后台任务异常日志可诊断 |
-| ⬜ #078 | SSH clone/fetch/push 验证 | SSH clone、fetch、push 通过 |
-| ⬜ #079 | 关闭与端口冲突验证 | 应用停止时 SSH listener 和 scheduler 正常退出；端口被占用时应用行为明确 |
+| ✅ #070 | 内置 SSH hosted service | `SshServerConfig` 改为 hosted service，随 GitCandy host 同进程启动和停止 |
+| ✅ #071 | SSH DI 权限接入 | `GitSshService` 通过 DI 获取权限服务和配置 |
+| ✅ #072 | SSH 与 Git backend 复用 | SSH clone/fetch/push 复用 `IGitTransportBackend`、仓库路径解析、权限判断、审计和 hook pipeline |
+| ✅ #073 | 后台 DbContext 边界 | 后台线程访问数据库使用 `IDbContextFactory` |
+| ✅ #074 | SSH 配置迁移 | 保留端口、host keys、开关配置迁移路径 |
+| ✅ #075 | SSH 安全评估 | 评估自写 SSH 协议实现的安全性、算法兼容性、host key 管理和禁用交互 shell/SFTP/端口转发的策略 |
+| ✅ #076 | Scheduler 取消支持 | Quartz.NET job 支持 `CancellationToken`，应用停止时等待或取消后台任务并记录诊断日志 |
+| ✅ #077 | 启停日志与失败诊断 | 端口占用、host key 缺失、后台任务异常日志可诊断 |
+| ✅ #078 | SSH clone/fetch/push 验证 | SSH clone、fetch、push 通过 |
+| ✅ #079 | 关闭与端口冲突验证 | 应用停止时 SSH listener 和 scheduler 正常退出；端口被占用时应用行为明确 |
 
 验收：
 
