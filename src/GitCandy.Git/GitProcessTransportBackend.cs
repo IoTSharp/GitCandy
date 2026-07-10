@@ -40,14 +40,46 @@ public sealed class GitProcessTransportBackend(
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(output);
 
-        await _operationSlots.WaitAsync(cancellationToken);
+        var startedTimestamp = Stopwatch.GetTimestamp();
+        using var activity = GitTransportTelemetry.StartOperation(request);
+        var acquiredOperationSlot = false;
+        var result = "success";
         try
         {
+            await _operationSlots.WaitAsync(cancellationToken);
+            acquiredOperationSlot = true;
+            GitTransportTelemetry.ActiveOperations.Add(
+                1,
+                GitTransportTelemetry.CreateTags(request.Service));
             await ExecuteCoreAsync(request, input, output, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            result = "canceled";
+            throw;
+        }
+        catch (Exception exception)
+        {
+            result = "error";
+            activity?.SetStatus(ActivityStatusCode.Error, exception.GetType().Name);
+            throw;
         }
         finally
         {
-            _operationSlots.Release();
+            var tags = GitTransportTelemetry.CreateTags(request.Service, result);
+            GitTransportTelemetry.Operations.Add(1, tags);
+            GitTransportTelemetry.OperationDuration.Record(
+                Stopwatch.GetElapsedTime(startedTimestamp).TotalSeconds,
+                tags);
+            activity?.SetTag("gitcandy.result", result);
+
+            if (acquiredOperationSlot)
+            {
+                GitTransportTelemetry.ActiveOperations.Add(
+                    -1,
+                    GitTransportTelemetry.CreateTags(request.Service));
+                _operationSlots.Release();
+            }
         }
     }
 

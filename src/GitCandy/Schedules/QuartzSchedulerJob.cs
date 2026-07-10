@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -58,6 +59,10 @@ public sealed class QuartzSchedulerJob(
             previousUtcLastStart,
             previousUtcLastEnd);
 
+        var startedTimestamp = Stopwatch.GetTimestamp();
+        using var activity = SchedulerTelemetry.StartExecution();
+        SchedulerTelemetry.ActiveExecutions.Add(1);
+        var result = "success";
         try
         {
             _logger.LogInformation("Scheduler job {JobName} executing.", schedulerJob.Name);
@@ -66,12 +71,25 @@ public sealed class QuartzSchedulerJob(
         }
         catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
         {
+            result = "canceled";
             _logger.LogInformation("Scheduler job {JobName} was canceled.", schedulerJob.Name);
             return;
         }
         catch (Exception ex)
         {
+            result = "error";
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
             _logger.LogError(ex, "Scheduler job {JobName} failed.", schedulerJob.Name);
+        }
+        finally
+        {
+            var tags = SchedulerTelemetry.CreateTags(result);
+            SchedulerTelemetry.Executions.Add(1, tags);
+            SchedulerTelemetry.ExecutionDuration.Record(
+                Stopwatch.GetElapsedTime(startedTimestamp).TotalSeconds,
+                tags);
+            SchedulerTelemetry.ActiveExecutions.Add(-1);
+            activity?.SetTag("gitcandy.result", result);
         }
 
         var utcEnd = DateTimeOffset.UtcNow;

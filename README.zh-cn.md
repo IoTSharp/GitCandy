@@ -36,6 +36,7 @@ docker pull iotsharp/gitcandy:latest
 
 - 存活检查：`/health/live`
 - 就绪检查：`/health/ready`
+- OpenTelemetry tracing、metrics、logging 与可选 OTLP 导出
 - 可选的仅迁移命令：`GitCandy --migrate`
 - 部署、配置、备份、恢复与回滚：[docs/deployment.md](docs/deployment.md)
 - 数据库 provider 说明：[docs/database-providers.md](docs/database-providers.md)

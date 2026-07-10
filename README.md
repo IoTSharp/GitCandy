@@ -36,6 +36,7 @@ Tagged GitHub Releases also contain Linux and Windows service packages, migratio
 
 - Liveness: `/health/live`
 - Readiness: `/health/ready`
+- OpenTelemetry tracing, metrics, and logging with optional OTLP export
 - Optional migration-only command: `GitCandy --migrate`
 - Detailed deployment, configuration, backup, restore, and rollback guide: [docs/deployment.md](docs/deployment.md)
 - Database provider notes: [docs/database-providers.md](docs/database-providers.md)

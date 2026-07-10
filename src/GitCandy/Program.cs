@@ -1,4 +1,5 @@
 using GitCandy.Configuration;
+using GitCandy.Observability;
 using GitCandy.Operations;
 using GitCandy.Profiling;
 
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables(prefix: "ASPNETCORE_");
 builder.Host.UseSystemd();
 builder.Host.UseWindowsService(options => options.ServiceName = "GitCandy");
+builder.AddGitCandyObservability();
 builder.Services.AddGitCandyWebShell(builder.Configuration, builder.Environment.ContentRootPath);
 
 var app = builder.Build();

@@ -590,7 +590,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #092 | SSH 协议栈替换或升级 | 已替换为 Microsoft Dev Tunnels SSH，现代 OpenSSH 无兼容参数完成 SSH clone/fetch/push |
 | ✅ #093 | Nullable 全面启用 | 活动项目已全面启用 nullable，移除迁移源码中的局部关闭和无说明的 null-forgiving，用显式空值契约清理告警，并新增源码门禁测试；全解决方案构建 0 警告/0 错误，完整测试通过 |
 | ✅ #094 | 架构拆分深化 | 已建立 Core/Data/Git/SSH/Web 编译边界、模块内 DI 注册和项目依赖方向门禁；公开行为保持不变 |
-| ⬜ #095 | Observability | 引入 OpenTelemetry tracing/metrics/logging |
+| ✅ #095 | Observability | 已引入 OpenTelemetry tracing/metrics/logging，覆盖 ASP.NET Core 请求、runtime、Git transport 和 Quartz job，并支持可配置 OTLP/Console exporter |
 | ⬜ #096 | 前端资产管线 | 在 #090 原型和依赖清单稳定后，独立评估并引入 npm/Vite/esbuild/WebOptimizer 等资产管线；不在此项迁移业务页面 |
 | ⬜ #097 | LibGit2Sharp 升级 | 单独评估 native binary、API 差异和 Git 操作回归验证 |
 | ⬜ #098 | 减少 Git helper 依赖 | 在协议测试保护网完整后，评估用 LibGit2Sharp/托管实现替代部分 `git.exe` helper 的可行性 |
