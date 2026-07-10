@@ -8,7 +8,7 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 EF Core 领域表的仓库应用服务。
 /// </summary>
-public sealed class RepositoryService(
+internal sealed class RepositoryService(
     GitCandyDbContext dbContext,
     IGitCandyRepositoryPermissionQuery permissionQuery)
     : IRepositoryService

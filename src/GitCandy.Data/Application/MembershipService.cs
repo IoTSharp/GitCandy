@@ -10,7 +10,7 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 ASP.NET Core Identity 的用户应用服务。
 /// </summary>
-public sealed class MembershipService(
+internal sealed class MembershipService(
     UserManager<GitCandyUser> userManager,
     GitCandyDbContext dbContext) : IMembershipService
 {

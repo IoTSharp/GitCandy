@@ -65,6 +65,7 @@
  - Added M9 #091 account security management with TOTP authenticator setup, recovery codes, remembered browsers, and safe authenticator reset/disable flows.
  - Added optional generic OpenID Connect sign-in, external account registration, account linking/unlinking, and password setup for external-only accounts.
  - Added M9 #092 modern SSH protocol configuration tests and real OpenSSH coverage without legacy algorithm overrides.
+ - Added M9 #094 architecture dependency gates for the Core, Data, Git, SSH, provider, and Web projects.
 
 #### Changed
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
@@ -86,6 +87,7 @@
  - Deployment support now targets Docker Compose, Linux systemd, and Windows Service only; IIS is no longer supported.
  - Pinned the SQLite native runtime to `SQLitePCLRaw.lib.e_sqlite3` 3.53.3 because fresh release restores reject the vulnerable 2.1.11 transitive version.
  - Strengthened the default Identity password policy to 12 characters with at least four unique characters, uppercase, lowercase, digit, and non-alphanumeric requirements; the policy is configurable under `GitCandy:Identity:Password`.
+ - Split framework-independent contracts into `GitCandy.Core`, Git transport into `GitCandy.Git`, EF/Identity application implementations into `GitCandy.Data`, and the complete hosted SSH runtime into `GitCandy.Ssh`; `GitCandy` remains the single-process MVC host and composition root.
 
 #### Removed
  - Removed the migrated host's static `GitCandy.Log.Logger` compatibility adapter, legacy log rotation job, and unused `LogPathFormat` setting. Runtime logging now uses only dependency-injected `ILogger<T>` instances and ASP.NET Core logging providers.

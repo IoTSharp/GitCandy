@@ -7,7 +7,7 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 EF Core 领域表的团队管理服务。
 /// </summary>
-public sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
+internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
 {
     private readonly GitCandyDbContext _dbContext = dbContext;
 

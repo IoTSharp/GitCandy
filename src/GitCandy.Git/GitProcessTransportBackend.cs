@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using GitCandy.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace GitCandy.Git;

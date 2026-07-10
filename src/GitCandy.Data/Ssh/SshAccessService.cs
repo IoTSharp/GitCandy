@@ -9,7 +9,7 @@ namespace GitCandy.Ssh;
 /// <summary>
 /// 通过短生命周期 DbContext 执行 SSH key 认证和仓库权限查询。
 /// </summary>
-public sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbContextFactory)
+internal sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbContextFactory)
     : ISshAccessService
 {
     private readonly IDbContextFactory<GitCandyDbContext> _dbContextFactory = dbContextFactory;

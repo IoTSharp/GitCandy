@@ -11,7 +11,7 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 ASP.NET Core Identity 和 EF Core 的用户管理服务。
 /// </summary>
-public sealed class UserAdministrationService(
+internal sealed class UserAdministrationService(
     UserManager<GitCandyUser> userManager,
     GitCandyDbContext dbContext) : IUserAdministrationService
 {

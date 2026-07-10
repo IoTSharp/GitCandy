@@ -74,6 +74,8 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IRequestProfilerAccessor, HttpContextRequestProfilerAccessor>();
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+        services.AddGitCandyApplicationServices();
+        services.AddGitCandyGit();
         services.AddGitCandyHealthChecks();
 
         services.AddIdentity<GitCandyUser, IdentityRole>(options =>
@@ -119,7 +121,7 @@ public static class WebServiceCollectionExtensions
                 });
         }
 
-        services.AddGitCandyMigrationServices();
+        services.AddGitCandyWebServices();
         services.AddGitCandyScheduler();
         services.AddGitCandySsh();
 
@@ -179,24 +181,15 @@ public static class WebServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddGitCandyMigrationServices(this IServiceCollection services)
+    private static IServiceCollection AddGitCandyWebServices(this IServiceCollection services)
     {
         services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
-        services.TryAddScoped<IMembershipService, MembershipService>();
-        services.TryAddScoped<IUserAdministrationService, UserAdministrationService>();
-        services.TryAddScoped<ITeamService, TeamService>();
-        services.TryAddScoped<IRepositoryService, RepositoryService>();
-        services.TryAddScoped<IRepositoryManagementService, RepositoryManagementService>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, RepositoryAuthorizationHandler>());
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, TeamAdministratorAuthorizationHandler>());
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, CurrentUserAuthorizationHandler>());
-        services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
-        services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
-        services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
-        services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
         return services;
     }
 
@@ -225,17 +218,6 @@ public static class WebServiceCollectionExtensions
             options.AwaitApplicationStarted = true;
             options.WaitForJobsToComplete = true;
         });
-
-        return services;
-    }
-
-    private static IServiceCollection AddGitCandySsh(this IServiceCollection services)
-    {
-        services.TryAddSingleton<ISshHostKeyProvider, FileSshHostKeyProvider>();
-        services.TryAddSingleton<ISshAccessService, SshAccessService>();
-        services.TryAddSingleton<ISshServerRuntime, BuiltInSshServerRuntime>();
-        services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IHostedService, SshServerHostedService>());
 
         return services;
     }

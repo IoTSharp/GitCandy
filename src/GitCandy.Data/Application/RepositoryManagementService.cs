@@ -7,7 +7,7 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 EF Core 领域表的仓库元数据管理服务。
 /// </summary>
-public sealed class RepositoryManagementService(GitCandyDbContext dbContext)
+internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
     : IRepositoryManagementService
 {
     private readonly GitCandyDbContext _dbContext = dbContext;
