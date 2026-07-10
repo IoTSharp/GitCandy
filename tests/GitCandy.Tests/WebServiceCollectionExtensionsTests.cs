@@ -109,7 +109,6 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsTrue(localizationOptions.SupportedCultures?.Any(culture => culture.Name == "zh-Hans") == true);
 
             var applicationOptions = serviceProvider.GetRequiredService<IOptions<GitCandyApplicationOptions>>().Value;
-            Assert.AreEqual("App_Data/{0}.log", applicationOptions.LogPathFormat);
             Assert.AreEqual("App_Data/config.xml", applicationOptions.UserConfigurationPath);
             Assert.AreEqual("App_Data/Repos", applicationOptions.RepositoryPath);
             Assert.AreEqual("App_Data/Caches", applicationOptions.CachePath);
@@ -134,7 +133,6 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsTrue(authorizationHandlers.Any(handler => handler is RepositoryAuthorizationHandler));
             Assert.IsTrue(authorizationHandlers.Any(handler => handler is TeamAdministratorAuthorizationHandler));
             Assert.IsTrue(authorizationHandlers.Any(handler => handler is CurrentUserAuthorizationHandler));
-            Assert.IsTrue(scope.ServiceProvider.GetServices<ISchedulerJob>().Any(job => job is LogRotationJob));
         }
         finally
         {
@@ -238,9 +236,6 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create("."));
             Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create(".."));
 
-            var jobs = scope.ServiceProvider.GetServices<ISchedulerJob>().ToArray();
-            Assert.AreEqual(1, jobs.Length);
-            Assert.AreEqual("LegacyLogRotation", jobs[0].Name);
         }
         finally
         {
@@ -434,7 +429,6 @@ public sealed class WebServiceCollectionExtensionsTests
         var configuration = BuildConfiguration(
             new Dictionary<string, string?>
             {
-                ["GitCandy:Application:LogPathFormat"] = "logs/{0}.txt",
                 ["GitCandy:Application:UserConfigurationPath"] = "conf/gitcandy.xml",
                 ["GitCandy:Application:IsPublicServer"] = "false",
                 ["GitCandy:Application:ForceSsl"] = "true",
@@ -460,7 +454,6 @@ public sealed class WebServiceCollectionExtensionsTests
         using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
         var options = serviceProvider.GetRequiredService<IOptions<GitCandyApplicationOptions>>().Value;
 
-        Assert.AreEqual("logs/{0}.txt", options.LogPathFormat);
         Assert.AreEqual("conf/gitcandy.xml", options.UserConfigurationPath);
         Assert.IsFalse(options.IsPublicServer);
         Assert.IsTrue(options.ForceSsl);
@@ -480,12 +473,11 @@ public sealed class WebServiceCollectionExtensionsTests
     }
 
     [TestMethod]
-    public void AddGitCandyWebShell_WithLegacyAppSettings_UsesMigrationAliases()
+    public void AddGitCandyWebShell_WithLegacyUserConfigurationSetting_UsesMigrationAlias()
     {
         var configuration = BuildConfiguration(
             new Dictionary<string, string?>
             {
-                [GitCandyApplicationOptions.LegacyLogPathFormatKey] = "~\\App_Data\\{0}.log",
                 [GitCandyApplicationOptions.LegacyUserConfigurationKey] = "~\\App_Data\\custom.config.xml"
             });
 
@@ -496,7 +488,6 @@ public sealed class WebServiceCollectionExtensionsTests
         using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
         var options = serviceProvider.GetRequiredService<IOptions<GitCandyApplicationOptions>>().Value;
 
-        Assert.AreEqual("~\\App_Data\\{0}.log", options.LogPathFormat);
         Assert.AreEqual("~\\App_Data\\custom.config.xml", options.UserConfigurationPath);
     }
 

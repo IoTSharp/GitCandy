@@ -23,7 +23,6 @@ public sealed class GitCandyApplicationPathsTests
 
         Assert.AreEqual(FullPath(contentRoot), paths.ContentRootPath);
         Assert.AreEqual(FullPath(webRoot), paths.WebRootPath);
-        Assert.AreEqual(FullPath(contentRoot, "App_Data", "{0}.log"), paths.LogPathFormat);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "config.xml"), paths.UserConfigurationPath);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "Repos"), paths.RepositoryPath);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "Caches"), paths.CachePath);
@@ -37,7 +36,6 @@ public sealed class GitCandyApplicationPathsTests
         var webRoot = Path.Combine(contentRoot, "wwwroot");
         var options = new GitCandyApplicationOptions
         {
-            LogPathFormat = @"~\App_Data\{0}.log",
             UserConfigurationPath = "~/App_Data/custom.config.xml",
             RepositoryPath = @"~\Repositories",
             CachePath = "~/Caches",
@@ -48,7 +46,6 @@ public sealed class GitCandyApplicationPathsTests
             CreateEnvironment(contentRoot, webRoot),
             Options.Create(options));
 
-        Assert.AreEqual(FullPath(contentRoot, "App_Data", "{0}.log"), paths.LogPathFormat);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "custom.config.xml"), paths.UserConfigurationPath);
         Assert.AreEqual(FullPath(contentRoot, "Repositories"), paths.RepositoryPath);
         Assert.AreEqual(FullPath(contentRoot, "Caches"), paths.CachePath);
@@ -62,7 +59,6 @@ public sealed class GitCandyApplicationPathsTests
         var externalRoot = CreateTestPath("external");
         var options = new GitCandyApplicationOptions
         {
-            LogPathFormat = Path.Combine(externalRoot, "logs", "{0}.log"),
             UserConfigurationPath = Path.Combine(externalRoot, "config", "gitcandy.xml"),
             RepositoryPath = Path.Combine(externalRoot, "repositories"),
             CachePath = Path.Combine(externalRoot, "cache"),
@@ -73,7 +69,6 @@ public sealed class GitCandyApplicationPathsTests
             CreateEnvironment(contentRoot, Path.Combine(contentRoot, "wwwroot")),
             Options.Create(options));
 
-        Assert.AreEqual(FullPath(externalRoot, "logs", "{0}.log"), paths.LogPathFormat);
         Assert.AreEqual(FullPath(externalRoot, "config", "gitcandy.xml"), paths.UserConfigurationPath);
         Assert.AreEqual(FullPath(externalRoot, "repositories"), paths.RepositoryPath);
         Assert.AreEqual(FullPath(externalRoot, "cache"), paths.CachePath);
@@ -193,7 +188,6 @@ public sealed class GitCandyApplicationPathsTests
             CreateEnvironment(contentRoot, Path.Combine(contentRoot, "wwwroot")),
             Options.Create(new GitCandyApplicationOptions()));
 
-        Assert.AreEqual(FullPath(contentRoot, "App_Data", "{0}.log"), paths.LogPathFormat);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "config.xml"), paths.UserConfigurationPath);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "Repos"), paths.RepositoryPath);
         Assert.AreEqual(FullPath(contentRoot, "App_Data", "Caches"), paths.CachePath);

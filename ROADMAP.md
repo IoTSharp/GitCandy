@@ -355,9 +355,9 @@ ASP.NET Core 中间件和后台能力：
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ✅ #020 | 配置迁移 | 已新增 `GitCandy:Application` appsettings 配置、`GitCandyApplicationOptions`、启动期校验和旧 `LogPathFormat` / `UserConfiguration` 别名 |
+| ✅ #020 | 配置迁移 | 已新增 `GitCandy:Application` appsettings 配置、`GitCandyApplicationOptions`、启动期校验和旧 `UserConfiguration` 别名；旧 `LogPathFormat` 不迁移 |
 | ✅ #021 | 路径配置抽象 | 已新增 `IGitCandyApplicationPaths`，将应用路径解析收敛到 `IWebHostEnvironment.ContentRootPath/WebRootPath` |
-| ✅ #022 | 日志适配 | 已新增迁移期 `GitCandy.Log.Logger` 兼容 adapter，绑定 ASP.NET Core `ILoggerFactory` |
+| ✅ #022 | 标准日志 | 运行时代码统一通过 DI 使用 `ILogger<T>` 和 ASP.NET Core logging providers，不保留旧静态日志入口 |
 | ✅ #023 | 缓存替换 | 已注册 `IMemoryCache`，新增 `IApplicationCache`/`MemoryApplicationCache` 作为旧 `HttpRuntime.Cache` 迁移入口，并补充门禁和缓存行为测试 |
 | ✅ #024 | DI 替换 MEF | 已新增 `IMembershipService`、`IRepositoryService`、`IGitServiceFactory`、`IGitRepositoryPathResolver` 和 `ISchedulerJob` DI 注册，补充 MEF 门禁与迁移记录 |
 | ✅ #025 | Quartz.NET Scheduler hosted service | 已引入 Quartz.NET in-memory scheduler，使用 `AddQuartz` / `AddQuartzHostedService` 接入 ASP.NET Core 生命周期，并通过 bridge job 执行 DI 注册的 `ISchedulerJob` |
@@ -550,7 +550,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #080 | 部署方式说明 | 只支持 Docker Compose、Linux systemd、Windows Service；明确不支持 IIS |
 | ✅ #081 | 配置迁移指南 | `Web.config` connectionStrings/appSettings 到 `appsettings.json`/环境变量的对照表 |
 | ✅ #082 | 旧数据策略 | 明确旧用户数据不兼容；旧仓库/团队元数据若要迁移，使用独立导入工具 |
-| ✅ #083 | 文件系统路径指南 | 说明 repository、cache、git-core、SSH host keys、Data Protection keys、logs 路径 |
+| ✅ #083 | 文件系统路径指南 | 说明 repository、cache、git-core、SSH host keys 和 Data Protection keys 路径；日志输出由宿主 provider 管理 |
 | ✅ #084 | Health checks | 增加数据库连接、repository path、cache path、Git backend、SSH listener 检查 |
 | ✅ #085 | 备份策略 | 明确数据库、repositories、cache、host keys 和 key ring 的备份和恢复策略 |
 | ✅ #086 | Migration SQL | Release CI 生成 SQLite/SQL Server migration SQL；生产启动先检测并自动应用 pending migrations |

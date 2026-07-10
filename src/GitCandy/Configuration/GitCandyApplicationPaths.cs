@@ -29,7 +29,6 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
             : NormalizeRootPath(environment.WebRootPath);
 
         var value = options.Value;
-        LogPathFormat = ResolveContentPath(value.LogPathFormat);
         UserConfigurationPath = ResolveContentPath(value.UserConfigurationPath);
         RepositoryPath = ResolveContentPath(value.RepositoryPath);
         CachePath = ResolveContentPath(value.CachePath);
@@ -45,9 +44,6 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
 
     /// <inheritdoc />
     public string? WebRootPath { get; }
-
-    /// <inheritdoc />
-    public string LogPathFormat { get; }
 
     /// <inheritdoc />
     public string UserConfigurationPath { get; }

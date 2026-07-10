@@ -167,8 +167,6 @@ public static class WebServiceCollectionExtensions
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
         services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, LogRotationJob>());
-
         return services;
     }
 

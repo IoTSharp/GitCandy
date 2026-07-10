@@ -7,7 +7,7 @@
 - 新 ASP.NET Core host 显式注册 `IMembershipService`/`MembershipService`，用户查找和管理员判断进入 Identity `UserManager<GitCandyUser>`。
 - 新增 `IRepositoryService`/`RepositoryService`，仓库摘要查询、可见仓库列表和 read/write 权限判断通过 EF Core + `IGitCandyRepositoryPermissionQuery` 注入。
 - 新增 `IGitRepositoryPathResolver` 和 `IGitServiceFactory`，后续 Git HTTP/SSH 迁移不再需要在 controller 或 session handler 中直接 `new GitService(project)`，并先建立仓库根目录边界检查。
-- 新增 `ISchedulerJob`、`SchedulerJobContext`、`SchedulerJobType` 和 `LogRotationJob`，把旧 `LogJob` 的任务发现入口从 MEF 改为 ASP.NET Core DI 的 `IEnumerable<ISchedulerJob>`。
+- 新增 `ISchedulerJob`、`SchedulerJobContext` 和 `SchedulerJobType`，把任务发现入口从 MEF 改为 ASP.NET Core DI 的 `IEnumerable<ISchedulerJob>`。
 - `SystemWebEntryCheckTests` 增加 `System.Composition` / `System.ComponentModel.Composition` 门禁，防止新迁移项目重新引入 MEF。
 
 ## 迁移映射

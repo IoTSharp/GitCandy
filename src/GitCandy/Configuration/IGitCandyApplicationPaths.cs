@@ -16,11 +16,6 @@ public interface IGitCandyApplicationPaths
     string? WebRootPath { get; }
 
     /// <summary>
-    /// 日志文件路径格式，参数 0 为日期字符串。
-    /// </summary>
-    string LogPathFormat { get; }
-
-    /// <summary>
     /// 旧用户配置 XML 的绝对路径。
     /// </summary>
     string UserConfigurationPath { get; }

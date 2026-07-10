@@ -8,7 +8,7 @@
 - 第一阶段使用 Quartz.NET in-memory store，不新增 Quartz 持久化 schema，不混入 EF Core / Identity migration。
 - 新增 `QuartzSchedulerJob` bridge，把 Quartz job 执行转发到 DI 中注册的 `ISchedulerJob`，保留 #024 建立的迁移期任务入口。
 - 新增 `QuartzSchedulerRegistrationHostedService`，启动时枚举 `IEnumerable<ISchedulerJob>` 并注册 durable Quartz job 与初始 trigger。
-- `LogRotationJob` 继续作为迁移期 smoke job；首次运行只建立执行上下文，后续按 `GetNextInterval` 继续调度。
+- 调度基础设施通过测试专用 `ISchedulerJob` 验证注册、触发和取消，不再注册无实际作用的日志轮转任务。
 
 ## 迁移映射
 

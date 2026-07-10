@@ -159,7 +159,6 @@ public sealed class SshGitIntegrationTests
                         $"Data Source={Path.Combine(tempRoot, "GitCandy.db")};Pooling=False",
                     ["GitCandy:Application:RepositoryPath"] = repositoryRoot,
                     ["GitCandy:Application:CachePath"] = Path.Combine(tempRoot, "Caches"),
-                    ["GitCandy:Application:LogPathFormat"] = Path.Combine(tempRoot, "Logs", "{0}.log"),
                     ["GitCandy:Application:SshHostKeyPath"] = Path.Combine(tempRoot, "ssh-host-key.xml"),
                     ["GitCandy:Application:SshPort"] = sshPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     ["GitCandy:Application:EnableSsh"] = "true"

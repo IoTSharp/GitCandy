@@ -162,7 +162,6 @@ public sealed class GitSmartHttpIntegrationTests
                 ["ConnectionStrings:GitCandy"] = $"Data Source={Path.Combine(tempRoot, "GitCandy.db")};Pooling=False",
                 ["GitCandy:Application:RepositoryPath"] = repositoryRoot,
                 ["GitCandy:Application:CachePath"] = Path.Combine(tempRoot, "Caches"),
-                ["GitCandy:Application:LogPathFormat"] = Path.Combine(tempRoot, "Logs", "{0}.log"),
                 ["GitCandy:Application:EnableSsh"] = "false",
                 ["GitCandy:GitHttp:RequestTimeout"] = "00:05:00"
             });

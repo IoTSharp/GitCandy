@@ -5,7 +5,8 @@
 ## 验收结论
 
 - 旧 `Web.config appSettings` 中属于 GitCandy 的配置已迁到 `src/GitCandy/appsettings.json` 的 `GitCandy:Application` 节，并通过 `IOptions<GitCandyApplicationOptions>` 暴露。
-- `LogPathFormat` 和 `UserConfiguration` 旧键保留为迁移期别名，便于现有部署用环境变量或临时配置覆盖。
+- `UserConfiguration` 旧键保留为迁移期别名，便于现有部署用环境变量或临时配置覆盖。
+- `LogPathFormat` 不迁入新宿主；日志输出位置由 ASP.NET Core logging provider 和部署宿主管理。
 - MVC5 专用的 `webpages:*` 键没有迁入新宿主；ASP.NET Core MVC 不需要这些配置。
 - 本任务只迁移配置读取形态，不读取旧用户 XML、不导入 host key 私钥、不改变公开路由、认证语义、数据库 schema 或 Git HTTP/SSH 协议行为。
 
@@ -13,7 +14,7 @@
 
 | 旧键 | 新键 | 说明 |
 | --- | --- | --- |
-| `LogPathFormat` | `GitCandy:Application:LogPathFormat` | 日志文件路径格式，`{0}` 为日期字符串 |
+| `LogPathFormat` | 不迁移 | 不保留静态文件 logger；日志目的地由 logging provider 决定 |
 | `UserConfiguration` | `GitCandy:Application:UserConfigurationPath` | 旧 `App_Data/config.xml` 的保留路径，仅用于后续导入或兼容读取 |
 | `webpages:Version` | 不迁移 | MVC5 Razor host 专用 |
 | `webpages:Enabled` | 不迁移 | MVC5 Razor host 专用 |
@@ -36,6 +37,6 @@
 
 ## 兼容性影响
 
-- 配置键发生迁移：新宿主优先读取 `GitCandy:Application:*`，并暂时接受旧根级 `LogPathFormat`、`UserConfiguration` 作为别名。
+- 配置键发生迁移：新宿主优先读取 `GitCandy:Application:*`，并暂时接受旧根级 `UserConfiguration` 作为别名；`LogPathFormat` 被忽略。
 - 旧 XML 中的 SSH host key 私钥不迁入 JSON 配置，避免把密钥内容提交到仓库或普通部署配置。
-- repository、cache、日志路径仍保留为可配置字符串；content root/web root 解析已由 M2 #021 统一，路径边界检查在 M2 #029 继续完成。
+- repository 和 cache 路径仍保留为可配置字符串；content root/web root 解析已由 M2 #021 统一，路径边界检查在 M2 #029 继续完成。

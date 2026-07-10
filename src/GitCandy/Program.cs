@@ -11,7 +11,6 @@ builder.Host.UseWindowsService(options => options.ServiceName = "GitCandy");
 builder.Services.AddGitCandyWebShell(builder.Configuration, builder.Environment.ContentRootPath);
 
 var app = builder.Build();
-app.ConfigureGitCandyLegacyLogger();
 
 await app.Services.MigrateGitCandyDatabaseAsync();
 if (args.Contains("--migrate", StringComparer.Ordinal))

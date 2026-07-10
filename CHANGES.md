@@ -25,7 +25,7 @@
  - Added the M1 #019 shell build validation record for `dotnet build GitCandy.slnx`.
  - Added the M2 #020 `GitCandy:Application` options model for migrated application configuration.
  - Added the M2 #021 `IGitCandyApplicationPaths` abstraction for content-root and web-root based application path resolution.
- - Added the M2 #022 legacy `GitCandy.Log.Logger` adapter for routing migrated static logger calls through ASP.NET Core logging.
+ - Added M2 #022 standard ASP.NET Core logging through dependency-injected `ILogger<T>` instances and configured logging providers.
  - Added the M2 #023 ASP.NET Core `IMemoryCache` registration and `IApplicationCache` wrapper for replacing legacy `HttpRuntime.Cache` usage.
  - Added the M2 #025 Quartz.NET in-memory scheduler hosted service, including a bridge for DI-registered `ISchedulerJob` tasks.
  - Added the M2 #026 SSH lifecycle placeholder hosted service, including an injectable `ISshServerRuntime` and tests for enabled/disabled startup and graceful shutdown token flow.
@@ -64,7 +64,7 @@
  - Added a persistent ASP.NET Core Data Protection key ring so Identity cookies survive container and service restarts.
 
 #### Changed
- - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, logs, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
+ - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
  - Moved source-image build settings from the release Compose definition into the automatically loaded `docker-compose.override.yml`.
  - GitCandy now detects and applies pending EF Core migrations before Web, SSH, Quartz, and other hosted services start; `--migrate` remains available as a migration-only compatibility command.
  - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
@@ -83,6 +83,9 @@
  - Deployment support now targets Docker Compose, Linux systemd, and Windows Service only; IIS is no longer supported.
  - Pinned the SQLite native runtime to `SQLitePCLRaw.lib.e_sqlite3` 3.53.3 because fresh release restores reject the vulnerable 2.1.11 transitive version.
 
+#### Removed
+ - Removed the migrated host's static `GitCandy.Log.Logger` compatibility adapter, legacy log rotation job, and unused `LogPathFormat` setting. Runtime logging now uses only dependency-injected `ILogger<T>` instances and ASP.NET Core logging providers.
+
 #### Migration
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
  - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP now uses the independent M6 endpoint and authentication scheme.
@@ -92,15 +95,15 @@
  - Kept settings read-only in M5; configuration persistence, process restart, and SSH host-key regeneration remain scoped to M8/M7.
  - Added optional `GitCandy:GitHttp` request-size, timeout, and stream-buffer settings; reverse proxies must configure matching body and timeout limits.
  - Physical Git repositories may retain the legacy `{name}` layout or use the M0 fixture `{name}.git` layout under the configured repository root.
- - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
+ - Migrated the legacy `Web.config appSettings` key `UserConfiguration` to `appsettings.json` with a temporary legacy alias; `LogPathFormat` is intentionally not migrated because log destinations are provider-owned.
  - Replaced legacy `Server.MapPath`-style path assumptions in the ASP.NET Core host with `IWebHostEnvironment.ContentRootPath` and `WebRootPath` semantics.
- - Migrated the new host's legacy logger compatibility entry point to `ILoggerFactory`; log sinks are now controlled by ASP.NET Core `Logging` providers instead of the old static file writer.
+ - Standardized the new host on constructor-injected `ILogger<T>`; log sinks are controlled by ASP.NET Core `Logging` providers instead of the old static file writer.
  - New database configuration reads `GitCandy:Database:Provider` and also accepts IoTSharp-style top-level `DataBase`.
  - Migrated the ASP.NET Core host scheduler lifecycle to Quartz.NET `AddQuartz` / `AddQuartzHostedService`; Quartz persistence, clustering, and scheduler UI remain out of scope for the first migration slice.
  - Migrated the new host's SSH lifecycle entry point to an ASP.NET Core `IHostedService` placeholder; the real SSH protocol listener and clone/fetch/push behavior remain scoped to M7.
  - Migrated the new host's lightweight request profiler from `Application_BeginRequest` to ASP.NET Core middleware backed by `HttpContext.Items`.
  - Migrated startup/shutdown diagnostics to ASP.NET Core hosted-service lifecycle logging for the new host.
- - Hardened the new host's path semantics so relative application paths must stay under the ASP.NET Core content/web root; external repository/cache/log locations should be configured as fully qualified paths.
+ - Hardened the new host's path semantics so relative application paths must stay under the ASP.NET Core content/web root; external repository/cache locations should be configured as fully qualified paths.
  - Established the first migration-backed database creation path for the ASP.NET Core migration line; early `EnsureCreated` tests remain smoke coverage only, not release schema evidence.
  - Established separate SQLite and SQL Server migration assemblies for the new schema; the application host remains SQLite-first and does not migrate production databases automatically at startup.
  - Calibrated the ASP.NET Core migration roadmap so `GitCandy.slnx` is the active migration solution while the legacy `GitCandy.sln` remains behavior reference only.

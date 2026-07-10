@@ -6,7 +6,7 @@
 
 - 已新增 `IGitCandyApplicationPaths` 和 `GitCandyApplicationPaths`，作为 ASP.NET Core 宿主中的统一路径解析入口。
 - 路径解析基于 `IWebHostEnvironment.ContentRootPath` 和 `IWebHostEnvironment.WebRootPath`，替代旧 MVC5 代码中的 `Server.MapPath` 使用方式。
-- `GitCandy:Application` 中的 `LogPathFormat`、`UserConfigurationPath`、`RepositoryPath`、`CachePath` 和 `GitCorePath` 均可通过该抽象得到绝对路径。
+- `GitCandy:Application` 中的 `UserConfigurationPath`、`RepositoryPath`、`CachePath` 和 `GitCorePath` 均可通过该抽象得到绝对路径。
 - 支持旧式虚拟路径 `~`、`~/...`、`~\...`，也支持普通相对路径和部署者显式配置的绝对路径。
 - `GitCorePath` 未配置时保持为空字符串，留给后续 Git backend 发现逻辑处理。
 

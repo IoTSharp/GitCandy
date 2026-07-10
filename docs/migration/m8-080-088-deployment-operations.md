@@ -19,7 +19,7 @@
 | #080 | `Dockerfile`、`docker-compose.yml`、`deploy/linux`、`deploy/windows`；README 明确不支持 IIS |
 | #081 | `docs/deployment.md` 记录 `Web.config`/`config.xml` 到 JSON/环境变量对照 |
 | #082 | 明确不兼容旧用户认证数据，旧 metadata 只能由独立导入工具处理 |
-| #083 | 记录三种部署的 database/repository/cache/host key/key ring/logs 路径 |
+| #083 | 记录三种部署的 database/repository/cache/host key/key ring 路径，并说明宿主日志输出 |
 | #084 | 五项 readiness check 与独立 liveness endpoint |
 | #085 | 一致性停止、备份集、恢复顺序、ACL 和协议 smoke test 指南 |
 | #086 | tag workflow 使用固定版本 `dotnet-ef` 生成 SQLite 与 SQL Server SQL |

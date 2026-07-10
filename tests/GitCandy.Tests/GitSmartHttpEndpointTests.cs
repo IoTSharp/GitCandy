@@ -215,7 +215,6 @@ public sealed class GitSmartHttpEndpointTests
                 ["ConnectionStrings:GitCandy"] = $"Data Source={Path.Combine(tempRoot, "GitCandy.db")};Pooling=False",
                 ["GitCandy:Application:RepositoryPath"] = repositoryRoot,
                 ["GitCandy:Application:CachePath"] = Path.Combine(tempRoot, "Caches"),
-                ["GitCandy:Application:LogPathFormat"] = Path.Combine(tempRoot, "Logs", "{0}.log"),
                 ["GitCandy:Application:EnableSsh"] = "false",
                 ["GitCandy:GitHttp:MaxRequestBodySize"] = maxRequestBodySize.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ["GitCandy:GitHttp:RequestTimeout"] = (requestTimeout ?? TimeSpan.FromMinutes(1)).ToString("c")

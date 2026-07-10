@@ -13,15 +13,6 @@ internal static class GitCandyApplicationOptionsConfiguration
 
         var section = configuration.GetSection(GitCandyApplicationOptions.SectionName);
 
-        if (string.IsNullOrWhiteSpace(section[nameof(GitCandyApplicationOptions.LogPathFormat)]))
-        {
-            var legacyLogPathFormat = configuration[GitCandyApplicationOptions.LegacyLogPathFormatKey];
-            if (!string.IsNullOrWhiteSpace(legacyLogPathFormat))
-            {
-                options.LogPathFormat = legacyLogPathFormat;
-            }
-        }
-
         if (string.IsNullOrWhiteSpace(section[nameof(GitCandyApplicationOptions.UserConfigurationPath)]))
         {
             var legacyUserConfigurationPath = FirstValue(

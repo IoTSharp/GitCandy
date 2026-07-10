@@ -198,7 +198,6 @@ public sealed class MvcPageSmokeTests
                 ["ConnectionStrings:GitCandy"] = $"Data Source={Path.Combine(tempRoot, "GitCandy.db")};Pooling=False",
                 ["GitCandy:Application:RepositoryPath"] = Path.Combine(tempRoot, "Repositories"),
                 ["GitCandy:Application:CachePath"] = Path.Combine(tempRoot, "Caches"),
-                ["GitCandy:Application:LogPathFormat"] = Path.Combine(tempRoot, "Logs", "{0}.log"),
                 ["GitCandy:Application:EnableSsh"] = "false",
                 ["GitCandy:Application:AllowRegisterUser"] = "true",
                 ["GitCandy:Application:AllowRepositoryCreation"] = "true"

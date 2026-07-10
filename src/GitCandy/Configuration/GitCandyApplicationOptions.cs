@@ -11,19 +11,9 @@ public sealed class GitCandyApplicationOptions
     public const string SectionName = "GitCandy:Application";
 
     /// <summary>
-    /// 旧 Web.config 日志路径配置键，仅作为迁移期别名读取。
-    /// </summary>
-    public const string LegacyLogPathFormatKey = "LogPathFormat";
-
-    /// <summary>
     /// 旧 Web.config 用户配置 XML 路径键，仅作为迁移期别名读取。
     /// </summary>
     public const string LegacyUserConfigurationKey = "UserConfiguration";
-
-    /// <summary>
-    /// 日志文件路径格式，参数 0 为日期字符串。
-    /// </summary>
-    public string LogPathFormat { get; set; } = "App_Data/{0}.log";
 
     /// <summary>
     /// 旧用户配置 XML 的保留路径，用于后续独立导入或兼容读取。

@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.Extensions.Options;
 
 namespace GitCandy.Configuration;
@@ -15,8 +14,6 @@ public sealed class GitCandyApplicationOptionsValidator : IValidateOptions<GitCa
 
         var failures = new List<string>();
 
-        ValidateRequired(options.LogPathFormat, nameof(options.LogPathFormat), failures);
-        ValidateLogPathFormat(options.LogPathFormat, failures);
         ValidateRequired(options.UserConfigurationPath, nameof(options.UserConfigurationPath), failures);
         ValidateRequired(options.RepositoryPath, nameof(options.RepositoryPath), failures);
         ValidateRequired(options.CachePath, nameof(options.CachePath), failures);
@@ -58,20 +55,4 @@ public sealed class GitCandyApplicationOptionsValidator : IValidateOptions<GitCa
         }
     }
 
-    private static void ValidateLogPathFormat(string? value, List<string> failures)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        try
-        {
-            _ = string.Format(CultureInfo.InvariantCulture, value, "yyyyMMdd");
-        }
-        catch (FormatException)
-        {
-            failures.Add($"{nameof(GitCandyApplicationOptions.LogPathFormat)} must be a valid composite format string.");
-        }
-    }
 }

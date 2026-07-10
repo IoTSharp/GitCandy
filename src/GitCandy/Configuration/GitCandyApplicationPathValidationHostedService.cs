@@ -15,7 +15,6 @@ internal sealed class GitCandyApplicationPathValidationHostedService(
     {
         _ = _applicationPaths.ContentRootPath;
         _ = _applicationPaths.WebRootPath;
-        _ = _applicationPaths.LogPathFormat;
         _ = _applicationPaths.UserConfigurationPath;
         _ = _applicationPaths.RepositoryPath;
         _ = _applicationPaths.CachePath;

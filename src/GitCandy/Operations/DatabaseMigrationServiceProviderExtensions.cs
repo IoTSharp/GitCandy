@@ -28,7 +28,6 @@ public static class DatabaseMigrationServiceProviderExtensions
 
         Directory.CreateDirectory(paths.RepositoryPath);
         Directory.CreateDirectory(paths.CachePath);
-        CreateParentDirectory(paths.LogPathFormat);
         CreateParentDirectory(paths.UserConfigurationPath);
         CreateParentDirectory(paths.SshHostKeyPath);
         Directory.CreateDirectory(paths.DataProtectionKeysPath);
