@@ -4,7 +4,9 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Permissions;
 using GitCandy.Data.Sqlite;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -110,6 +112,140 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                 migrations.Any(static migration =>
                     migration.EndsWith("_InitialIdentitySchema", StringComparison.Ordinal)),
                 "SQLite schema must be created from the InitialIdentitySchema migration.");
+        }
+        finally
+        {
+            if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyData_WithDomainModel_UsesExplicitConstraintsAndIndexes()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sqlite",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using var scope = serviceProvider.CreateAsyncScope();
+
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await dbContext.Database.MigrateAsync();
+
+            var model = dbContext.Model;
+
+            AssertStringProperty(model, typeof(GitCandyUser), nameof(GitCandyUser.Id), 450, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyUser), nameof(GitCandyUser.DisplayName), 128, isNullable: true);
+            AssertStringProperty(model, typeof(GitCandyUser), nameof(GitCandyUser.Description), 512, isNullable: true);
+            AssertStringProperty(model, typeof(IdentityRole), nameof(IdentityRole.Id), 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityRoleClaim<string>), "RoleId", 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserClaim<string>), "UserId", 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserLogin<string>), "LoginProvider", 128, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserLogin<string>), "ProviderKey", 128, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserLogin<string>), "UserId", 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserRole<string>), "UserId", 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserRole<string>), "RoleId", 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserToken<string>), "UserId", 450, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserToken<string>), "LoginProvider", 128, isNullable: false);
+            AssertStringProperty(model, typeof(IdentityUserToken<string>), "Name", 128, isNullable: false);
+
+            AssertStringProperty(model, typeof(GitCandyRepository), nameof(GitCandyRepository.Name), 50, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyRepository), nameof(GitCandyRepository.NormalizedName), 50, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyRepository), nameof(GitCandyRepository.Description), 500, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyTeam), nameof(GitCandyTeam.Name), 20, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyTeam), nameof(GitCandyTeam.NormalizedName), 20, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyTeam), nameof(GitCandyTeam.Description), 500, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyUserRepositoryRole), nameof(GitCandyUserRepositoryRole.UserId), 450, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandyUserTeamRole), nameof(GitCandyUserTeamRole.UserId), 450, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandySshKey), nameof(GitCandySshKey.UserId), 450, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandySshKey), nameof(GitCandySshKey.KeyType), 20, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandySshKey), nameof(GitCandySshKey.Fingerprint), 47, isNullable: false);
+            AssertStringProperty(model, typeof(GitCandySshKey), nameof(GitCandySshKey.PublicKey), 600, isNullable: false);
+
+            AssertPrimaryKey(model, typeof(GitCandyRepository), nameof(GitCandyRepository.Id));
+            AssertPrimaryKey(model, typeof(GitCandyTeam), nameof(GitCandyTeam.Id));
+            AssertPrimaryKey(model, typeof(GitCandySshKey), nameof(GitCandySshKey.Id));
+            AssertPrimaryKey(
+                model,
+                typeof(GitCandyUserRepositoryRole),
+                nameof(GitCandyUserRepositoryRole.UserId),
+                nameof(GitCandyUserRepositoryRole.RepositoryId));
+            AssertPrimaryKey(
+                model,
+                typeof(GitCandyTeamRepositoryRole),
+                nameof(GitCandyTeamRepositoryRole.TeamId),
+                nameof(GitCandyTeamRepositoryRole.RepositoryId));
+            AssertPrimaryKey(
+                model,
+                typeof(GitCandyUserTeamRole),
+                nameof(GitCandyUserTeamRole.UserId),
+                nameof(GitCandyUserTeamRole.TeamId));
+
+            AssertUniqueIndex(model, typeof(GitCandyRepository), "IX_Repositories_NormalizedName", nameof(GitCandyRepository.NormalizedName));
+            AssertUniqueIndex(model, typeof(GitCandyTeam), "IX_Teams_NormalizedName", nameof(GitCandyTeam.NormalizedName));
+            AssertUniqueIndex(model, typeof(GitCandySshKey), "IX_SshKeys_Fingerprint", nameof(GitCandySshKey.Fingerprint));
+            AssertUniqueIndex(model, typeof(GitCandyUser), "UserNameIndex", nameof(GitCandyUser.NormalizedUserName));
+            AssertUniqueIndex(model, typeof(IdentityRole), "RoleNameIndex", nameof(IdentityRole.NormalizedName));
+
+            AssertForeignKey(
+                model,
+                typeof(GitCandyUserRepositoryRole),
+                typeof(GitCandyUser),
+                DeleteBehavior.Cascade,
+                nameof(GitCandyUserRepositoryRole.UserId));
+            AssertForeignKey(
+                model,
+                typeof(GitCandyUserRepositoryRole),
+                typeof(GitCandyRepository),
+                DeleteBehavior.Cascade,
+                nameof(GitCandyUserRepositoryRole.RepositoryId));
+            AssertForeignKey(
+                model,
+                typeof(GitCandyTeamRepositoryRole),
+                typeof(GitCandyTeam),
+                DeleteBehavior.Cascade,
+                nameof(GitCandyTeamRepositoryRole.TeamId));
+            AssertForeignKey(
+                model,
+                typeof(GitCandyTeamRepositoryRole),
+                typeof(GitCandyRepository),
+                DeleteBehavior.Cascade,
+                nameof(GitCandyTeamRepositoryRole.RepositoryId));
+            AssertForeignKey(
+                model,
+                typeof(GitCandyUserTeamRole),
+                typeof(GitCandyUser),
+                DeleteBehavior.Cascade,
+                nameof(GitCandyUserTeamRole.UserId));
+            AssertForeignKey(
+                model,
+                typeof(GitCandyUserTeamRole),
+                typeof(GitCandyTeam),
+                DeleteBehavior.Cascade,
+                nameof(GitCandyUserTeamRole.TeamId));
+            AssertForeignKey(
+                model,
+                typeof(GitCandySshKey),
+                typeof(GitCandyUser),
+                DeleteBehavior.Cascade,
+                nameof(GitCandySshKey.UserId));
         }
         finally
         {
@@ -393,6 +529,51 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    public async Task AddGitCandyData_WithCaseOnlyRepositoryAndTeamNames_RejectsDuplicates()
+    {
+        var databasePath = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sqlite",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={databasePath};Pooling=False"
+                })
+                .Build();
+
+            var services = new ServiceCollection();
+            services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using (var scope = serviceProvider.CreateAsyncScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+                await dbContext.Database.MigrateAsync();
+            }
+
+            await SaveRepositoryAsync(serviceProvider, "sample-demo");
+            await SaveTeamAsync(serviceProvider, "core");
+
+            await Assert.ThrowsExactlyAsync<DbUpdateException>(
+                () => SaveRepositoryAsync(serviceProvider, "SAMPLE-DEMO"));
+            await Assert.ThrowsExactlyAsync<DbUpdateException>(
+                () => SaveTeamAsync(serviceProvider, "CORE"));
+        }
+        finally
+        {
+            if (File.Exists(databasePath))
+            {
+                File.Delete(databasePath);
+            }
+        }
+    }
+
+    [TestMethod]
     public async Task AddGitCandyData_WithDomainUserForeignKeys_UsesIdentityUserIds()
     {
         var databasePath = Path.Combine(
@@ -613,6 +794,77 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
         return names;
     }
 
+    private static void AssertStringProperty(
+        IModel model,
+        Type entityClrType,
+        string propertyName,
+        int maxLength,
+        bool isNullable)
+    {
+        var property = GetEntityType(model, entityClrType).FindProperty(propertyName)
+            ?? throw new AssertFailedException($"{entityClrType.Name}.{propertyName} was not found.");
+
+        Assert.AreEqual(typeof(string), property.ClrType);
+        Assert.AreEqual(maxLength, property.GetMaxLength(), $"{entityClrType.Name}.{propertyName} max length mismatch.");
+        Assert.AreEqual(isNullable, property.IsNullable, $"{entityClrType.Name}.{propertyName} nullability mismatch.");
+    }
+
+    private static void AssertPrimaryKey(IModel model, Type entityClrType, params string[] propertyNames)
+    {
+        var primaryKey = GetEntityType(model, entityClrType).FindPrimaryKey()
+            ?? throw new AssertFailedException($"{entityClrType.Name} primary key was not found.");
+
+        CollectionAssert.AreEqual(propertyNames, primaryKey.Properties.Select(static property => property.Name).ToArray());
+    }
+
+    private static void AssertUniqueIndex(
+        IModel model,
+        Type entityClrType,
+        string databaseName,
+        params string[] propertyNames)
+    {
+        var index = GetEntityType(model, entityClrType)
+            .GetIndexes()
+            .SingleOrDefault(index => string.Equals(index.GetDatabaseName(), databaseName, StringComparison.Ordinal));
+
+        if (index is null)
+        {
+            throw new AssertFailedException($"{entityClrType.Name}.{databaseName} was not found.");
+        }
+
+        Assert.IsTrue(index.IsUnique, $"{entityClrType.Name}.{databaseName} must be unique.");
+        CollectionAssert.AreEqual(propertyNames, index.Properties.Select(static property => property.Name).ToArray());
+    }
+
+    private static void AssertForeignKey(
+        IModel model,
+        Type entityClrType,
+        Type principalClrType,
+        DeleteBehavior deleteBehavior,
+        params string[] propertyNames)
+    {
+        var foreignKey = GetEntityType(model, entityClrType)
+            .GetForeignKeys()
+            .SingleOrDefault(foreignKey =>
+                foreignKey.PrincipalEntityType.ClrType == principalClrType
+                && propertyNames.SequenceEqual(foreignKey.Properties.Select(static property => property.Name)));
+
+        if (foreignKey is null)
+        {
+            throw new AssertFailedException(
+                $"{entityClrType.Name} foreign key to {principalClrType.Name} over {string.Join(", ", propertyNames)} was not found.");
+        }
+
+        Assert.IsTrue(foreignKey.IsRequired, $"{entityClrType.Name} foreign key to {principalClrType.Name} must be required.");
+        Assert.AreEqual(deleteBehavior, foreignKey.DeleteBehavior);
+    }
+
+    private static IEntityType GetEntityType(IModel model, Type entityClrType)
+    {
+        return model.FindEntityType(entityClrType)
+            ?? throw new AssertFailedException($"{entityClrType.Name} entity type was not found.");
+    }
+
     private static async Task AssertHasIdentityUserForeignKeyAsync(
         GitCandyDbContext dbContext,
         string tableName)
@@ -700,6 +952,36 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
             Fingerprint = "11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00",
             PublicKey = SshPublicKey,
             ImportedAtUtc = DateTime.UtcNow
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task SaveRepositoryAsync(IServiceProvider serviceProvider, string repositoryName)
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+
+        dbContext.Repositories.Add(new GitCandyRepository
+        {
+            Name = repositoryName,
+            Description = "Repository name uniqueness sample",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static async Task SaveTeamAsync(IServiceProvider serviceProvider, string teamName)
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+
+        dbContext.Teams.Add(new GitCandyTeam
+        {
+            Name = teamName,
+            Description = "Team name uniqueness sample",
+            CreatedAtUtc = DateTime.UtcNow
         });
 
         await dbContext.SaveChangesAsync();

@@ -15,7 +15,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "AspNetRoles",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     Name = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true)
@@ -29,7 +29,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "TEXT", nullable: false),
+                    Id = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     DisplayName = table.Column<string>(type: "TEXT", maxLength: 128, nullable: true),
                     Description = table.Column<string>(type: "TEXT", maxLength: 512, nullable: true),
                     UserName = table.Column<string>(type: "TEXT", maxLength: 256, nullable: true),
@@ -93,7 +93,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    RoleId = table.Column<string>(type: "TEXT", nullable: false),
+                    RoleId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
                     ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -114,7 +114,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     ClaimType = table.Column<string>(type: "TEXT", nullable: true),
                     ClaimValue = table.Column<string>(type: "TEXT", nullable: true)
                 },
@@ -133,10 +133,10 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "AspNetUserLogins",
                 columns: table => new
                 {
-                    LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
-                    ProviderKey = table.Column<string>(type: "TEXT", nullable: false),
+                    LoginProvider = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    ProviderKey = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                     ProviderDisplayName = table.Column<string>(type: "TEXT", nullable: true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false)
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -153,8 +153,8 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    RoleId = table.Column<string>(type: "TEXT", nullable: false)
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    RoleId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -177,9 +177,9 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "AspNetUserTokens",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    LoginProvider = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
+                    LoginProvider = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
                     Value = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
@@ -199,7 +199,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 {
                     Id = table.Column<long>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     KeyType = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                     Fingerprint = table.Column<string>(type: "TEXT", fixedLength: true, maxLength: 47, nullable: false),
                     PublicKey = table.Column<string>(type: "TEXT", maxLength: 600, nullable: false),
@@ -221,7 +221,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "UserRepositoryRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     RepositoryId = table.Column<long>(type: "INTEGER", nullable: false),
                     AllowRead = table.Column<bool>(type: "INTEGER", nullable: false),
                     AllowWrite = table.Column<bool>(type: "INTEGER", nullable: false),
@@ -274,7 +274,7 @@ namespace GitCandy.Data.Sqlite.Migrations
                 name: "UserTeamRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    UserId = table.Column<string>(type: "TEXT", maxLength: 450, nullable: false),
                     TeamId = table.Column<long>(type: "INTEGER", nullable: false),
                     IsAdministrator = table.Column<bool>(type: "INTEGER", nullable: false)
                 },

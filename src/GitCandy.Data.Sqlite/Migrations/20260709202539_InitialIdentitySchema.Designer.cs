@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GitCandy.Data.Sqlite.Migrations
 {
     [DbContext(typeof(GitCandyDbContext))]
-    [Migration("20260709172133_InitialIdentitySchema")]
+    [Migration("20260709202539_InitialIdentitySchema")]
     partial class InitialIdentitySchema
     {
         /// <inheritdoc />
@@ -56,7 +56,8 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Repositories_NormalizedName");
 
                     b.ToTable("Repositories", (string)null);
                 });
@@ -91,14 +92,17 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Fingerprint")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_SshKeys_Fingerprint");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_SshKeys_UserId");
 
                     b.ToTable("SshKeys", (string)null);
                 });
@@ -130,7 +134,8 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Teams_NormalizedName");
 
                     b.ToTable("Teams", (string)null);
                 });
@@ -151,7 +156,8 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.HasKey("TeamId", "RepositoryId");
 
-                    b.HasIndex("RepositoryId");
+                    b.HasIndex("RepositoryId")
+                        .HasDatabaseName("IX_TeamRepositoryRoles_RepositoryId");
 
                     b.ToTable("TeamRepositoryRoles", (string)null);
                 });
@@ -159,6 +165,7 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyUserRepositoryRole", b =>
                 {
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
@@ -175,7 +182,8 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.HasKey("UserId", "RepositoryId");
 
-                    b.HasIndex("RepositoryId");
+                    b.HasIndex("RepositoryId")
+                        .HasDatabaseName("IX_UserRepositoryRoles_RepositoryId");
 
                     b.ToTable("UserRepositoryRoles", (string)null);
                 });
@@ -183,6 +191,7 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyUserTeamRole", b =>
                 {
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<long>("TeamId")
@@ -193,7 +202,8 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.HasKey("UserId", "TeamId");
 
-                    b.HasIndex("TeamId");
+                    b.HasIndex("TeamId")
+                        .HasDatabaseName("IX_UserTeamRoles_TeamId");
 
                     b.ToTable("UserTeamRoles", (string)null);
                 });
@@ -201,6 +211,7 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("GitCandy.Data.Identity.GitCandyUser", b =>
                 {
                     b.Property<string>("Id")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
@@ -273,6 +284,7 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -310,6 +322,7 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.Property<string>("RoleId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -333,6 +346,7 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -345,9 +359,11 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
                     b.Property<string>("LoginProvider")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderKey")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderDisplayName")
@@ -355,6 +371,7 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.Property<string>("UserId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("LoginProvider", "ProviderKey");
@@ -367,9 +384,11 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RoleId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RoleId");
@@ -382,12 +401,15 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LoginProvider")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
