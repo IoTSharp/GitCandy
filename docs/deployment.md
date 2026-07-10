@@ -112,6 +112,34 @@ Invoke-WebRequest http://127.0.0.1:8080/health/ready
 
 新增的 `GitCandy:Application:DataProtectionKeysPath` 保存 Identity cookie 加密 key ring。它必须位于持久化、仅应用账户可写的目录；丢失后已有 cookie 全部失效。
 
+### Identity 和 OpenID Connect
+
+新密码默认至少 12 位，并要求至少 4 个不同字符以及大写字母、小写字母、数字和非字母数字字符。可通过 `GitCandy:Identity:Password:RequiredLength`、`RequiredUniqueChars`、`RequireDigit`、`RequireLowercase`、`RequireUppercase`、`RequireNonAlphanumeric` 调整；降低策略前应完成安全评审。策略只影响新密码和密码变更，不会使已有密码立即失效。
+
+通用 OpenID Connect 登录默认关闭。启用时在未提交到仓库的生产配置中设置：
+
+```json
+{
+  "GitCandy": {
+    "Identity": {
+      "OpenIdConnect": {
+        "Enabled": true,
+        "DisplayName": "Company ID",
+        "Authority": "https://identity.example.com",
+        "ClientId": "gitcandy",
+        "ClientSecret": "从生产 secret store 注入",
+        "CallbackPath": "/signin-oidc",
+        "RequireHttpsMetadata": true
+      }
+    }
+  }
+}
+```
+
+优先通过 secret store 或进程凭据提供 `GitCandy__Identity__OpenIdConnect__ClientSecret`，不要把真实 secret 写入镜像、Compose、systemd unit 或仓库。Identity provider 中登记的 redirect URI 是 GitCandy 公网 HTTPS origin 加 `CallbackPath`。GitCandy 不持久化上游 access/refresh token；本地退出不会结束 provider 的单点登录会话。关闭 `Enabled` 即可回滚外部登录入口，已绑定记录保留在标准 `AspNetUserLogins` 表中，不需要 schema 回滚。
+
+TOTP 和恢复码只用于交互式 Web/外部登录的第二阶段认证。Git Smart HTTP Basic Auth 与 SSH public key 仍是独立认证方案，不能弹出 MFA challenge，本项不改变其现有协议行为或凭据要求。
+
 不迁移旧 `_gc_auth` cookie、密码 hash、`Users`、`AuthorizationLog` 或 `PasswordVersion`。用户必须在新 Identity schema 中重新创建。旧 repository/team/role 元数据只能由后续独立导入工具导入；当前发布不包含自动导入器，也不会在启动时读取并改写旧数据库。物理 bare repositories 可备份后复制到新 repository 根目录，再在新系统重建对应 metadata 和权限。
 
 ## 文件系统路径

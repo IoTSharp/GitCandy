@@ -14,4 +14,6 @@ public sealed class LoginViewModel
 
     [Display(Name = "Remember me")]
     public bool RememberMe { get; set; }
+
+    public IReadOnlyList<ExternalLoginProviderViewModel> ExternalProviders { get; set; } = [];
 }

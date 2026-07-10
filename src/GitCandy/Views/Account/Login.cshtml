@@ -27,4 +27,18 @@
             <a asp-action="Create">Create account</a>
         </div>
     </form>
+    @if (Model.ExternalProviders.Count > 0)
+    {
+        <hr />
+        <div class="external-login-list">
+            @foreach (var provider in Model.ExternalProviders)
+            {
+                <form asp-controller="AccountSecurity" asp-action="ExternalLogin" asp-route-returnUrl="@returnUrl" method="post">
+                    <button type="submit" name="provider" value="@provider.Scheme" class="btn btn-default">
+                        Sign in with @provider.DisplayName
+                    </button>
+                </form>
+            }
+        </div>
+    }
 </section>

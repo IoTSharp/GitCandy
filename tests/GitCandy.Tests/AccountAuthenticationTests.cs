@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
+using System.Globalization;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using GitCandy.Configuration;
 using GitCandy.Controllers;
@@ -26,6 +29,9 @@ public sealed class AccountAuthenticationTests
     private const string ChangedPassword = "M4-Changed-Password-2026!";
     private static readonly Regex AntiforgeryTokenPattern = new(
         "<input name=\"__RequestVerificationToken\" type=\"hidden\" value=\"([^\"]+)\"",
+        RegexOptions.CultureInvariant);
+    private static readonly Regex RecoveryCodePattern = new(
+        "<code>([^<]+-[^<]+)</code>",
         RegexOptions.CultureInvariant);
 
     [TestMethod]
@@ -181,6 +187,64 @@ public sealed class AccountAuthenticationTests
             "Unable to sign in with the supplied credentials.");
     }
 
+    [TestMethod]
+    public async Task Authenticator_WithTwoFactorAndRecoveryCode_CompletesIdentitySignIn()
+    {
+        await using var fixture = await AccountWebFixture.CreateAsync();
+        await fixture.CreateUserAsync("mfa-user", "mfa-user@example.com", OriginalPassword);
+        await fixture.LoginAsync("mfa-user", OriginalPassword);
+
+        var enableToken = await fixture.GetAntiforgeryTokenAsync("/Account/EnableAuthenticator");
+        var authenticatorCode = await fixture.GenerateAuthenticatorCodeAsync("mfa-user");
+        using var enableResponse = await fixture.PostFormAsync(
+            "/Account/EnableAuthenticator",
+            enableToken,
+            new Dictionary<string, string> { ["Code"] = authenticatorCode });
+
+        Assert.AreEqual(HttpStatusCode.OK, enableResponse.StatusCode);
+        var recoveryCodesHtml = await enableResponse.Content.ReadAsStringAsync();
+        var recoveryCodeMatch = RecoveryCodePattern.Match(recoveryCodesHtml);
+        Assert.IsTrue(
+            recoveryCodeMatch.Success,
+            $"No recovery code was rendered after enabling MFA.{Environment.NewLine}{recoveryCodesHtml}");
+        var recoveryCode = WebUtility.HtmlDecode(recoveryCodeMatch.Groups[1].Value);
+        Assert.IsTrue(await fixture.IsTwoFactorEnabledAsync("mfa-user"));
+
+        await fixture.LogoutAsync();
+        using var passwordResponse = await fixture.PostLoginAsync("mfa-user", OriginalPassword);
+        Assert.AreEqual(HttpStatusCode.Redirect, passwordResponse.StatusCode);
+        StringAssert.Contains(
+            passwordResponse.Headers.Location?.OriginalString ?? string.Empty,
+            "/Account/LoginWithTwoFactor");
+
+        var twoFactorToken = await fixture.GetAntiforgeryTokenAsync("/Account/LoginWithTwoFactor?rememberMe=false");
+        authenticatorCode = await fixture.GenerateAuthenticatorCodeAsync("mfa-user");
+        using var twoFactorResponse = await fixture.PostFormAsync(
+            "/Account/LoginWithTwoFactor",
+            twoFactorToken,
+            new Dictionary<string, string>
+            {
+                ["Code"] = authenticatorCode,
+                ["RememberMe"] = "false",
+                ["RememberMachine"] = "false"
+            });
+        Assert.AreEqual(HttpStatusCode.Redirect, twoFactorResponse.StatusCode);
+        StringAssert.Contains(await fixture.GetStringAsync("/Repository"), "mfa-user");
+
+        await fixture.LogoutAsync();
+        using var secondPasswordResponse = await fixture.PostLoginAsync("mfa-user", OriginalPassword);
+        Assert.AreEqual(HttpStatusCode.Redirect, secondPasswordResponse.StatusCode);
+        var recoveryToken = await fixture.GetAntiforgeryTokenAsync("/Account/LoginWithRecoveryCode");
+        using var recoveryResponse = await fixture.PostFormAsync(
+            "/Account/LoginWithRecoveryCode",
+            recoveryToken,
+            new Dictionary<string, string> { ["RecoveryCode"] = recoveryCode });
+
+        Assert.AreEqual(HttpStatusCode.Redirect, recoveryResponse.StatusCode);
+        Assert.AreEqual(9, await fixture.CountRecoveryCodesAsync("mfa-user"));
+        StringAssert.Contains(await fixture.GetStringAsync("/Repository"), "mfa-user");
+    }
+
     private static Dictionary<string, string> LoginForm(string userNameOrEmail, string password)
     {
         return new Dictionary<string, string>
@@ -334,6 +398,54 @@ public sealed class AccountAuthenticationTests
             Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode);
         }
 
+        public async Task<HttpResponseMessage> PostLoginAsync(string userNameOrEmail, string password)
+        {
+            var token = await GetAntiforgeryTokenAsync("/Account/Login");
+            return await PostFormAsync(
+                "/Account/Login",
+                token,
+                LoginForm(userNameOrEmail, password));
+        }
+
+        public async Task LogoutAsync()
+        {
+            var token = await GetAntiforgeryTokenAsync("/Repository");
+            using var response = await PostFormAsync(
+                "/Account/Logout",
+                token,
+                new Dictionary<string, string>());
+            Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode);
+        }
+
+        public async Task<string> GenerateAuthenticatorCodeAsync(string userName)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<GitCandyUser>>();
+            var user = await userManager.FindByNameAsync(userName);
+            Assert.IsNotNull(user);
+            var key = await userManager.GetAuthenticatorKeyAsync(user);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(key));
+            return GenerateTotp(key);
+        }
+
+        public async Task<bool> IsTwoFactorEnabledAsync(string userName)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<GitCandyUser>>();
+            var user = await userManager.FindByNameAsync(userName);
+            Assert.IsNotNull(user);
+            return await userManager.GetTwoFactorEnabledAsync(user);
+        }
+
+        public async Task<int> CountRecoveryCodesAsync(string userName)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<GitCandyUser>>();
+            var user = await userManager.FindByNameAsync(userName);
+            Assert.IsNotNull(user);
+            return await userManager.CountRecoveryCodesAsync(user);
+        }
+
         public async Task<GitCandyUser?> FindUserAsync(string userName)
         {
             await using var scope = App.Services.CreateAsyncScope();
@@ -390,6 +502,45 @@ public sealed class AccountAuthenticationTests
             {
                 BaseAddress = new Uri(GetServerAddress(app))
             };
+        }
+
+        private static string GenerateTotp(string base32Key)
+        {
+            var key = DecodeBase32(base32Key);
+            Span<byte> counter = stackalloc byte[sizeof(long)];
+            BinaryPrimitives.WriteInt64BigEndian(
+                counter,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30);
+            var hash = HMACSHA1.HashData(key, counter);
+            var offset = hash[^1] & 0x0f;
+            var binaryCode = ((hash[offset] & 0x7f) << 24)
+                | (hash[offset + 1] << 16)
+                | (hash[offset + 2] << 8)
+                | hash[offset + 3];
+            return (binaryCode % 1_000_000).ToString("D6", CultureInfo.InvariantCulture);
+        }
+
+        private static byte[] DecodeBase32(string value)
+        {
+            const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+            var output = new List<byte>(value.Length * 5 / 8);
+            var buffer = 0;
+            var bitsLeft = 0;
+            foreach (var character in value)
+            {
+                var index = alphabet.IndexOf(char.ToUpperInvariant(character));
+                Assert.IsGreaterThanOrEqualTo(0, index);
+                buffer = (buffer << 5) | index;
+                bitsLeft += 5;
+                if (bitsLeft >= 8)
+                {
+                    bitsLeft -= 8;
+                    output.Add((byte)(buffer >> bitsLeft));
+                    buffer &= (1 << bitsLeft) - 1;
+                }
+            }
+
+            return output.ToArray();
         }
 
         private static string GetWebProjectRoot()

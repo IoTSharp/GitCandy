@@ -13,6 +13,7 @@ using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -73,6 +74,15 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsNotNull(identityScheme);
             var gitBasicScheme = await schemeProvider.GetSchemeAsync(GitCandyAuthenticationSchemes.GitBasic);
             Assert.IsNotNull(gitBasicScheme);
+            Assert.IsNull(await schemeProvider.GetSchemeAsync(GitCandyAuthenticationSchemes.OpenIdConnect));
+
+            var identityOptions = serviceProvider.GetRequiredService<IOptions<IdentityOptions>>().Value;
+            Assert.AreEqual(12, identityOptions.Password.RequiredLength);
+            Assert.AreEqual(4, identityOptions.Password.RequiredUniqueChars);
+            Assert.IsTrue(identityOptions.Password.RequireDigit);
+            Assert.IsTrue(identityOptions.Password.RequireLowercase);
+            Assert.IsTrue(identityOptions.Password.RequireUppercase);
+            Assert.IsTrue(identityOptions.Password.RequireNonAlphanumeric);
 
             var authorizationOptions = serviceProvider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
             Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.Administrator));
@@ -314,6 +324,63 @@ public sealed class WebServiceCollectionExtensionsTests
                 Directory.Delete(tempRoot, recursive: true);
             }
         }
+    }
+
+    [TestMethod]
+    public async Task AddGitCandyWebShell_WithIdentityConfiguration_RegistersPasswordPolicyAndOpenIdConnect()
+    {
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["GitCandy:Identity:Password:RequiredLength"] = "16",
+            ["GitCandy:Identity:Password:RequiredUniqueChars"] = "6",
+            ["GitCandy:Identity:OpenIdConnect:Enabled"] = "true",
+            ["GitCandy:Identity:OpenIdConnect:DisplayName"] = "Company ID",
+            ["GitCandy:Identity:OpenIdConnect:Authority"] = "https://identity.example.com",
+            ["GitCandy:Identity:OpenIdConnect:ClientId"] = "gitcandy",
+            ["GitCandy:Identity:OpenIdConnect:ClientSecret"] = "test-secret",
+            ["GitCandy:Identity:OpenIdConnect:CallbackPath"] = "/auth/company/callback"
+        });
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddGitCandyWebShell(configuration);
+
+        await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var identityOptions = serviceProvider.GetRequiredService<IOptions<IdentityOptions>>().Value;
+        Assert.AreEqual(16, identityOptions.Password.RequiredLength);
+        Assert.AreEqual(6, identityOptions.Password.RequiredUniqueChars);
+
+        var schemeProvider = serviceProvider.GetRequiredService<IAuthenticationSchemeProvider>();
+        var scheme = await schemeProvider.GetSchemeAsync(GitCandyAuthenticationSchemes.OpenIdConnect);
+        Assert.IsNotNull(scheme);
+        Assert.AreEqual("Company ID", scheme.DisplayName);
+
+        var openIdConnectOptions = serviceProvider
+            .GetRequiredService<IOptionsMonitor<OpenIdConnectOptions>>()
+            .Get(GitCandyAuthenticationSchemes.OpenIdConnect);
+        Assert.AreEqual("https://identity.example.com", openIdConnectOptions.Authority);
+        Assert.AreEqual("gitcandy", openIdConnectOptions.ClientId);
+        Assert.AreEqual("/auth/company/callback", openIdConnectOptions.CallbackPath.Value);
+        Assert.IsFalse(openIdConnectOptions.SaveTokens);
+        Assert.IsTrue(openIdConnectOptions.UsePkce);
+    }
+
+    [TestMethod]
+    public void AddGitCandyWebShell_WithIncompleteOpenIdConnectConfiguration_RejectsOptions()
+    {
+        var configuration = BuildConfiguration(new Dictionary<string, string?>
+        {
+            ["GitCandy:Identity:OpenIdConnect:Enabled"] = "true",
+            ["GitCandy:Identity:OpenIdConnect:Authority"] = "https://identity.example.com",
+            ["GitCandy:Identity:OpenIdConnect:ClientId"] = "gitcandy"
+        });
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddGitCandyWebShell(configuration);
+
+        using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var identityOptions = serviceProvider.GetRequiredService<IOptions<GitCandyIdentityOptions>>();
+
+        Assert.ThrowsExactly<OptionsValidationException>(() => _ = identityOptions.Value);
     }
 
     [TestMethod]

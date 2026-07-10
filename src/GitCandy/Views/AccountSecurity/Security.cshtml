@@ -1,0 +1,81 @@
+@model AccountSecurityViewModel
+@{
+    ViewData["Title"] = "Account security";
+}
+
+<section class="account-shell">
+    <h1>Account security</h1>
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <p class="status-message">@Model.StatusMessage</p>
+    }
+
+    <h2>Password</h2>
+    <div class="form-actions">
+        @if (Model.HasPassword)
+        {
+            <a asp-controller="Account" asp-action="Change" class="btn btn-default">Change password</a>
+        }
+        else
+        {
+            <a asp-action="SetPassword" class="btn btn-primary">Add password</a>
+        }
+    </div>
+
+    <h2>Authenticator</h2>
+    @if (Model.IsTwoFactorEnabled)
+    {
+        <p>Two-factor authentication is enabled. @Model.RecoveryCodesLeft recovery codes remain.</p>
+        <div class="form-actions">
+            <form asp-action="GenerateRecoveryCodes" method="post">
+                <button type="submit" class="btn btn-default">Replace recovery codes</button>
+            </form>
+            <form asp-action="DisableAuthenticator" method="post">
+                <button type="submit" class="btn btn-warning">Disable</button>
+            </form>
+            <form asp-action="ResetAuthenticator" method="post">
+                <button type="submit" class="btn btn-danger">Reset authenticator</button>
+            </form>
+        </div>
+    }
+    else
+    {
+        <p>Two-factor authentication is disabled.</p>
+        <a asp-action="EnableAuthenticator" class="btn btn-primary">Enable</a>
+    }
+    @if (Model.IsMachineRemembered)
+    {
+        <form asp-action="ForgetTwoFactorClient" method="post" class="form-actions">
+            <button type="submit" class="btn btn-default">Forget this browser</button>
+        </form>
+    }
+
+    <h2>External logins</h2>
+    @if (Model.CurrentLogins.Count == 0)
+    {
+        <p>No external login is linked.</p>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var login in Model.CurrentLogins)
+            {
+                <li class="list-group-item">
+                    @login.ProviderDisplayName
+                    <form asp-action="RemoveExternalLogin" method="post" class="pull-right">
+                        <input type="hidden" name="loginProvider" value="@login.LoginProvider" />
+                        <button type="submit" class="btn btn-xs btn-danger">Remove</button>
+                    </form>
+                </li>
+            }
+        </ul>
+    }
+    @foreach (var provider in Model.OtherLogins)
+    {
+        <form asp-action="LinkExternalLogin" method="post" class="form-actions">
+            <button type="submit" name="provider" value="@provider.Scheme" class="btn btn-default">
+                Link @provider.DisplayName
+            </button>
+        </form>
+    }
+</section>

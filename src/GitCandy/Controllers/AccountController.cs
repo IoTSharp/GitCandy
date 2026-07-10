@@ -84,7 +84,7 @@ public sealed class AccountController(
     [HttpGet]
     [AllowAnonymous]
     [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Login(string? returnUrl = null)
+    public async Task<IActionResult> Login(string? returnUrl = null)
     {
         if (_currentUser.IsAuthenticated)
         {
@@ -92,7 +92,10 @@ public sealed class AccountController(
         }
 
         ViewData[nameof(returnUrl)] = returnUrl;
-        return View();
+        return View(new LoginViewModel
+        {
+            ExternalProviders = await GetExternalLoginProvidersAsync()
+        });
     }
 
     [HttpPost]
@@ -106,6 +109,7 @@ public sealed class AccountController(
         ViewData[nameof(returnUrl)] = returnUrl;
         if (!ModelState.IsValid)
         {
+            model.ExternalProviders = await GetExternalLoginProvidersAsync();
             return View(model);
         }
 
@@ -121,9 +125,18 @@ public sealed class AccountController(
             {
                 return RedirectToStartPage(returnUrl);
             }
+
+            if (result.RequiresTwoFactor)
+            {
+                return RedirectToAction(
+                    nameof(AccountSecurityController.LoginWithTwoFactor),
+                    "AccountSecurity",
+                    new { returnUrl, model.RememberMe });
+            }
         }
 
         ModelState.AddModelError(string.Empty, InvalidCredentialsMessage);
+        model.ExternalProviders = await GetExternalLoginProvidersAsync();
         return View(model);
     }
 
@@ -433,5 +446,16 @@ public sealed class AccountController(
         {
             ModelState.AddModelError(string.Empty, error.Description);
         }
+    }
+
+    private async Task<IReadOnlyList<ExternalLoginProviderViewModel>> GetExternalLoginProvidersAsync()
+    {
+        var schemes = await _signInManager.GetExternalAuthenticationSchemesAsync();
+        return schemes
+            .Where(static scheme => !string.IsNullOrWhiteSpace(scheme.DisplayName))
+            .Select(static scheme => new ExternalLoginProviderViewModel(
+                scheme.Name,
+                scheme.DisplayName ?? scheme.Name))
+            .ToArray();
     }
 }

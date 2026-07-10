@@ -33,5 +33,6 @@
         <a asp-action="Edit" asp-route-name="@Model.User.UserName" class="btn btn-primary">Edit</a>
         <a asp-action="Ssh" asp-route-name="@Model.User.UserName" class="btn btn-info">SSH keys</a>
         <a asp-action="Change" class="btn btn-default">Change password</a>
+        <a asp-controller="AccountSecurity" asp-action="Security" class="btn btn-default">Account security</a>
     </p>
 }

@@ -14,6 +14,7 @@ using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -64,6 +65,7 @@ public static class WebServiceCollectionExtensions
             .PersistKeysToFileSystem(new DirectoryInfo(
                 ResolveDataProtectionKeysPath(configuration, contentRootPath)));
         services.AddGitSmartHttpOptions(configuration);
+        var identitySettings = AddGitCandyIdentityOptions(services, configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
@@ -77,6 +79,12 @@ public static class WebServiceCollectionExtensions
         services.AddIdentity<GitCandyUser, IdentityRole>(options =>
             {
                 options.User.RequireUniqueEmail = true;
+                options.Password.RequiredLength = identitySettings.Password.RequiredLength;
+                options.Password.RequiredUniqueChars = identitySettings.Password.RequiredUniqueChars;
+                options.Password.RequireDigit = identitySettings.Password.RequireDigit;
+                options.Password.RequireLowercase = identitySettings.Password.RequireLowercase;
+                options.Password.RequireUppercase = identitySettings.Password.RequireUppercase;
+                options.Password.RequireNonAlphanumeric = identitySettings.Password.RequireNonAlphanumeric;
                 options.Lockout.AllowedForNewUsers = true;
                 options.Lockout.MaxFailedAccessAttempts = 5;
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
@@ -84,10 +92,32 @@ public static class WebServiceCollectionExtensions
             .AddEntityFrameworkStores<GitCandyDbContext>()
             .AddDefaultTokenProviders();
 
-        services.AddAuthentication()
+        var authentication = services.AddAuthentication()
             .AddScheme<AuthenticationSchemeOptions, GitBasicAuthenticationHandler>(
                 GitCandyAuthenticationSchemes.GitBasic,
                 _ => { });
+
+        if (identitySettings.OpenIdConnect.Enabled)
+        {
+            var openIdConnect = identitySettings.OpenIdConnect;
+            authentication.AddOpenIdConnect(
+                GitCandyAuthenticationSchemes.OpenIdConnect,
+                openIdConnect.DisplayName,
+                options =>
+                {
+                    options.SignInScheme = IdentityConstants.ExternalScheme;
+                    options.Authority = openIdConnect.Authority;
+                    options.ClientId = openIdConnect.ClientId;
+                    options.ClientSecret = openIdConnect.ClientSecret;
+                    options.CallbackPath = openIdConnect.CallbackPath;
+                    options.RequireHttpsMetadata = openIdConnect.RequireHttpsMetadata;
+                    options.ResponseType = "code";
+                    options.UsePkce = true;
+                    options.SaveTokens = false;
+                    options.GetClaimsFromUserInfoEndpoint = true;
+                    options.Scope.Add("email");
+                });
+        }
 
         services.AddGitCandyMigrationServices();
         services.AddGitCandyScheduler();
@@ -225,6 +255,37 @@ public static class WebServiceCollectionExtensions
             ServiceDescriptor.Singleton<IValidateOptions<GitCandyApplicationOptions>, GitCandyApplicationOptionsValidator>());
 
         return services;
+    }
+
+    private static GitCandyIdentityOptions AddGitCandyIdentityOptions(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var section = configuration.GetSection(GitCandyIdentityOptions.SectionName);
+        var settings = section.Get<GitCandyIdentityOptions>() ?? new GitCandyIdentityOptions();
+
+        services.AddOptions<GitCandyIdentityOptions>()
+            .Bind(section)
+            .Validate(
+                options => options.Password.RequiredLength is >= 8 and <= 128,
+                $"{nameof(GitCandyPasswordOptions.RequiredLength)} must be between 8 and 128.")
+            .Validate(
+                options => options.Password.RequiredUniqueChars is >= 1 and <= 128
+                    && options.Password.RequiredUniqueChars <= options.Password.RequiredLength,
+                $"{nameof(GitCandyPasswordOptions.RequiredUniqueChars)} must be between 1 and the required password length.")
+            .Validate(
+                options => !options.OpenIdConnect.Enabled
+                    || (!string.IsNullOrWhiteSpace(options.OpenIdConnect.DisplayName)
+                        && Uri.TryCreate(options.OpenIdConnect.Authority, UriKind.Absolute, out var authority)
+                        && (!options.OpenIdConnect.RequireHttpsMetadata
+                            || string.Equals(authority.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                        && !string.IsNullOrWhiteSpace(options.OpenIdConnect.ClientId)
+                        && !string.IsNullOrWhiteSpace(options.OpenIdConnect.ClientSecret)
+                        && options.OpenIdConnect.CallbackPath.StartsWith("/", StringComparison.Ordinal)),
+                "Enabled OpenID Connect login requires a display name, absolute authority, client id, client secret, and root-relative callback path.")
+            .ValidateOnStart();
+
+        return settings;
     }
 
     private static string ResolveDataProtectionKeysPath(

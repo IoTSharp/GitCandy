@@ -1,0 +1,26 @@
+@model TwoFactorLoginViewModel
+@{
+    ViewData["Title"] = "Two-factor authentication";
+    var returnUrl = ViewData["returnUrl"] as string;
+}
+
+<section class="account-shell">
+    <h1>Two-factor authentication</h1>
+    <form asp-action="LoginWithTwoFactor" asp-route-returnUrl="@returnUrl" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <input asp-for="RememberMe" type="hidden" />
+        <div class="form-field">
+            <label asp-for="Code"></label>
+            <input asp-for="Code" inputmode="numeric" autocomplete="one-time-code" autofocus />
+            <span asp-validation-for="Code"></span>
+        </div>
+        <label class="checkbox-field">
+            <input asp-for="RememberMachine" />
+            <span>@Html.DisplayNameFor(model => model.RememberMachine)</span>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Verify</button>
+            <a asp-action="LoginWithRecoveryCode" asp-route-returnUrl="@returnUrl">Use a recovery code</a>
+        </div>
+    </form>
+</section>

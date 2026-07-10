@@ -1,0 +1,10 @@
+@model string
+@{
+    ViewData["Title"] = "External login failed";
+}
+
+<section class="account-shell">
+    <h1>External login failed</h1>
+    <p class="validation-summary">@Model</p>
+    <a asp-controller="Account" asp-action="Login" class="btn btn-default">Return to sign in</a>
+</section>

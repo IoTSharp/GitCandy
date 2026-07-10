@@ -1,0 +1,26 @@
+@model ExternalLoginConfirmationViewModel
+@{
+    ViewData["Title"] = "Create external account";
+    var returnUrl = ViewData["returnUrl"] as string;
+}
+
+<section class="account-shell">
+    <h1>Create account</h1>
+    <form asp-action="ExternalLoginConfirmation" asp-route-returnUrl="@returnUrl" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="form-field">
+            <label asp-for="UserName"></label>
+            <input asp-for="UserName" autocomplete="username" autofocus />
+            <span asp-validation-for="UserName"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="email" />
+            <span asp-validation-for="Email"></span>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Create account</button>
+            <a asp-controller="Account" asp-action="Login">Cancel</a>
+        </div>
+    </form>
+</section>

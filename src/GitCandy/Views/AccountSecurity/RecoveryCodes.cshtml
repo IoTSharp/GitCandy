@@ -1,0 +1,16 @@
+@model RecoveryCodesViewModel
+@{
+    ViewData["Title"] = "Recovery codes";
+}
+
+<section class="account-shell">
+    <h1>Recovery codes</h1>
+    <p class="alert alert-warning">Each code can be used once. Store these codes securely.</p>
+    <ul class="recovery-code-list">
+        @foreach (var code in Model.RecoveryCodes)
+        {
+            <li><code>@code</code></li>
+        }
+    </ul>
+    <a asp-action="Security" class="btn btn-primary">Done</a>
+</section>

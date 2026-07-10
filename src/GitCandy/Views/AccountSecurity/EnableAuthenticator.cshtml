@@ -1,0 +1,26 @@
+@model EnableAuthenticatorViewModel
+@{
+    ViewData["Title"] = "Enable authenticator";
+}
+
+<section class="account-shell">
+    <h1>Enable authenticator</h1>
+    <dl>
+        <dt>Setup key</dt>
+        <dd><code>@Model.SharedKey</code></dd>
+        <dt>Authenticator URI</dt>
+        <dd><code class="text-break">@Model.AuthenticatorUri</code></dd>
+    </dl>
+    <form asp-action="EnableAuthenticator" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="form-field">
+            <label asp-for="Code"></label>
+            <input asp-for="Code" inputmode="numeric" autocomplete="one-time-code" autofocus />
+            <span asp-validation-for="Code"></span>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Verify and enable</button>
+            <a asp-action="Security">Cancel</a>
+        </div>
+    </form>
+</section>
