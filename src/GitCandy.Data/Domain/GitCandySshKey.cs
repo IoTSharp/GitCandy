@@ -43,7 +43,7 @@ public sealed class GitCandySshKey
     public DateTime? LastUsedAtUtc { get; set; }
 
     /// <summary>
-    /// Identity 用户。
+    /// Identity 用户；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyUser User { get; set; } = null!;
+    public GitCandyUser? User { get; set; }
 }

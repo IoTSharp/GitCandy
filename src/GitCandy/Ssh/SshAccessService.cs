@@ -31,7 +31,13 @@ public sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCont
             .SingleOrDefaultAsync(
                 item => item.Fingerprint == fingerprint && item.KeyType == keyType,
                 cancellationToken);
-        if (key?.User.UserName is null || !MatchesStoredKey(key.PublicKey, publicKey))
+        if (key is null || !MatchesStoredKey(key.PublicKey, publicKey))
+        {
+            return null;
+        }
+
+        var userName = key.User?.UserName;
+        if (userName is null)
         {
             return null;
         }
@@ -51,7 +57,7 @@ public sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCont
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        return new SshPrincipal(key.UserId, key.User.UserName, isAdministrator);
+        return new SshPrincipal(key.UserId, userName, isAdministrator);
     }
 
     /// <inheritdoc />

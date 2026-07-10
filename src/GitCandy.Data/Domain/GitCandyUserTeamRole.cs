@@ -23,12 +23,12 @@ public sealed class GitCandyUserTeamRole
     public bool IsAdministrator { get; set; }
 
     /// <summary>
-    /// Identity 用户。
+    /// Identity 用户；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyUser User { get; set; } = null!;
+    public GitCandyUser? User { get; set; }
 
     /// <summary>
-    /// 团队。
+    /// 团队；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyTeam Team { get; set; } = null!;
+    public GitCandyTeam? Team { get; set; }
 }

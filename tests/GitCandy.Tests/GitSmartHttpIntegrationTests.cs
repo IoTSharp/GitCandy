@@ -79,7 +79,9 @@ public sealed class GitSmartHttpIntegrationTests
 
     private static async Task WriteRandomFileAsync(string path, int size)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var directory = Path.GetDirectoryName(path)
+            ?? throw new ArgumentException("The file path must include a directory.", nameof(path));
+        Directory.CreateDirectory(directory);
         await using var stream = new FileStream(
             path,
             FileMode.CreateNew,

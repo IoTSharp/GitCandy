@@ -59,12 +59,13 @@ public sealed class GitController(
         SetNoCacheHeaders();
 
         var operationResult = ResolveOperation(verb, service);
-        if (operationResult.ErrorStatusCode is int errorStatusCode)
+        if (operationResult.Operation is not { } operation)
         {
-            return StatusCode(errorStatusCode);
+            return StatusCode(
+                operationResult.ErrorStatusCode
+                ?? StatusCodes.Status500InternalServerError);
         }
 
-        var operation = operationResult.Operation!;
         if (!string.Equals(
             Request.Method,
             operation.HttpMethod,

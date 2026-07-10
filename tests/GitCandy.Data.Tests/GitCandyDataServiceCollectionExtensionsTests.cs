@@ -428,6 +428,7 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
             Assert.AreEqual(alice.Id, savedSshKey.UserId);
             Assert.AreEqual("ssh-rsa", savedSshKey.KeyType);
             Assert.AreEqual(SshPublicKey, savedSshKey.PublicKey);
+            Assert.IsNotNull(savedSshKey.User);
             Assert.AreEqual("alice", savedSshKey.User.UserName);
             Assert.IsNull(savedSshKey.LastUsedAtUtc);
 

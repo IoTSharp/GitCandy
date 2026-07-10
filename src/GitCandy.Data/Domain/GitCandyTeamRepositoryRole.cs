@@ -26,12 +26,12 @@ public sealed class GitCandyTeamRepositoryRole
     public bool AllowWrite { get; set; }
 
     /// <summary>
-    /// 团队。
+    /// 团队；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyTeam Team { get; set; } = null!;
+    public GitCandyTeam? Team { get; set; }
 
     /// <summary>
-    /// 仓库。
+    /// 仓库；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyRepository Repository { get; set; } = null!;
+    public GitCandyRepository? Repository { get; set; }
 }

@@ -33,12 +33,12 @@ public sealed class GitCandyUserRepositoryRole
     public bool IsOwner { get; set; }
 
     /// <summary>
-    /// Identity 用户。
+    /// Identity 用户；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyUser User { get; set; } = null!;
+    public GitCandyUser? User { get; set; }
 
     /// <summary>
-    /// 仓库。
+    /// 仓库；未显式加载导航属性时为空。
     /// </summary>
-    public GitCandyRepository Repository { get; set; } = null!;
+    public GitCandyRepository? Repository { get; set; }
 }

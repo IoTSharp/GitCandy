@@ -240,6 +240,11 @@ public sealed class AccountController(
     public async Task<IActionResult> Edit(string? name, CancellationToken cancellationToken)
     {
         var effectiveName = string.IsNullOrWhiteSpace(name) ? _currentUser.UserName : name;
+        if (string.IsNullOrWhiteSpace(effectiveName))
+        {
+            return NotFound();
+        }
+
         var denied = await RequireCurrentUserAsync(effectiveName);
         if (denied is not null)
         {
@@ -247,7 +252,7 @@ public sealed class AccountController(
         }
 
         var user = await _userAdministrationService.GetUserAsync(
-            effectiveName!,
+            effectiveName,
             _currentUser.UserId,
             _currentUser.IsAdministrator,
             cancellationToken);
@@ -324,16 +329,21 @@ public sealed class AccountController(
     public async Task<IActionResult> Ssh(string? name, CancellationToken cancellationToken)
     {
         var effectiveName = string.IsNullOrWhiteSpace(name) ? _currentUser.UserName : name;
+        if (string.IsNullOrWhiteSpace(effectiveName))
+        {
+            return NotFound();
+        }
+
         var denied = await RequireCurrentUserAsync(effectiveName);
         if (denied is not null)
         {
             return denied;
         }
 
-        var keys = await _userAdministrationService.GetSshKeysAsync(effectiveName!, cancellationToken);
+        var keys = await _userAdministrationService.GetSshKeysAsync(effectiveName, cancellationToken);
         return keys is null
             ? NotFound()
-            : View(new SshKeysViewModel { UserName = effectiveName!, Keys = keys });
+            : View(new SshKeysViewModel { UserName = effectiveName, Keys = keys });
     }
 
     [HttpPost]

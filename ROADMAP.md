@@ -588,7 +588,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #090 | UI 信息架构与双主题原型基线 | 已完成页面/角色/状态矩阵、浅色/深色 token、整体布局和桌面/移动原型；未修改生产 Razor 页面 |
 | ✅ #091 | Identity 增强 | 已增加可配置密码策略、TOTP/恢复码/受信任浏览器和可选 OpenID Connect 登录、注册、绑定与解绑流程 |
 | ✅ #092 | SSH 协议栈替换或升级 | 已替换为 Microsoft Dev Tunnels SSH，现代 OpenSSH 无兼容参数完成 SSH clone/fetch/push |
-| ⬜ #093 | Nullable 全面启用 | 全面 nullable enable 和代码清理，不用无说明的 `!` 消警告 |
+| ✅ #093 | Nullable 全面启用 | 活动项目已全面启用 nullable，移除迁移源码中的局部关闭和无说明的 null-forgiving，用显式空值契约清理告警，并新增源码门禁测试；全解决方案构建 0 警告/0 错误，完整测试通过 |
 | ⬜ #094 | 架构拆分深化 | 在行为稳定后再推进更完整的 Clean Architecture 拆分 |
 | ⬜ #095 | Observability | 引入 OpenTelemetry tracing/metrics/logging |
 | ⬜ #096 | 前端资产管线 | 在 #090 原型和依赖清单稳定后，独立评估并引入 npm/Vite/esbuild/WebOptimizer 等资产管线；不在此项迁移业务页面 |
