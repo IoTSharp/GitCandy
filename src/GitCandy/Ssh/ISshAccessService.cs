@@ -10,11 +10,13 @@ public interface ISshAccessService
     /// </summary>
     /// <param name="keyType">客户端声明的 SSH key 算法。</param>
     /// <param name="publicKey">SSH wire 格式 public key blob。</param>
+    /// <param name="recordUsage">是否在签名验证成功后记录本次 key 使用时间。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     /// <returns>认证用户；认证失败时为 <see langword="null" />。</returns>
     Task<SshPrincipal?> AuthenticateAsync(
         string keyType,
         byte[] publicKey,
+        bool recordUsage = true,
         CancellationToken cancellationToken = default);
 
     /// <summary>

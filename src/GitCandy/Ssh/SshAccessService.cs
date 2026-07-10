@@ -18,6 +18,7 @@ public sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCont
     public async Task<SshPrincipal?> AuthenticateAsync(
         string keyType,
         byte[] publicKey,
+        bool recordUsage = true,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(keyType);
@@ -44,8 +45,11 @@ public sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCont
             select userRole)
             .AnyAsync(cancellationToken);
 
-        key.LastUsedAtUtc = DateTime.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (recordUsage)
+        {
+            key.LastUsedAtUtc = DateTime.UtcNow;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         return new SshPrincipal(key.UserId, key.User.UserName, isAdministrator);
     }

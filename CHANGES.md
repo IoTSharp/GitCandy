@@ -64,6 +64,7 @@
  - Added a persistent ASP.NET Core Data Protection key ring so Identity cookies survive container and service restarts.
  - Added M9 #091 account security management with TOTP authenticator setup, recovery codes, remembered browsers, and safe authenticator reset/disable flows.
  - Added optional generic OpenID Connect sign-in, external account registration, account linking/unlinking, and password setup for external-only accounts.
+ - Added M9 #092 modern SSH protocol configuration tests and real OpenSSH coverage without legacy algorithm overrides.
 
 #### Changed
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
@@ -80,7 +81,7 @@
  - Git HTTP now returns 401 for missing/invalid Basic credentials, 403 for authenticated users without permission, and 404 for missing metadata or physical repositories.
  - Git pack authorization now follows the actual URL verb, closing the legacy query-service/verb authorization mismatch.
  - SSH now allows only `git-upload-pack`, `git-receive-pack`, and `git-upload-archive`; password login, shell, SFTP, forwarding, and arbitrary environment variables remain disabled.
- - The migrated SSH compatibility stack now advertises only group14-SHA1, RSA, AES-CTR, and HMAC-SHA1, removing group1, DSA, CBC, 3DES, and HMAC-MD5 from the new host.
+ - Replaced the migrated custom SSH protocol stack with Microsoft Dev Tunnels SSH 3.12.36, using SHA-2 KEX/signatures, AES-GCM or AES-CTR, and SHA-2 MACs without CBC or SHA-1 negotiation.
  - Quartz now interrupts cancellation-aware jobs during host shutdown and waits for their cleanup to complete.
  - Deployment support now targets Docker Compose, Linux systemd, and Windows Service only; IIS is no longer supported.
  - Pinned the SQLite native runtime to `SQLitePCLRaw.lib.e_sqlite3` 3.53.3 because fresh release restores reject the vulnerable 2.1.11 transitive version.
@@ -114,7 +115,7 @@
  - Standardized the ASP.NET Core migration roadmap to use a single Milestone label set (`M0`-`M10`).
  - Renamed the planned ASP.NET Core host path from `src/GitCandy.Web` to `src/GitCandy` to reflect the single-process main-program architecture.
  - Replaced the M2 SSH lifecycle placeholder with the M7 in-process listener. Configure `GitCandy:Application:EnableSsh`, `SshPort`, and `SshHostKeyPath`; existing RSA host keys can be imported from `UserConfigurationPath`.
- - Existing DSA and non-RSA user keys are not accepted by the migrated SSH stack. Current OpenSSH clients require explicit legacy SHA-1 algorithm opt-in until the separately scoped SSH protocol upgrade is completed.
+ - Existing RSA host keys and SSH URLs remain valid after the protocol replacement. Modern OpenSSH clients no longer require legacy algorithm options; clients limited to SHA-1 SSH algorithms must be upgraded or temporarily use the previous stack during rollback.
  - OpenID Connect remains disabled by default. Enabling it requires provider authority/client settings and a protected client secret; rollback is configuration-only and does not require a database downgrade.
  - Release deployments persist SQLite, repositories, SSH host keys, and Data Protection keys outside the application directory; backup and rollback must treat them as one versioned recovery set.
 

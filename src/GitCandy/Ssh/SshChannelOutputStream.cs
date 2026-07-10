@@ -1,12 +1,14 @@
-using GitCandy.Ssh.Services;
+using System.Runtime.InteropServices;
+using Microsoft.DevTunnels.Ssh;
+using SshBuffer = Microsoft.DevTunnels.Ssh.Buffer;
 
 namespace GitCandy.Ssh;
 
 internal sealed class SshChannelOutputStream(
-    SessionChannel channel,
+    SshChannel channel,
     CancellationToken cancellationToken) : Stream
 {
-    private readonly SessionChannel _channel = channel;
+    private readonly SshChannel _channel = channel;
     private readonly CancellationToken _cancellationToken = cancellationToken;
 
     public override bool CanRead => false;
@@ -35,20 +37,43 @@ internal sealed class SshChannelOutputStream(
     public override void Write(byte[] buffer, int offset, int count)
     {
         ArgumentNullException.ThrowIfNull(buffer);
-        _cancellationToken.ThrowIfCancellationRequested();
-        _channel.SendData(CopyBuffer(buffer, offset, count), _cancellationToken);
+        if (count == 0)
+        {
+            return;
+        }
+
+        _channel.SendAsync(
+                SshBuffer.From(buffer, offset, count),
+                _cancellationToken)
+            .GetAwaiter()
+            .GetResult();
     }
 
-    public override ValueTask WriteAsync(
+    public override async ValueTask WriteAsync(
         ReadOnlyMemory<byte> buffer,
         CancellationToken cancellationToken = default)
     {
+        if (buffer.IsEmpty)
+        {
+            return;
+        }
+
+        if (cancellationToken == _cancellationToken || !cancellationToken.CanBeCanceled)
+        {
+            await SendAsync(buffer, _cancellationToken);
+            return;
+        }
+
+        if (!_cancellationToken.CanBeCanceled)
+        {
+            await SendAsync(buffer, cancellationToken);
+            return;
+        }
+
         using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             _cancellationToken,
             cancellationToken);
-        linkedCancellation.Token.ThrowIfCancellationRequested();
-        _channel.SendData(buffer.ToArray(), linkedCancellation.Token);
-        return ValueTask.CompletedTask;
+        await SendAsync(buffer, linkedCancellation.Token);
     }
 
     public override int Read(byte[] buffer, int offset, int count)
@@ -66,22 +91,15 @@ internal sealed class SshChannelOutputStream(
         throw new NotSupportedException();
     }
 
-    private static byte[] CopyBuffer(byte[] buffer, int offset, int count)
+    private Task SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken)
     {
-        ArgumentOutOfRangeException.ThrowIfNegative(offset);
-        ArgumentOutOfRangeException.ThrowIfNegative(count);
-        if (offset > buffer.Length - count)
+        if (MemoryMarshal.TryGetArray(buffer, out var segment) && segment.Array is not null)
         {
-            throw new ArgumentException("The offset and count exceed the buffer length.");
+            return _channel.SendAsync(
+                SshBuffer.From(segment.Array, segment.Offset, segment.Count),
+                cancellationToken);
         }
 
-        if (offset == 0 && count == buffer.Length)
-        {
-            return buffer;
-        }
-
-        var copy = new byte[count];
-        Buffer.BlockCopy(buffer, offset, copy, 0, count);
-        return copy;
+        return _channel.SendAsync(SshBuffer.From(buffer.ToArray()), cancellationToken);
     }
 }

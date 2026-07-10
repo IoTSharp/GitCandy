@@ -64,6 +64,8 @@ public sealed class SshGitIntegrationTests
             useSsh: false);
         var localHead = await fixture.RunGitForOutputAsync(["-C", clonePath, "rev-parse", "HEAD"]);
         Assert.AreEqual(localHead, pushedHead);
+
+        await fixture.AssertSshCommandRejectedAsync("whoami");
     }
 
     private sealed class SshGitFixture : IAsyncDisposable
@@ -74,7 +76,9 @@ public sealed class SshGitIntegrationTests
             string bareRepositoryPath,
             string seedWorkTree,
             string remoteUrl,
-            string sshCommand)
+            string sshCommand,
+            string privateKeyPath,
+            int sshPort)
         {
             App = app;
             TempRoot = tempRoot;
@@ -82,11 +86,17 @@ public sealed class SshGitIntegrationTests
             SeedWorkTree = seedWorkTree;
             RemoteUrl = remoteUrl;
             SshCommand = sshCommand;
+            PrivateKeyPath = privateKeyPath;
+            SshPort = sshPort;
         }
 
         private WebApplication App { get; }
 
         private string SshCommand { get; }
+
+        private string PrivateKeyPath { get; }
+
+        private int SshPort { get; }
 
         public string TempRoot { get; }
 
@@ -219,11 +229,6 @@ public sealed class SshGitIntegrationTests
                     "-o BatchMode=yes",
                     "-o StrictHostKeyChecking=no",
                     $"-o UserKnownHostsFile={knownHostsPath}",
-                    "-o KexAlgorithms=diffie-hellman-group14-sha1",
-                    "-o HostKeyAlgorithms=ssh-rsa",
-                    "-o PubkeyAcceptedAlgorithms=ssh-rsa",
-                    "-o Ciphers=aes128-ctr",
-                    "-o MACs=hmac-sha1",
                     "-o LogLevel=ERROR");
                 var remoteUrl = $"ssh://git@127.0.0.1:{sshPort}/git/private-demo.git";
 
@@ -233,7 +238,9 @@ public sealed class SshGitIntegrationTests
                     bareRepositoryPath,
                     seedWorkTree,
                     remoteUrl,
-                    sshCommand);
+                    sshCommand,
+                    privateKeyPath,
+                    sshPort);
             }
             catch
             {
@@ -249,15 +256,47 @@ public sealed class SshGitIntegrationTests
 
         public Task RunGitAsync(IReadOnlyList<string> arguments, bool useSsh = true)
         {
-            return RunGitProcessAsync(arguments, useSsh ? SshCommand : null);
+            return RunGitProcessAsync(
+                WithProtocolVersion(arguments, useSsh),
+                useSsh ? SshCommand : null);
         }
 
         public async Task<string> RunGitForOutputAsync(
             IReadOnlyList<string> arguments,
             bool useSsh = true)
         {
-            var result = await RunGitProcessAsync(arguments, useSsh ? SshCommand : null);
+            var result = await RunGitProcessAsync(
+                WithProtocolVersion(arguments, useSsh),
+                useSsh ? SshCommand : null);
             return result.StandardOutput.Trim();
+        }
+
+        public async Task AssertSshCommandRejectedAsync(string command)
+        {
+            var knownHostsPath = OperatingSystem.IsWindows() ? "NUL" : "/dev/null";
+            var result = await RunProcessForResultAsync(
+                OperatingSystem.IsWindows() ? "ssh.exe" : "ssh",
+                [
+                    "-i", PrivateKeyPath,
+                    "-p", SshPort.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    "-o", "IdentitiesOnly=yes",
+                    "-o", "BatchMode=yes",
+                    "-o", "StrictHostKeyChecking=no",
+                    "-o", $"UserKnownHostsFile={knownHostsPath}",
+                    "-o", "LogLevel=ERROR",
+                    "git@127.0.0.1",
+                    command
+                ]);
+            Assert.AreNotEqual(0, result.ExitCode, "The SSH server accepted a non-Git command.");
+        }
+
+        private static IReadOnlyList<string> WithProtocolVersion(
+            IReadOnlyList<string> arguments,
+            bool useSsh)
+        {
+            return useSsh
+                ? ["-c", "protocol.version=2", .. arguments]
+                : arguments;
         }
 
         public async ValueTask DisposeAsync()
@@ -287,6 +326,19 @@ public sealed class SshGitIntegrationTests
     }
 
     private static async Task<ProcessResult> RunProcessAsync(
+        string fileName,
+        IReadOnlyList<string> arguments,
+        IReadOnlyDictionary<string, string>? environment = null)
+    {
+        var result = await RunProcessForResultAsync(fileName, arguments, environment);
+        Assert.AreEqual(
+            0,
+            result.ExitCode,
+            $"{fileName} {arguments.FirstOrDefault()} failed: {result.StandardError}");
+        return result;
+    }
+
+    private static async Task<ProcessResult> RunProcessForResultAsync(
         string fileName,
         IReadOnlyList<string> arguments,
         IReadOnlyDictionary<string, string>? environment = null)
@@ -321,11 +373,7 @@ public sealed class SshGitIntegrationTests
         await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(2));
         var standardOutput = await standardOutputTask;
         var standardError = await standardErrorTask;
-        Assert.AreEqual(
-            0,
-            process.ExitCode,
-            $"{fileName} {arguments.FirstOrDefault()} failed: {standardError}");
-        return new ProcessResult(standardOutput, standardError);
+        return new ProcessResult(process.ExitCode, standardOutput, standardError);
     }
 
     private static int GetAvailablePort()
@@ -354,7 +402,7 @@ public sealed class SshGitIntegrationTests
         LogProvider.SetCurrentLogProvider(new NoopQuartzLogProvider());
     }
 
-    private sealed record ProcessResult(string StandardOutput, string StandardError);
+    private sealed record ProcessResult(int ExitCode, string StandardOutput, string StandardError);
 
     private sealed class NoopQuartzLogProvider : ILogProvider
     {

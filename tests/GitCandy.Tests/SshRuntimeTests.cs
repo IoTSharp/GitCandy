@@ -11,6 +11,8 @@ using GitCandy.Ssh;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Messages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,6 +23,38 @@ namespace GitCandy.Tests;
 [TestClass]
 public sealed class SshRuntimeTests
 {
+    [TestMethod]
+    public void CreateServerConfiguration_WithModernStack_AllowsOnlyPublicKeyAndModernAlgorithms()
+    {
+        var configuration = SshProtocolStack.CreateServerConfiguration();
+
+        CollectionAssert.AreEqual(
+            new[] { AuthenticationMethods.PublicKey },
+            configuration.AuthenticationMethods.ToArray());
+        var keyExchangeAlgorithms = configuration.KeyExchangeAlgorithms
+            .Select(algorithm => algorithm?.Name ?? "none")
+            .ToArray();
+        var publicKeyAlgorithms = configuration.PublicKeyAlgorithms
+            .Select(algorithm => algorithm?.Name ?? "none")
+            .ToArray();
+        var encryptionAlgorithms = configuration.EncryptionAlgorithms
+            .Select(algorithm => algorithm?.Name ?? "none")
+            .ToArray();
+        var hmacAlgorithms = configuration.HmacAlgorithms
+            .Select(algorithm => algorithm?.Name ?? "none")
+            .ToArray();
+        Assert.IsTrue(keyExchangeAlgorithms.All(
+            name => !name.Contains("sha1", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(publicKeyAlgorithms.All(
+            name => !name.Equals("ssh-rsa", StringComparison.Ordinal)));
+        Assert.IsTrue(encryptionAlgorithms.All(
+            name => !name.Contains("cbc", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(hmacAlgorithms.All(
+            name => !name.Contains("sha1", StringComparison.OrdinalIgnoreCase)));
+        CollectionAssert.Contains(publicKeyAlgorithms, "rsa-sha2-512");
+        CollectionAssert.Contains(encryptionAlgorithms, "aes256-gcm@openssh.com");
+    }
+
     [TestMethod]
     public async Task GetHostKeysAsync_WithLegacyConfiguration_ImportsAndPersistsRsaHostKey()
     {
@@ -127,7 +161,24 @@ public sealed class SshRuntimeTests
             }
 
             var accessService = app.Services.GetRequiredService<ISshAccessService>();
-            var principal = await accessService.AuthenticateAsync("ssh-rsa", publicKey);
+            var queryPrincipal = await accessService.AuthenticateAsync(
+                "ssh-rsa",
+                publicKey,
+                recordUsage: false);
+            Assert.IsNotNull(queryPrincipal);
+
+            await using (var queryVerificationScope = app.Services.CreateAsyncScope())
+            {
+                var queryVerificationContext = queryVerificationScope.ServiceProvider
+                    .GetRequiredService<GitCandyDbContext>();
+                var queriedKey = await queryVerificationContext.SshKeys.FindAsync(1L);
+                Assert.IsNull(queriedKey?.LastUsedAtUtc);
+            }
+
+            var principal = await accessService.AuthenticateAsync(
+                "ssh-rsa",
+                publicKey,
+                recordUsage: true);
 
             Assert.IsNotNull(principal);
             Assert.AreEqual("ssh-reader", principal.UserName);
@@ -177,7 +228,7 @@ public sealed class SshRuntimeTests
                     leaveOpen: true);
                 var banner = await reader.ReadLineAsync()
                     .WaitAsync(TimeSpan.FromSeconds(5));
-                StringAssert.StartsWith(banner, "SSH-2.0-FxSsh");
+                StringAssert.StartsWith(banner, "SSH-2.0-Microsoft.DevTunnels.Ssh_");
             }
             finally
             {

@@ -2,6 +2,8 @@
 
 记录日期：2026-07-10
 
+> 后续状态：M9 #092 已用 Microsoft Dev Tunnels SSH 替换本文件记录的自写兼容协议栈。下方 SHA-1 算法和客户端兼容参数仅保留为 M7 当时的历史验收记录，当前行为见 `m9-092-ssh-protocol-stack.md`。
+
 ## 验收结论
 
 - ASP.NET Core host 使用 `SshServerHostedService` 启停真实内置 SSH listener，不需要外部 OpenSSH daemon、forced command 或独立 worker。

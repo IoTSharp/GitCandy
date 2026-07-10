@@ -1,7 +1,10 @@
-using System.IO.Pipelines;
+using System.Diagnostics.CodeAnalysis;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using GitCandy.Git;
-using GitCandy.Ssh.Services;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Events;
+using Microsoft.DevTunnels.Ssh.Messages;
 
 namespace GitCandy.Ssh;
 
@@ -12,25 +15,22 @@ internal sealed class GitSshSession : IDisposable
         RegexOptions.CultureInvariant | RegexOptions.Compiled,
         TimeSpan.FromSeconds(1));
 
-    private readonly Session _session;
+    private readonly SshServerSession _session;
     private readonly ISshAccessService _accessService;
     private readonly IGitRepositoryPathResolver _pathResolver;
     private readonly IGitTransportBackend _transportBackend;
     private readonly ILogger<GitSshSession> _logger;
     private readonly CancellationTokenSource _sessionCancellation;
     private readonly object _syncRoot = new();
-    private UserauthService? _userauthService;
-    private ConnectionService? _connectionService;
-    private SessionChannel? _channel;
-    private Pipe? _inputPipe;
+    private SshChannel? _channel;
     private Task? _transportTask;
     private SshPrincipal? _principal;
+    private string? _gitProtocolVersion;
     private bool _commandStarted;
-    private bool _inputCompleted;
     private bool _disposed;
 
     public GitSshSession(
-        Session session,
+        SshServerSession session,
         CancellationToken serverStoppingToken,
         ISshAccessService accessService,
         IGitRepositoryPathResolver pathResolver,
@@ -43,7 +43,8 @@ internal sealed class GitSshSession : IDisposable
         _transportBackend = transportBackend;
         _logger = logger;
         _sessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(serverStoppingToken);
-        _session.ServiceRegistered += HandleServiceRegistered;
+        _session.Authenticating += HandleAuthenticating;
+        _session.ChannelOpening += HandleChannelOpening;
     }
 
     public void Dispose()
@@ -60,20 +61,15 @@ internal sealed class GitSshSession : IDisposable
             transportTask = _transportTask;
         }
 
-        _session.ServiceRegistered -= HandleServiceRegistered;
-        if (_userauthService is not null)
+        _session.Authenticating -= HandleAuthenticating;
+        _session.ChannelOpening -= HandleChannelOpening;
+        if (_channel is not null)
         {
-            _userauthService.Userauth -= HandleUserauth;
+            _channel.Request -= HandleChannelRequest;
+            _channel.Closed -= HandleChannelClosed;
         }
 
-        if (_connectionService is not null)
-        {
-            _connectionService.CommandOpened -= HandleCommandOpened;
-        }
-
-        CompleteInput();
         _sessionCancellation.Cancel();
-
         if (transportTask is null || transportTask.IsCompleted)
         {
             _sessionCancellation.Dispose();
@@ -81,7 +77,7 @@ internal sealed class GitSshSession : IDisposable
         else
         {
             _ = transportTask.ContinueWith(
-                static (_, state) => ((CancellationTokenSource)state!).Dispose(),
+                static (_, state) => ((CancellationTokenSource?)state)?.Dispose(),
                 _sessionCancellation,
                 CancellationToken.None,
                 TaskContinuationOptions.ExecuteSynchronously,
@@ -89,159 +85,242 @@ internal sealed class GitSshSession : IDisposable
         }
     }
 
-    private void HandleServiceRegistered(object? sender, SshService service)
+    private void HandleAuthenticating(object? sender, SshAuthenticatingEventArgs args)
     {
-        if (service is UserauthService userauthService)
+        if (args.AuthenticationType is not (
+                SshAuthenticationType.ClientPublicKeyQuery
+                or SshAuthenticationType.ClientPublicKey)
+            || args.PublicKey is null)
         {
-            _userauthService = userauthService;
-            userauthService.Userauth += HandleUserauth;
+            return;
         }
-        else if (service is ConnectionService connectionService)
-        {
-            _connectionService = connectionService;
-            connectionService.CommandOpened += HandleCommandOpened;
-        }
+
+        args.AuthenticationTask = AuthenticateAsync(args);
     }
 
-    private void HandleUserauth(object? sender, UserauthArgs args)
+    private async Task<ClaimsPrincipal?> AuthenticateAsync(SshAuthenticatingEventArgs args)
     {
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _sessionCancellation.Token,
+            args.Cancellation);
         try
         {
-            _principal = _accessService.AuthenticateAsync(
-                    args.KeyAlgorithm,
-                    args.Key,
-                    _sessionCancellation.Token)
-                .GetAwaiter()
-                .GetResult();
-            args.Result = _principal is not null;
+            var publicKey = args.PublicKey;
+            if (publicKey is null)
+            {
+                return null;
+            }
+            var principal = await _accessService.AuthenticateAsync(
+                publicKey.KeyAlgorithmName,
+                publicKey.GetPublicKeyBytes().ToArray(),
+                recordUsage: args.AuthenticationType == SshAuthenticationType.ClientPublicKey,
+                cancellationToken: linkedCancellation.Token);
+            if (principal is null)
+            {
+                return null;
+            }
+
+            if (args.AuthenticationType == SshAuthenticationType.ClientPublicKey)
+            {
+                _principal = principal;
+            }
+
+            var authenticationType = args.AuthenticationType == SshAuthenticationType.ClientPublicKey
+                ? "GitCandy.Ssh.PublicKey"
+                : null;
+            var identity = new ClaimsIdentity(
+                [
+                    new Claim(ClaimTypes.NameIdentifier, principal.UserId),
+                    new Claim(ClaimTypes.Name, principal.UserName)
+                ],
+                authenticationType);
+            return new ClaimsPrincipal(identity);
         }
-        catch (OperationCanceledException) when (_sessionCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
-            args.Result = false;
+            return null;
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, "SSH public key authentication failed unexpectedly.");
-            args.Result = false;
+            return null;
         }
     }
 
-    private void HandleCommandOpened(object? sender, SessionRequestedArgs args)
+    private void HandleChannelOpening(object? sender, SshChannelOpeningEventArgs args)
     {
-        var principal = _principal
-            ?? throw new SshConnectionException("SSH user is not authenticated.", DisconnectReason.NoMoreAuthMethodsAvailable);
-        var parsedCommand = ParseCommand(args.CommandText);
+        if (!args.IsRemoteRequest
+            || !string.Equals(args.Channel.ChannelType, SshChannel.SessionChannelType, StringComparison.Ordinal))
+        {
+            args.FailureReason = SshChannelOpenFailureReason.AdministrativelyProhibited;
+            args.FailureDescription = "Only SSH session channels for Git commands are allowed.";
+            return;
+        }
 
         lock (_syncRoot)
         {
-            if (_commandStarted)
+            if (_channel is not null || _disposed)
             {
-                throw new SshConnectionException(
-                    "Only one Git command is allowed per SSH session.",
-                    DisconnectReason.ByApplication);
+                args.FailureReason = SshChannelOpenFailureReason.ResourceShortage;
+                args.FailureDescription = "Only one channel is allowed per SSH session.";
+                return;
+            }
+
+            _channel = args.Channel;
+            _channel.Request += HandleChannelRequest;
+            _channel.Closed += HandleChannelClosed;
+        }
+    }
+
+    private void HandleChannelRequest(
+        object? sender,
+        SshRequestEventArgs<ChannelRequestMessage> args)
+    {
+        if (sender is not SshChannel channel || !ReferenceEquals(channel, _channel))
+        {
+            return;
+        }
+
+        if (string.Equals(args.RequestType, GitEnvironmentRequestMessage.EnvironmentRequestType, StringComparison.Ordinal))
+        {
+            var environment = args.Request.ConvertTo<GitEnvironmentRequestMessage>();
+            args.IsAuthorized = string.Equals(environment.VariableName, "GIT_PROTOCOL", StringComparison.Ordinal)
+                && string.Equals(environment.VariableValue, "version=2", StringComparison.Ordinal);
+            if (args.IsAuthorized)
+            {
+                lock (_syncRoot)
+                {
+                    if (_commandStarted || _disposed)
+                    {
+                        args.IsAuthorized = false;
+                    }
+                    else
+                    {
+                        _gitProtocolVersion = environment.VariableValue;
+                    }
+                }
+            }
+
+            return;
+        }
+
+        if (!string.Equals(args.RequestType, ChannelRequestTypes.Command, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var commandRequest = args.Request.ConvertTo<CommandRequestMessage>();
+        if (!TryParseCommand(commandRequest.Command, out var parsedCommand))
+        {
+            return;
+        }
+
+        lock (_syncRoot)
+        {
+            if (_commandStarted || _disposed)
+            {
+                return;
             }
 
             _commandStarted = true;
         }
 
-        var requiresWrite = parsedCommand.Service == GitTransportService.ReceivePack;
-        var authorized = _accessService.CanAccessRepositoryAsync(
-                principal,
-                parsedCommand.RepositoryName,
-                requiresWrite,
-                _sessionCancellation.Token)
-            .GetAwaiter()
-            .GetResult();
-        if (!authorized)
+        var authorizationTask = AuthorizeCommandAsync(parsedCommand, args.Cancellation);
+        args.ResponseTask = GetAuthorizationResponseAsync(authorizationTask);
+        args.ResponseContinuation = response =>
         {
-            throw new SshConnectionException("Repository access denied.", DisconnectReason.ByApplication);
-        }
-
-        var repositoryPath = _pathResolver.ResolveRepositoryPath(parsedCommand.RepositoryName);
-        var repository = new GitRepositoryContext(parsedCommand.RepositoryName, repositoryPath);
-        _transportBackend.EnsureRepositoryExists(repository);
-
-        lock (_syncRoot)
-        {
-            if (_disposed)
+            if (response is ChannelSuccessMessage
+                && authorizationTask.IsCompletedSuccessfully
+                && authorizationTask.Result is AuthorizedGitCommand authorizedCommand)
             {
-                throw new SshConnectionException(
-                    "The SSH server is stopping.",
-                    DisconnectReason.ByApplication);
+                lock (_syncRoot)
+                {
+                    if (!_disposed)
+                    {
+                        _transportTask = RunTransportAsync(channel, authorizedCommand);
+                    }
+                }
             }
 
-            _channel = args.Channel;
-            _inputPipe = new Pipe(new PipeOptions(
-                pauseWriterThreshold: 1024 * 1024,
-                resumeWriterThreshold: 512 * 1024,
-                useSynchronizationContext: false));
-            _channel.DataReceived += HandleChannelData;
-            _channel.EofReceived += HandleChannelEof;
-            _channel.CloseReceived += HandleChannelClose;
+            return Task.CompletedTask;
+        };
+    }
 
-            _transportTask = RunTransportAsync(
+    private async Task<AuthorizedGitCommand?> AuthorizeCommandAsync(
+        ParsedGitCommand parsedCommand,
+        CancellationToken requestCancellation)
+    {
+        using var linkedCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            _sessionCancellation.Token,
+            requestCancellation);
+        try
+        {
+            var principal = _principal;
+            if (principal is null)
+            {
+                return null;
+            }
+
+            var requiresWrite = parsedCommand.Service == GitTransportService.ReceivePack;
+            if (!await _accessService.CanAccessRepositoryAsync(
+                    principal,
+                    parsedCommand.RepositoryName,
+                    requiresWrite,
+                    linkedCancellation.Token))
+            {
+                return null;
+            }
+
+            var repositoryPath = _pathResolver.ResolveRepositoryPath(parsedCommand.RepositoryName);
+            var repository = new GitRepositoryContext(parsedCommand.RepositoryName, repositoryPath);
+            _transportBackend.EnsureRepositoryExists(repository);
+            return new AuthorizedGitCommand(
                 repository,
                 parsedCommand.Service,
                 principal.UserName,
-                args.Channel.GitProtocolVersion);
+                _gitProtocolVersion);
         }
-    }
-
-    private void HandleChannelData(object? sender, byte[] data)
-    {
-        var pipe = _inputPipe;
-        if (pipe is null || _sessionCancellation.IsCancellationRequested)
+        catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
-            return;
+            return null;
         }
-
-        try
+        catch (GitRepositoryNotFoundException)
         {
-            pipe.Writer.WriteAsync(data, _sessionCancellation.Token)
-                .AsTask()
-                .GetAwaiter()
-                .GetResult();
+            return null;
         }
-        catch (OperationCanceledException) when (_sessionCancellation.IsCancellationRequested)
+        catch (Exception exception)
         {
+            _logger.LogError(
+                exception,
+                "SSH Git {Service} authorization for repository {RepositoryName} failed unexpectedly.",
+                parsedCommand.Service,
+                parsedCommand.RepositoryName);
+            return null;
         }
     }
 
-    private void HandleChannelEof(object? sender, EventArgs args)
+    private static async Task<SshMessage> GetAuthorizationResponseAsync(
+        Task<AuthorizedGitCommand?> authorizationTask)
     {
-        CompleteInput();
+        return await authorizationTask is null
+            ? new ChannelFailureMessage()
+            : new ChannelSuccessMessage();
     }
 
-    private void HandleChannelClose(object? sender, EventArgs args)
+    private async Task RunTransportAsync(SshChannel channel, AuthorizedGitCommand command)
     {
-        CompleteInput();
-        _sessionCancellation.Cancel();
-        EnsureSessionClosed();
-    }
-
-    private async Task RunTransportAsync(
-        GitRepositoryContext repository,
-        GitTransportService service,
-        string actorName,
-        string? protocolVersion)
-    {
-        var channel = _channel
-            ?? throw new InvalidOperationException("The SSH channel is not initialized.");
-        var pipe = _inputPipe
-            ?? throw new InvalidOperationException("The SSH input pipe is not initialized.");
         uint exitCode = 0;
-
+        var input = new SshStream(channel);
         try
         {
-            await using var input = pipe.Reader.AsStream();
             await using var output = new SshChannelOutputStream(channel, _sessionCancellation.Token);
             var request = new GitTransportRequest(
-                repository,
-                service,
+                command.Repository,
+                command.Service,
                 StatelessRpc: false,
                 AdvertiseRefs: false,
-                ProtocolVersion: protocolVersion,
-                actorName);
+                command.ProtocolVersion,
+                command.ActorName);
             await _transportBackend.ExecuteAsync(
                 request,
                 input,
@@ -253,8 +332,8 @@ internal sealed class GitSshSession : IDisposable
             exitCode = 1;
             _logger.LogInformation(
                 "SSH Git {Service} for repository {RepositoryName} was canceled.",
-                service,
-                repository.RepositoryName);
+                command.Service,
+                command.Repository.RepositoryName);
         }
         catch (Exception exception)
         {
@@ -262,60 +341,44 @@ internal sealed class GitSshSession : IDisposable
             _logger.LogError(
                 exception,
                 "SSH Git {Service} for repository {RepositoryName} failed.",
-                service,
-                repository.RepositoryName);
+                command.Service,
+                command.Repository.RepositoryName);
         }
         finally
         {
-            CompleteInput();
             try
             {
-                channel.SendEof();
-                channel.SendClose(exitCode);
+                await channel.CloseAsync(exitCode, CancellationToken.None);
             }
             catch (Exception exception) when (_sessionCancellation.IsCancellationRequested)
             {
                 _logger.LogDebug(exception, "SSH channel closed while the Git transport was stopping.");
             }
-
-            EnsureSessionClosed();
-        }
-    }
-
-    private void CompleteInput()
-    {
-        Pipe? pipe;
-        lock (_syncRoot)
-        {
-            if (_inputCompleted)
+            catch (Exception exception)
             {
-                return;
+                _logger.LogWarning(exception, "SSH channel could not send its final exit status.");
             }
-
-            _inputCompleted = true;
-            pipe = _inputPipe;
-        }
-
-        pipe?.Writer.Complete();
-    }
-
-    private void EnsureSessionClosed()
-    {
-        var channel = _channel;
-        if (channel is not null && channel.ClientClosed && channel.ServerClosed)
-        {
-            _session.Disconnect();
+            finally
+            {
+                input.Dispose();
+            }
         }
     }
 
-    private static ParsedGitCommand ParseCommand(string commandText)
+    private void HandleChannelClosed(object? sender, SshChannelClosedEventArgs args)
     {
-        var match = GitCommandPattern.Match(commandText);
+        _sessionCancellation.Cancel();
+    }
+
+    private static bool TryParseCommand(
+        string? commandText,
+        [NotNullWhen(true)] out ParsedGitCommand? parsedCommand)
+    {
+        var match = GitCommandPattern.Match(commandText ?? string.Empty);
         if (!match.Success)
         {
-            throw new SshConnectionException(
-                "Only Git upload-pack, receive-pack and upload-archive commands are allowed.",
-                DisconnectReason.ByApplication);
+            parsedCommand = null;
+            return false;
         }
 
         var service = match.Groups["command"].Value switch
@@ -325,8 +388,15 @@ internal sealed class GitSshSession : IDisposable
             "git-upload-archive" => GitTransportService.UploadArchive,
             _ => throw new InvalidOperationException("The SSH Git command was not recognized.")
         };
-        return new ParsedGitCommand(service, match.Groups["repository"].Value);
+        parsedCommand = new ParsedGitCommand(service, match.Groups["repository"].Value);
+        return true;
     }
 
     private sealed record ParsedGitCommand(GitTransportService Service, string RepositoryName);
+
+    private sealed record AuthorizedGitCommand(
+        GitRepositoryContext Repository,
+        GitTransportService Service,
+        string ActorName,
+        string? ProtocolVersion);
 }

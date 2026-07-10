@@ -2,8 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Nullable>disable</Nullable>
     <RootNamespace>GitCandy.Ssh</RootNamespace>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Protocol\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.DevTunnels.Ssh.Tcp" />
+  </ItemGroup>
 
 </Project>

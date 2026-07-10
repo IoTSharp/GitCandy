@@ -1,12 +1,17 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
-using GitCandy.Ssh;
+using System.Net.Sockets;
+using System.Security.Cryptography;
+using Microsoft.DevTunnels.Ssh;
+using Microsoft.DevTunnels.Ssh.Algorithms;
+using Microsoft.DevTunnels.Ssh.Tcp;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GitCandy.Ssh;
 
 /// <summary>
-/// 在 ASP.NET Core host 内运行旧 GitCandy SSH listener 和 Git session handler。
+/// 在 ASP.NET Core host 内运行现代 SSH listener 和 Git session handler。
 /// </summary>
 public sealed class BuiltInSshServerRuntime(
     ISshHostKeyProvider hostKeyProvider,
@@ -17,8 +22,11 @@ public sealed class BuiltInSshServerRuntime(
     private readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory;
     private readonly ILogger<BuiltInSshServerRuntime> _logger = logger;
     private readonly SemaphoreSlim _lifecycleLock = new(1, 1);
-    private readonly ConcurrentDictionary<Session, SessionRegistration> _sessions = new();
+    private readonly ConcurrentDictionary<SshServerSession, SessionRegistration> _sessions = new();
     private CancellationTokenSource? _serverStopping;
+    private IReadOnlyList<IKeyPair>? _hostKeyPairs;
+    private Task? _acceptSessionsTask;
+    private TraceSource? _traceSource;
     private SshServer? _server;
     private bool _isRunning;
 
@@ -37,27 +45,63 @@ public sealed class BuiltInSshServerRuntime(
             }
 
             var hostKeys = await _hostKeyProvider.GetHostKeysAsync(cancellationToken);
-            var server = new SshServer(new StartingInfo(IPAddress.IPv6Any, port));
-            foreach (var hostKey in hostKeys)
-            {
-                server.AddHostKey(hostKey.KeyType, hostKey.PrivateKeyXml);
-            }
-
-            _serverStopping = new CancellationTokenSource();
-            server.ConnectionAccepted += HandleConnectionAccepted;
-            server.ExceptionRasied += HandleServerException;
+            var hostKeyPairs = CreateHostKeyPairs(hostKeys);
+            TraceSource? traceSource = null;
+            SshServer? server = null;
+            Task? acceptSessionsTask = null;
             try
             {
-                server.Start();
+                traceSource = new TraceSource("GitCandy.Ssh.Protocol", SourceLevels.Warning);
+                traceSource.Listeners.Clear();
+                var listenerFactory = new DualModeTcpListenerFactory();
+                server = new SshServer(SshProtocolStack.CreateServerConfiguration(), traceSource)
+                {
+                    Credentials = new SshServerCredentials(hostKeyPairs),
+                    TcpListenerFactory = listenerFactory
+                };
+
+                _serverStopping = new CancellationTokenSource();
+                server.SessionOpened += HandleSessionOpened;
+                server.ExceptionRaised += HandleServerException;
+                acceptSessionsTask = server.AcceptSessionsAsync(port, IPAddress.IPv6Any);
+                await listenerFactory.Listening.WaitAsync(cancellationToken);
+                if (acceptSessionsTask.IsCompleted)
+                {
+                    await acceptSessionsTask;
+                    throw new InvalidOperationException("The built-in SSH listener stopped during startup.");
+                }
+
                 _server = server;
+                _traceSource = traceSource;
+                _hostKeyPairs = hostKeyPairs;
+                _acceptSessionsTask = acceptSessionsTask;
                 Volatile.Write(ref _isRunning, true);
+                _ = MonitorAcceptSessionsAsync(acceptSessionsTask, _serverStopping.Token);
             }
             catch
             {
-                server.ConnectionAccepted -= HandleConnectionAccepted;
-                server.ExceptionRasied -= HandleServerException;
-                server.Dispose();
-                _serverStopping.Dispose();
+                if (server is not null)
+                {
+                    server.SessionOpened -= HandleSessionOpened;
+                    server.ExceptionRaised -= HandleServerException;
+                    server.Dispose();
+                }
+
+                if (acceptSessionsTask is not null)
+                {
+                    try
+                    {
+                        await acceptSessionsTask;
+                    }
+                    catch
+                    {
+                        // The startup exception being rethrown remains the actionable failure.
+                    }
+                }
+
+                traceSource?.Close();
+                DisposeHostKeys(hostKeyPairs);
+                _serverStopping?.Dispose();
                 _serverStopping = null;
                 throw;
             }
@@ -83,18 +127,32 @@ public sealed class BuiltInSshServerRuntime(
             _server = null;
             Volatile.Write(ref _isRunning, false);
             _serverStopping?.Cancel();
-            server.ConnectionAccepted -= HandleConnectionAccepted;
-            server.ExceptionRasied -= HandleServerException;
-            server.Stop();
-
-            foreach (var registration in _sessions.Values)
+            server.SessionOpened -= HandleSessionOpened;
+            server.ExceptionRaised -= HandleServerException;
+            try
             {
-                registration.Dispose();
+                server.Dispose();
+                if (_acceptSessionsTask is not null)
+                {
+                    await _acceptSessionsTask.WaitAsync(cancellationToken);
+                }
             }
+            finally
+            {
+                foreach (var registration in _sessions.Values)
+                {
+                    registration.Dispose();
+                }
 
-            _sessions.Clear();
-            _serverStopping?.Dispose();
-            _serverStopping = null;
+                _sessions.Clear();
+                _acceptSessionsTask = null;
+                _traceSource?.Close();
+                _traceSource = null;
+                DisposeHostKeys(_hostKeyPairs);
+                _hostKeyPairs = null;
+                _serverStopping?.Dispose();
+                _serverStopping = null;
+            }
         }
         finally
         {
@@ -102,7 +160,7 @@ public sealed class BuiltInSshServerRuntime(
         }
     }
 
-    private void HandleConnectionAccepted(object? sender, Session session)
+    private void HandleSessionOpened(object? sender, SshServerSession session)
     {
         var stoppingToken = _serverStopping?.Token ?? CancellationToken.None;
         var scope = _serviceScopeFactory.CreateScope();
@@ -116,40 +174,117 @@ public sealed class BuiltInSshServerRuntime(
             if (!_sessions.TryAdd(session, registration))
             {
                 registration.Dispose();
-                session.Disconnect();
+                session.Dispose();
                 return;
             }
 
-            session.Disconnected += HandleSessionDisconnected;
+            session.Closed += HandleSessionClosed;
         }
         catch
         {
             scope.Dispose();
-            session.Disconnect();
+            session.Dispose();
             throw;
         }
     }
 
-    private void HandleSessionDisconnected(object? sender, EventArgs args)
+    private void HandleSessionClosed(object? sender, EventArgs args)
     {
-        if (sender is not Session session || !_sessions.TryRemove(session, out var registration))
+        if (sender is not SshServerSession session
+            || !_sessions.TryRemove(session, out var registration))
         {
             return;
         }
 
-        session.Disconnected -= HandleSessionDisconnected;
+        session.Closed -= HandleSessionClosed;
         registration.Dispose();
     }
 
     private void HandleServerException(object? sender, Exception exception)
     {
-        if (exception is SshConnectionException)
+        if (exception is Microsoft.DevTunnels.Ssh.SshConnectionException)
         {
             _logger.LogDebug(exception, "Built-in SSH connection ended with a protocol error.");
             return;
         }
 
         _logger.LogError(exception, "Built-in SSH connection failed unexpectedly.");
+    }
+
+    private async Task MonitorAcceptSessionsAsync(
+        Task acceptSessionsTask,
+        CancellationToken serverStoppingToken)
+    {
+        try
+        {
+            await acceptSessionsTask;
+            if (!serverStoppingToken.IsCancellationRequested)
+            {
+                Volatile.Write(ref _isRunning, false);
+                _logger.LogError("Built-in SSH listener stopped unexpectedly.");
+            }
+        }
+        catch (Exception exception) when (serverStoppingToken.IsCancellationRequested)
+        {
+            _logger.LogDebug(exception, "Built-in SSH listener stopped with the application host.");
+        }
+        catch (Exception exception)
+        {
+            Volatile.Write(ref _isRunning, false);
+            _logger.LogError(exception, "Built-in SSH listener failed unexpectedly.");
+        }
+    }
+
+    private static IKeyPair[] CreateHostKeyPairs(IReadOnlyList<SshHostKey> hostKeys)
+    {
+        var hostKeyPairs = new List<IKeyPair>(hostKeys.Count);
+        try
+        {
+            foreach (var hostKey in hostKeys)
+            {
+                hostKeyPairs.Add(CreateHostKeyPair(hostKey));
+            }
+
+            return hostKeyPairs.ToArray();
+        }
+        catch
+        {
+            DisposeHostKeys(hostKeyPairs);
+            throw;
+        }
+    }
+
+    private static IKeyPair CreateHostKeyPair(SshHostKey hostKey)
+    {
+        if (!string.Equals(hostKey.KeyType, "ssh-rsa", StringComparison.Ordinal))
+        {
+            throw new InvalidDataException($"Unsupported SSH host key type: {hostKey.KeyType}.");
+        }
+
+        var rsa = RSA.Create();
+        try
+        {
+            rsa.FromXmlString(hostKey.PrivateKeyXml);
+            return new Rsa.KeyPair(rsa);
+        }
+        catch
+        {
+            rsa.Dispose();
+            throw;
+        }
+    }
+
+    private static void DisposeHostKeys(IReadOnlyList<IKeyPair>? hostKeys)
+    {
+        if (hostKeys is null)
+        {
+            return;
+        }
+
+        foreach (var hostKey in hostKeys)
+        {
+            hostKey.Dispose();
+        }
     }
 
     private sealed class SessionRegistration(GitSshSession handler, IServiceScope scope) : IDisposable
@@ -167,6 +302,43 @@ public sealed class BuiltInSshServerRuntime(
 
             _handler.Dispose();
             _scope.Dispose();
+        }
+    }
+
+    private sealed class DualModeTcpListenerFactory : ITcpListenerFactory
+    {
+        private readonly TaskCompletionSource<bool> _listening = new(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task Listening => _listening.Task;
+
+        public Task<TcpListener> CreateTcpListenerAsync(
+            int? remotePort,
+            IPAddress localIPAddress,
+            int localPort,
+            bool canChangeLocalPort,
+            TraceSource trace,
+            CancellationToken cancellation)
+        {
+            cancellation.ThrowIfCancellationRequested();
+            try
+            {
+                var listener = new TcpListener(localIPAddress, localPort);
+                if (localIPAddress.Equals(IPAddress.IPv6Any))
+                {
+                    listener.Server.DualMode = true;
+                }
+
+                listener.ExclusiveAddressUse = true;
+                listener.Start();
+                _listening.TrySetResult(true);
+                return Task.FromResult(listener);
+            }
+            catch (Exception exception)
+            {
+                _listening.TrySetException(exception);
+                throw;
+            }
         }
     }
 }
