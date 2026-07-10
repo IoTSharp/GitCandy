@@ -228,6 +228,10 @@ public sealed class WebServiceCollectionExtensionsTests
                 gitContext.RepositoryPath,
                 Path.Combine("App_Data", "Repos", "public-demo"));
             Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create(@"..\escape"));
+            Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create("../escape"));
+            Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create("nested/repository"));
+            Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create("."));
+            Assert.ThrowsExactly<ArgumentException>(() => gitFactory.Create(".."));
 
             var jobs = scope.ServiceProvider.GetServices<ISchedulerJob>().ToArray();
             Assert.AreEqual(1, jobs.Length);

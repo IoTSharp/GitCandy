@@ -51,6 +51,9 @@
  - Added standard `Resources/SharedResource*.resx` localization for English, Simplified Chinese, and French.
  - Added Bootstrap 3, bootstrap-switch, jQuery, highlight.js, marked, common.js, and Glyphicon assets under `wwwroot` with direct static references.
  - Added Kestrel/SQLite MVC page smoke tests for form validation, antiforgery-protected CRUD, public/private repository visibility, localization, and static assets.
+ - Added the ASP.NET Core Git Smart HTTP endpoint for both `/git/{repository}.git` and legacy no-suffix repository URLs.
+ - Added a shared `IGitTransportBackend` with structured Git arguments, full-duplex streaming, cancellation, bounded diagnostics, and repository root/symlink boundary checks.
+ - Added Git Smart HTTP protocol/header/gzip/authentication tests and real Kestrel/SQLite/Git client clone, fetch, authenticated push, and 24 MiB pack coverage.
 
 #### Changed
  - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
@@ -60,14 +63,19 @@
  - Changed account, team, and repository delete operations from query-driven GET requests to antiforgery-protected POST forms.
  - Restored the legacy start-page behavior so `/` redirects to `/Repository`.
  - Repository, account, and team pages now filter private repository names using the current viewer's repository permissions.
+ - Replaced the Git Smart HTTP 501 placeholder with streaming upload-pack and receive-pack behavior, including Git protocol v2 forwarding.
+ - Git HTTP now returns 401 for missing/invalid Basic credentials, 403 for authenticated users without permission, and 404 for missing metadata or physical repositories.
+ - Git pack authorization now follows the actual URL verb, closing the legacy query-service/verb authorization mismatch.
 
 #### Migration
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
- - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP endpoint binding remains scoped to M6.
- - Migrated the M5 account/team/repository public URL shapes to real ASP.NET Core controllers; Git Smart HTTP remains on the M6 placeholder endpoint.
- - Repository CRUD in M5 manages EF Core metadata and authorization relationships only; bare repository creation/import/deletion remains behind the planned M6 `IGitTransportBackend` boundary.
+ - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP now uses the independent M6 endpoint and authentication scheme.
+ - Migrated the M5 account/team/repository public URL shapes to real ASP.NET Core controllers and replaced the Git HTTP compatibility placeholder in M6.
+ - Repository CRUD remains metadata-only; bare repository creation/import/deletion must use dedicated lifecycle operations through the established Git backend boundary.
  - Migrated language selection to the standard ASP.NET Core culture cookie while temporarily retaining the legacy `Lang` cookie.
  - Kept settings read-only in M5; configuration persistence, process restart, and SSH host-key regeneration remain scoped to M8/M7.
+ - Added optional `GitCandy:GitHttp` request-size, timeout, and stream-buffer settings; reverse proxies must configure matching body and timeout limits.
+ - Physical Git repositories may retain the legacy `{name}` layout or use the M0 fixture `{name}.git` layout under the configured repository root.
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
  - Replaced legacy `Server.MapPath`-style path assumptions in the ASP.NET Core host with `IWebHostEnvironment.ContentRootPath` and `WebRootPath` semantics.
  - Migrated the new host's legacy logger compatibility entry point to `ILoggerFactory`; log sinks are now controlled by ASP.NET Core `Logging` providers instead of the old static file writer.

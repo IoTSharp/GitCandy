@@ -55,6 +55,7 @@ public static class WebServiceCollectionExtensions
             .AddViewLocalization();
         services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
+        services.AddGitSmartHttpOptions(configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
@@ -155,6 +156,7 @@ public static class WebServiceCollectionExtensions
             ServiceDescriptor.Scoped<IAuthorizationHandler, CurrentUserAuthorizationHandler>());
         services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
+        services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, LogRotationJob>());
 
         return services;
@@ -209,6 +211,29 @@ public static class WebServiceCollectionExtensions
 
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<GitCandyApplicationOptions>, GitCandyApplicationOptionsValidator>());
+
+        return services;
+    }
+
+    private static IServiceCollection AddGitSmartHttpOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<GitSmartHttpOptions>()
+            .Bind(configuration.GetSection(GitSmartHttpOptions.SectionName))
+            .Validate(
+                options => options.MaxRequestBodySize > 0,
+                $"{nameof(GitSmartHttpOptions.MaxRequestBodySize)} must be greater than zero.")
+            .Validate(
+                options => options.RequestTimeout > TimeSpan.Zero,
+                $"{nameof(GitSmartHttpOptions.RequestTimeout)} must be greater than zero.")
+            .Validate(
+                options => options.StreamBufferSize >= 4096,
+                $"{nameof(GitSmartHttpOptions.StreamBufferSize)} must be at least 4096 bytes.")
+            .Validate(
+                options => options.MaxConcurrentOperations is >= 1 and <= 1024,
+                $"{nameof(GitSmartHttpOptions.MaxConcurrentOperations)} must be between 1 and 1024.")
+            .ValidateOnStart();
 
         return services;
     }

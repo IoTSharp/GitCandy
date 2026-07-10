@@ -27,26 +27,6 @@ public sealed class CompatibilityRouteTests
         Assert.AreEqual("/Repository", homeResponse.Headers.Location?.OriginalString);
     }
 
-    [TestMethod]
-    public async Task MapGitCandyCompatibilityRoutes_WithGitSmartHttpPaths_ReturnsNotImplementedPlaceholder()
-    {
-        await using var app = await StartRouteTestAppAsync();
-        using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
-        {
-            BaseAddress = new Uri(GetServerAddress(app)),
-        };
-
-        using var dotGitResponse = await httpClient.GetAsync("/git/sample.git/info/refs");
-        Assert.AreEqual(HttpStatusCode.NotImplemented, dotGitResponse.StatusCode);
-        var dotGitContent = await dotGitResponse.Content.ReadAsStringAsync();
-        StringAssert.Contains(dotGitContent, "sample/info/refs");
-
-        using var legacyGitResponse = await httpClient.GetAsync("/git/sample/info/refs");
-        Assert.AreEqual(HttpStatusCode.NotImplemented, legacyGitResponse.StatusCode);
-        var legacyGitContent = await legacyGitResponse.Content.ReadAsStringAsync();
-        StringAssert.Contains(legacyGitContent, "sample/info/refs");
-    }
-
     private static async Task<WebApplication> StartRouteTestAppAsync()
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions

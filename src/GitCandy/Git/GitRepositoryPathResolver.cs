@@ -8,11 +8,7 @@ namespace GitCandy.Git;
 public sealed class GitRepositoryPathResolver(IGitCandyApplicationPaths applicationPaths)
     : IGitRepositoryPathResolver
 {
-    private static readonly char[] DirectorySeparators =
-    [
-        Path.DirectorySeparatorChar,
-        Path.AltDirectorySeparatorChar
-    ];
+    private static readonly char[] DirectorySeparators = ['/', '\\'];
 
     private readonly IGitCandyApplicationPaths _applicationPaths = applicationPaths;
 
@@ -26,7 +22,8 @@ public sealed class GitRepositoryPathResolver(IGitCandyApplicationPaths applicat
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryName);
 
         var safeRepositoryName = repositoryName.Trim();
-        if (safeRepositoryName.IndexOfAny(DirectorySeparators) >= 0)
+        if (safeRepositoryName is "." or ".."
+            || safeRepositoryName.IndexOfAny(DirectorySeparators) >= 0)
         {
             throw new ArgumentException(
                 "Repository name must be a single path segment.",

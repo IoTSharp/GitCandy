@@ -9,7 +9,7 @@ namespace GitCandy.Configuration;
 public static class GitCandyEndpointRouteBuilderExtensions
 {
     /// <summary>
-    /// 注册迁移期兼容占位路由，先保持旧 GitCandy 公开 URL 可匹配。
+    /// 注册 Git Smart HTTP 与 MVC 兼容路由，保持旧 GitCandy 公开 URL 可匹配。
     /// </summary>
     /// <param name="endpoints">端点路由构建器。</param>
     /// <returns>同一个端点路由构建器。</returns>
@@ -20,12 +20,12 @@ public static class GitCandyEndpointRouteBuilderExtensions
         endpoints.MapControllerRoute(
             name: "git-dotgit",
             pattern: "git/{project}.git/{**verb}",
-            defaults: new { controller = "Compatibility", action = "Git" });
+            defaults: new { controller = "Git", action = "Smart" });
 
         endpoints.MapControllerRoute(
             name: "git",
             pattern: "git/{project}/{**verb}",
-            defaults: new { controller = "Compatibility", action = "Git" });
+            defaults: new { controller = "Git", action = "Smart" });
 
         endpoints.MapControllerRoute(
             name: "account",

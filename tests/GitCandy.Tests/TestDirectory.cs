@@ -26,6 +26,15 @@ internal static class TestDirectory
 
         if (Directory.Exists(fullPath))
         {
+            foreach (var fileSystemInfo in new DirectoryInfo(fullPath)
+                .EnumerateFileSystemInfos("*", SearchOption.AllDirectories))
+            {
+                if ((fileSystemInfo.Attributes & FileAttributes.ReadOnly) != 0)
+                {
+                    fileSystemInfo.Attributes &= ~FileAttributes.ReadOnly;
+                }
+            }
+
             Directory.Delete(fullPath, recursive: true);
         }
     }

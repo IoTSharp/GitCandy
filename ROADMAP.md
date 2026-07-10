@@ -468,7 +468,7 @@ ASP.NET Core 中间件和后台能力：
 - 静态资源路径、字体、highlight、marked、bootstrap-switch 工作。
 - 页面 URL 与旧版兼容。
 
-### ⬜ Milestone 6：Git Smart HTTP 迁移
+### ✅ Milestone 6：Git Smart HTTP 迁移
 
 目标：保住 Git 客户端协议行为。
 
@@ -478,20 +478,20 @@ ASP.NET Core 中间件和后台能力：
 - 必须保持 streaming、headers、URL escaping、认证挑战和 Git 客户端错误行为。
 - Git 协议执行必须收敛在 `IGitTransportBackend`，业务层不得散落命令行调用。
 
-#### ⬜ M6 拆分
+#### ✅ M6 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #060 | Smart HTTP endpoint | 将 `GitController.Smart` 迁移为 ASP.NET Core MVC action 或专用 endpoint |
-| ⬜ #061 | 请求/响应 streaming | 使用 `Request.Body` 和 `Response.Body` 流式复制，不完整读入 pack |
-| ⬜ #062 | gzip request body | gzip request body 仍能解压 |
-| ⬜ #063 | Git headers | 精确保留 Git Smart HTTP content type、no-cache headers 和 `WWW-Authenticate` |
-| ⬜ #064 | 请求限制配置 | 配置 request body size、超时、反向代理限制 |
-| ⬜ #065 | URL 与路径安全 | 校验 URL escaping、仓库名、path traversal 和仓库根目录边界 |
-| ⬜ #066 | Git transport backend 边界 | 建立 `IGitTransportBackend`，把 `upload-pack`、`receive-pack`、`upload-archive` 执行收敛到一个受控入口；若暂用 `git.exe`，必须使用 `ProcessStartInfo.ArgumentList`，避免用户输入拼进 shell command |
-| ⬜ #067 | Git clone/fetch/push 验证 | `git clone http://.../git/{repo}.git`、`git fetch`、`git push` 通过 |
-| ⬜ #068 | 大 pack 流式验证 | 大文件/较大 pack 流式传输，不占用异常内存 |
-| ⬜ #069 | 权限失败行为 | 权限不足时 Git 客户端收到正确 401/403/404 行为 |
+| ✅ #060 | Smart HTTP endpoint | 已将两套兼容 Git URL 从占位响应切换到 ASP.NET Core `GitController.Smart` |
+| ✅ #061 | 请求/响应 streaming | 已使用 `Request.Body`、helper stdin/stdout 和 `Response.Body` 异步流式复制，不完整读入 pack |
+| ✅ #062 | gzip request body | 已使用流式 `GZipStream` 解压并通过 endpoint 测试 |
+| ✅ #063 | Git headers | 已保留 Smart HTTP content type、no-cache headers、protocol v0/v1/v2 framing 和 Basic challenge |
+| ✅ #064 | 请求限制配置 | 已新增 4 GiB request body、30 分钟 timeout、stream buffer 配置及 IIS/Nginx 说明 |
+| ✅ #065 | URL 与路径安全 | 已覆盖 URL escaping、跨平台分隔符、dot traversal、repository root 与 symlink/junction 最终路径边界 |
+| ✅ #066 | Git transport backend 边界 | 已建立 `IGitTransportBackend`，使用 `ProcessStartInfo.ArgumentList` 收敛 upload-pack、receive-pack、upload-archive |
+| ✅ #067 | Git clone/fetch/push 验证 | 真实 Kestrel + SQLite + Git 客户端 `.git`/无后缀 clone、fetch、Basic Auth push 通过 |
+| ✅ #068 | 大 pack 流式验证 | 24 MiB 随机文件 pack 经同一流式 endpoint push 通过 |
+| ✅ #069 | 权限失败行为 | 已覆盖匿名/错误凭据 401、已认证无权限 403、仓库不存在 404、service 不支持 403 |
 
 验收：
 
@@ -659,7 +659,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建；Identity 存储和权限 smoke test 通过；SQL Server migration SQL 可生成审阅，PgSQL/SonnetDB 后续独立回补 |
 | ✅ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
 | ✅ M5 | Web 垂直切片 | 账户、团队、仓库 CRUD 页面迁移完成 |
-| ⬜ M6 | Git HTTP 垂直切片 | Git Smart HTTP clone/fetch/push 完成 |
+| ✅ M6 | Git HTTP 垂直切片 | Git Smart HTTP clone/fetch/push 完成 |
 | ⬜ M7 | SSH 与后台任务 | SSH 和 scheduler 完成 |
 | ⬜ M8 | 发布闭环 | 部署文档、迁移脚本、回滚方案完成 |
 | ⬜ M9 | 迁移后改进池 | 第一轮迁移稳定后逐项独立推进 |
@@ -677,8 +677,8 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #015 到 ✅ #019 | 建立新 `Program.cs`、标准 pipeline、认证/授权占位、空路由、`System.Web` 门禁和空壳构建验证 |
 | ✅ #030 到 ✅ #039 | 建立 EF Core `GitCandyDbContext` + Identity/领域 schema，完成 SQLite 新库、存储/权限 smoke tests 和 SQL Server migration SQL 闭环 |
 | ✅ #040 到 ✅ #049 | 迁移登录、当前用户和权限服务，打通 Web 登录/登出 |
-| ⬜ #050 到 ⬜ #059 | 迁移 `Repository/Index` 和其余 MVC Controllers/Razor Views |
-| ⬜ #060 到 ⬜ #069 | 再迁 Git Smart HTTP，尽早验证 `git clone/fetch/push` |
+| ✅ #050 到 ✅ #059 | 已迁移 `Repository/Index` 和其余 MVC Controllers/Razor Views |
+| ✅ #060 到 ✅ #069 | 已迁移 Git Smart HTTP，并验证 `git clone/fetch/push` 与大 pack streaming |
 | ⬜ #070 到 ⬜ #079 | 迁移内置 SSH hosted service，验证 SSH clone/fetch/push 和 graceful shutdown |
 
 这样能尽快发现真正的风险点：Identity/领域模型关系、ASP.NET Core routing 差异、Git streaming 差异，而不是在 40 多个 view 迁完后才发现协议层不通。
@@ -687,7 +687,10 @@ ASP.NET Core 中间件和后台能力：
 
 1. ✅ M1 已完成：`src/GitCandy` 空壳、标准 ASP.NET Core MVC pipeline、兼容占位路由、`System.Web` 门禁和 `.slnx` 构建验证已闭环。
 2. ✅ M3 已完成：以 SQLite 为短期运行 provider，Identity/领域 migration、权限与 Identity store smoke tests、SQL Server migration SQL 已闭环。
-3. ✅ M4 已完成：Identity cookie、独立 Git Basic scheme、当前用户、resource authorization handlers、Session 收敛和行为测试已闭环；下一步推进 M5 `Repository/Index` 垂直切片。
+3. ✅ M4 已完成：Identity cookie、独立 Git Basic scheme、当前用户、resource authorization handlers、Session 收敛和行为测试已闭环。
+4. ✅ M5 已完成：MVC controllers、Razor Views、静态资源和主要页面 smoke tests 已闭环。
+5. ✅ M6 已完成：Smart HTTP endpoint、独立 Basic 授权、受控 Git backend、clone/fetch/push 和大 pack streaming 已闭环。
+6. 下一步推进 M7 内置 SSH hosted service，并复用 M6 `IGitTransportBackend`。
 
 ⬜ M10 的代码智能能力进入第二波实施：等 Git Smart HTTP、SSH/scheduler、部署路径稳定后，再从 ⬜ #150 schema 和 ⬜ #151 ingest 垂直切片开始推进。
 

@@ -10,10 +10,19 @@ public sealed class GitServiceFactory(IGitRepositoryPathResolver pathResolver) :
     /// <inheritdoc />
     public GitRepositoryContext Create(string repositoryName)
     {
-        var repositoryPath = _pathResolver.ResolveRepositoryPath(repositoryName);
+        var normalizedRepositoryName = repositoryName.Trim();
+        var repositoryPath = _pathResolver.ResolveRepositoryPath(normalizedRepositoryName);
+        if (!Directory.Exists(repositoryPath))
+        {
+            var dotGitPath = _pathResolver.ResolveRepositoryPath($"{normalizedRepositoryName}.git");
+            if (Directory.Exists(dotGitPath))
+            {
+                repositoryPath = dotGitPath;
+            }
+        }
 
         return new GitRepositoryContext(
-            repositoryName.Trim(),
+            normalizedRepositoryName,
             repositoryPath);
     }
 }

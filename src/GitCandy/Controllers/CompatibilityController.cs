@@ -1,6 +1,4 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 
 namespace GitCandy.Controllers;
 
@@ -24,24 +22,6 @@ public sealed class CompatibilityController : Controller
     public IActionResult Setting(string? legacyAction = null)
     {
         return Placeholder("Setting", legacyAction, defaultAction: "Edit", name: null, path: null);
-    }
-
-    public IActionResult Git(string project, string? verb = null)
-    {
-        Response.Headers[HeaderNames.CacheControl] = "no-cache, max-age=0, must-revalidate";
-        Response.Headers[HeaderNames.Pragma] = "no-cache";
-        Response.Headers[HeaderNames.Expires] = "Fri, 01 Jan 1980 00:00:00 GMT";
-
-        var target = string.IsNullOrWhiteSpace(verb)
-            ? project
-            : $"{project}/{verb}";
-
-        return new ContentResult
-        {
-            StatusCode = StatusCodes.Status501NotImplemented,
-            ContentType = "text/plain; charset=utf-8",
-            Content = $"Git Smart HTTP placeholder for {target}.",
-        };
     }
 
     private ContentResult Placeholder(
