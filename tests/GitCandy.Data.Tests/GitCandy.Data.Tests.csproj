@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\GitCandy.Data\GitCandy.Data.csproj" />
+    <ProjectReference Include="..\..\src\GitCandy.Data.SqlServer\GitCandy.Data.SqlServer.csproj" />
     <ProjectReference Include="..\..\src\GitCandy.Data.Sqlite\GitCandy.Data.Sqlite.csproj" />
   </ItemGroup>
 </Project>

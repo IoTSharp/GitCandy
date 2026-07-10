@@ -1,6 +1,6 @@
 # GitCandy EF Core Database Providers
 
-GitCandy's ASP.NET Core migration uses SQLite first while the main Web, Identity, repository, Git HTTP, SSH, and scheduler slices are still being brought up. SQL Server, PostgreSQL/pgsql, and SonnetDB remain visible in the provider plan, but their migration SQL, schema differences, and deployment validation are handled after the main migration path works end to end.
+GitCandy's ASP.NET Core migration uses SQLite first while the main Web, Identity, repository, Git HTTP, SSH, and scheduler slices are still being brought up. SQL Server has a separate provider and initial migration so its schema SQL can be generated and reviewed. PostgreSQL/pgsql and SonnetDB remain visible in the provider plan, but their migration SQL, schema differences, and deployment validation are handled after the main migration path works end to end.
 
 The design still mirrors IoTSharp's provider-neutral direction: keep the base `DbContext` provider-neutral, while the active host registration and business implementation stay on SQLite for the current vertical slices.
 
@@ -9,7 +9,7 @@ Current implementation status:
 | Provider | Status | Notes |
 | --- | --- | --- |
 | SQLite | Active implementation provider | Default local provider and current smoke-test target |
-| SQL Server | Planned later provider | Revisit provider project, migration assembly, and migration SQL after the main migration path is working |
+| SQL Server | Migration validation provider | Independent provider/migrations assembly; idempotent Identity/domain SQL is covered without requiring a live server |
 | PostgreSQL | Optional implemented extension | Existing optional provider work stays visible but is not expanded during the first vertical slices |
 | SonnetDB | Optional implemented extension | Existing optional provider work stays visible but is not expanded during the first vertical slices |
 
@@ -63,7 +63,7 @@ Supported provider aliases:
 | Provider | Accepted values |
 | --- | --- |
 | SQLite | `sqlite`, `sqlite3` |
-| SQL Server | Planned later: `sqlserver`, `mssql`, `sql-server` |
+| SQL Server | `sqlserver`, `mssql`, `sql-server` |
 | PostgreSQL | `pgsql`, `postgres`, `postgresql`, `npgsql` |
 | SonnetDB | `sonnet`, `sonnetdb` |
 
@@ -73,7 +73,7 @@ Supported provider aliases:
 | --- | --- |
 | `GitCandy.Data` | Provider-neutral `GitCandyDbContext`, `GitCandyUser`, configuration reader, and DI builder |
 | `GitCandy.Data.Sqlite` | SQLite `UseSqlite` registration and future SQLite migrations |
-| `GitCandy.Data.SqlServer` | Planned SQL Server `UseSqlServer` registration and SQL Server migrations |
+| `GitCandy.Data.SqlServer` | SQL Server `UseSqlServer` registration and SQL Server migrations |
 | `GitCandy.Data.PostgreSql` | Optional PostgreSQL `UseNpgsql` registration and future PostgreSQL migrations |
 | `GitCandy.Data.SonnetDB` | Optional SonnetDB `UseSonnetDB` registration and future SonnetDB migrations |
 
@@ -87,11 +87,11 @@ SQLite:
 dotnet ef migrations add InitialCreate --project src/GitCandy.Data.Sqlite --startup-project src/GitCandy.Data.Sqlite --context GitCandyDbContext --output-dir Migrations
 ```
 
-SQL Server, once `GitCandy.Data.SqlServer` is added:
+SQL Server:
 
 ```powershell
-dotnet ef migrations add InitialCreate --project src/GitCandy.Data.SqlServer --startup-project src/GitCandy.Data.SqlServer --context GitCandyDbContext --output-dir Migrations
-dotnet ef migrations script --project src/GitCandy.Data.SqlServer --startup-project src/GitCandy.Data.SqlServer --context GitCandyDbContext --idempotent --output artifacts/migrations/sqlserver/InitialCreate.sql
+dotnet ef migrations has-pending-model-changes --project src/GitCandy.Data.SqlServer --startup-project src/GitCandy.Data.SqlServer --context GitCandyDbContext
+dotnet ef migrations script --project src/GitCandy.Data.SqlServer --startup-project src/GitCandy.Data.SqlServer --context GitCandyDbContext --idempotent --output artifacts/migrations/sqlserver/InitialIdentitySchema.sql
 ```
 
 Optional PostgreSQL:
@@ -106,4 +106,4 @@ Optional SonnetDB:
 dotnet ef migrations add InitialCreate --project src/GitCandy.Data.SonnetDB --startup-project src/GitCandy.Data.SonnetDB --context GitCandyDbContext --output-dir Migrations
 ```
 
-Do not run production schema changes automatically on application startup. Generate and review migration SQL during release preparation. `EnsureCreated` is acceptable for early smoke tests only; it is not a release migration strategy.
+Do not run production schema changes automatically on application startup. Generate and review migration SQL during release preparation, and do not commit generated `artifacts/` output. `EnsureCreated` is acceptable for early smoke tests only; it is not a release migration strategy.

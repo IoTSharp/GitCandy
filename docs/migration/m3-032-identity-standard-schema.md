@@ -14,8 +14,8 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `src/GitCandy.Data.Sqlite/Migrations/20260709172133_InitialIdentitySchema.cs` | SQLite 初始 migration |
-| `src/GitCandy.Data.Sqlite/Migrations/20260709172133_InitialIdentitySchema.Designer.cs` | migration target model |
+| `src/GitCandy.Data.Sqlite/Migrations/20260709202539_InitialIdentitySchema.cs` | SQLite 初始 migration |
+| `src/GitCandy.Data.Sqlite/Migrations/20260709202539_InitialIdentitySchema.Designer.cs` | migration target model |
 | `src/GitCandy.Data.Sqlite/Migrations/GitCandyDbContextModelSnapshot.cs` | EF Core model snapshot |
 | `tests/GitCandy.Data.Tests/GitCandyDataServiceCollectionExtensionsTests.cs` | migration-backed Identity schema smoke test |
 
@@ -23,7 +23,7 @@
 
 - 当前 DbContext 已包含 M0/M3 阶段落地的仓库、团队、权限角色和 SSH key 领域表骨架，因此初始 migration/snapshot 反映的是当前完整 EF Core 模型；#032 的验收重点仍限定在 Identity 标准 schema。
 - 本任务不兼容旧 `Users`、`AuthorizationLog`、`PasswordVersion` 或旧 `_gc_auth` cookie。
-- 按当前 SQLite-first 校准，本任务只新增 SQLite migration；SQL Server migration SQL、跨 provider schema 差异和领域表完整约束继续留给后续 M3 任务闭环。
+- 本切片先落地 SQLite migration；M3 #038 已补齐 SQL Server 独立 migration 和 SQL 生成审阅，PostgreSQL/SonnetDB 仍留待可选 provider 工作。
 - 不在应用启动时自动执行生产 schema 变更。
 
 ## 测试入口

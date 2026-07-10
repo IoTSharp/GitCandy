@@ -23,7 +23,7 @@ public static class GitCandyPostgreSqlDataBuilderExtensions
 
         return builder.AddProvider(GitCandyDatabaseProvider.PostgreSql, static (services, options) =>
         {
-            services.AddDbContextPool<GitCandyDbContext>(dbContextOptions =>
+            services.AddPooledDbContextFactory<GitCandyDbContext>(dbContextOptions =>
             {
                 dbContextOptions.UseNpgsql(options.ConnectionString, npgsqlOptions =>
                     npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)

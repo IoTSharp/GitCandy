@@ -7,7 +7,7 @@
 - 已在 `GitCandy.Data` 中建立 Identity 用户扩展、仓库、团队、用户仓库角色、团队仓库角色、用户团队角色的 EF Core 领域 schema 骨架。
 - 已新增 `IGitCandyRepositoryPermissionQuery` 作为后续 Web、Git HTTP 和 SSH 复用的权限查询入口。
 - 已新增 SQLite smoke test，覆盖新数据库创建、Identity 用户写入、领域实体写入、大小写不敏感名称规范化、领域数据读取和基础权限查询。
-- 当前仍使用 `EnsureCreatedAsync` 作为 M0 早期 smoke test；正式 schema 验收、SQLite/SQL Server migrations 和 migration SQL 仍由 M3 #032/#038/#039 闭环。
+- `EnsureCreatedAsync` 只保留为 M0 早期 smoke test；正式 SQLite/SQL Server migration 与 migration SQL 验收已由 M3 #032/#038/#039 闭环。
 
 ## 测试入口
 

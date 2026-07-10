@@ -24,7 +24,7 @@ dotnet build .\GitCandy.slnx
 
 未运行：
 
-- SQLite 数据读取/写入 smoke test：不涉及数据层行为变更，后续 M3 继续覆盖。
+- SQLite 数据读取/写入 smoke test：M1 不涉及数据层行为变更，后续已由 M3 覆盖。
 - MVC 登录和主要页面 smoke test：M1 当前只有占位路由，真实登录页面迁移属于后续 M4/M5。
 - Git HTTP clone/fetch/push：#019 不改变 Git Smart HTTP 运行时代码，M6 单独验收。
 - SSH clone/fetch/push：#019 不改变 SSH 运行时代码，M7 单独验收。

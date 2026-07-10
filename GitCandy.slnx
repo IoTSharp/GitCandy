@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/GitCandy.Data.PostgreSql/GitCandy.Data.PostgreSql.csproj" />
     <Project Path="src/GitCandy.Data.SonnetDB/GitCandy.Data.SonnetDB.csproj" />
+    <Project Path="src/GitCandy.Data.SqlServer/GitCandy.Data.SqlServer.csproj" />
     <Project Path="src/GitCandy.Data.Sqlite/GitCandy.Data.Sqlite.csproj" />
     <Project Path="src/GitCandy.Data/GitCandy.Data.csproj" />
     <Project Path="src/GitCandy/GitCandy.csproj" />

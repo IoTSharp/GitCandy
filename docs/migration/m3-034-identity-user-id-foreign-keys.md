@@ -27,7 +27,7 @@ dotnet test tests/GitCandy.Data.Tests/GitCandy.Data.Tests.csproj --filter "Fully
 ## 当前边界
 
 - 本任务只闭环新 EF Core/Identity schema 的用户外键，不兼容旧 `Users`、`AuthorizationLog`、`PasswordVersion` 或旧 `_gc_auth` cookie。
-- 当前短线仍按 SQLite-first 验收；SQL Server migration SQL、PostgreSQL 和 SonnetDB provider 差异继续留给 M3 #038/#039 后续工作。
+- 当前短线仍按 SQLite-first 运行；M3 #038/#039 已验证 SQL Server migration SQL 中的 Identity user id 外键，PostgreSQL 和 SonnetDB provider 差异后续独立回补。
 - 本任务不实现 Web 登录、Git Basic Auth 或 SSH public key authentication handler。
 
 ## 兼容性影响

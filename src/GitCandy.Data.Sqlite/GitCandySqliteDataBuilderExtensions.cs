@@ -26,7 +26,7 @@ public static class GitCandySqliteDataBuilderExtensions
         {
             EnsureSqliteDirectory(options.ConnectionString);
 
-            services.AddDbContextPool<GitCandyDbContext>(dbContextOptions =>
+            services.AddPooledDbContextFactory<GitCandyDbContext>(dbContextOptions =>
             {
                 dbContextOptions.UseSqlite(options.ConnectionString, sqliteOptions =>
                     sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)

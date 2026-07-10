@@ -31,6 +31,13 @@ public static class GitCandyDatabaseProviderParser
             return true;
         }
 
+        if (string.Equals(normalized, "sqlserver", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(normalized, "mssql", StringComparison.OrdinalIgnoreCase))
+        {
+            provider = GitCandyDatabaseProvider.SqlServer;
+            return true;
+        }
+
         if (string.Equals(normalized, "pgsql", StringComparison.OrdinalIgnoreCase)
             || string.Equals(normalized, "postgres", StringComparison.OrdinalIgnoreCase)
             || string.Equals(normalized, "postgresql", StringComparison.OrdinalIgnoreCase)

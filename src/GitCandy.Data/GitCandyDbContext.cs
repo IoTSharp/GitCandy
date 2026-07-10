@@ -9,9 +9,18 @@ namespace GitCandy.Data;
 /// <summary>
 /// GitCandy 面向 ASP.NET Core Identity 和新领域模型的 EF Core 上下文。
 /// </summary>
-public sealed class GitCandyDbContext(DbContextOptions<GitCandyDbContext> options)
-    : IdentityDbContext<GitCandyUser>(options)
+public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
 {
+    /// <summary>
+    /// 初始化 GitCandy 数据上下文，并禁用 EF Core lazy loading。
+    /// </summary>
+    /// <param name="options">EF Core 上下文选项。</param>
+    public GitCandyDbContext(DbContextOptions<GitCandyDbContext> options)
+        : base(options)
+    {
+        ChangeTracker.LazyLoadingEnabled = false;
+    }
+
     /// <summary>
     /// GitCandy 仓库领域表。
     /// </summary>

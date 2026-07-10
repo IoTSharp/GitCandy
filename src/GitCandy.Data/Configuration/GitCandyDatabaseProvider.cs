@@ -11,6 +11,11 @@ public enum GitCandyDatabaseProvider
     Sqlite,
 
     /// <summary>
+    /// SQL Server provider，用于生成和部署 SQL Server schema。
+    /// </summary>
+    SqlServer,
+
+    /// <summary>
     /// PostgreSQL provider，用于 pgsql 部署。
     /// </summary>
     PostgreSql,

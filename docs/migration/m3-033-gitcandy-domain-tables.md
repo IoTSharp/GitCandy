@@ -29,10 +29,10 @@ dotnet test GitCandy.slnx --filter "FullyQualifiedName~GitCandy.Data.Tests.GitCa
 
 ## 当前边界
 
-- 本任务复用当前 SQLite 初始 migration/snapshot 显式表达领域表；SQL Server migration SQL 和跨 provider 差异仍由 M3 #038/#039 闭环。
+- 本任务复用当前 SQLite 初始 migration/snapshot 显式表达领域表；M3 #038/#039 已用 SQL Server 独立 migration 和离线 SQL smoke test 验证同一领域模型。
 - 本任务不兼容旧 `Users`、`AuthorizationLog`、`PasswordVersion` 或旧 `_gc_auth` cookie。
 - 本任务不实现 SSH public key authentication handler，只提供后续 M7 复用的数据模型。
-- PostgreSQL、SonnetDB 和 SQL Server 的 schema SQL 差异仍作为后续 provider 工作处理。
+- PostgreSQL 和 SonnetDB 的 schema SQL 差异仍作为后续可选 provider 工作处理；SQL Server 差异记录在 `m3-038-migration-strategy.md`。
 
 ## 兼容性影响
 

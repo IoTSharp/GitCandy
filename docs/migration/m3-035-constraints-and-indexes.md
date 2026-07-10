@@ -28,8 +28,8 @@ dotnet test tests/GitCandy.Data.Tests/GitCandy.Data.Tests.csproj --filter "Fully
 
 ## 当前边界
 
-- 本任务仍以 SQLite 为短期业务实现和验收 provider；SQL Server migration SQL、PostgreSQL 和 SonnetDB 差异继续留给 M3 #038/#039 后续工作。
-- SQLite 不强制执行 `maxLength`，本任务通过 EF metadata 和 migration 表达长度；后续 SQL Server migration SQL 需要继续审阅实际 DDL。
+- 本任务仍以 SQLite 为短期业务实现和运行验收 provider；M3 #038/#039 已补齐 SQL Server migration SQL 的字段类型与索引审阅，PostgreSQL 和 SonnetDB 差异后续独立回补。
+- SQLite 不强制执行 `maxLength`，本任务通过 EF metadata 和 migration 表达长度；M3 #039 已审阅 SQL Server DDL 中的 `nvarchar`/`nchar` 长度和唯一索引。
 - 本任务不兼容旧 `Users`、`AuthorizationLog`、`PasswordVersion` 或旧 `_gc_auth` cookie。
 - 本任务不实现登录、注册、Git Basic Auth、SSH public key authentication 或仓库 CRUD 页面。
 

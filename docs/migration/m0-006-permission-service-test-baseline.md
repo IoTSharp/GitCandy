@@ -41,7 +41,7 @@ dotnet test .\GitCandy.slnx
 - 写权限要求匿名写或角色同时具备 `AllowRead=true` 与 `AllowWrite=true`，保留旧 GitCandy 的写入语义。
 - owner 当前通过用户仓库角色授予读写权限；`IsOwner` 字段作为后续仓库管理权限语义保留。
 - 本任务不实现 Web cookie、Git Basic Auth、PAT、SSH public key 或具体 authorization handler。
-- 本任务仍使用 `EnsureCreatedAsync` 作为 M0 早期测试入口；正式 migration、SQLite/SQL Server migration SQL 和 provider 差异仍由 M3 闭环。
+- 本任务仍使用 `EnsureCreatedAsync` 作为 M0 早期测试入口；正式 SQLite/SQL Server migration、migration SQL 和 provider 差异已由 M3 闭环。
 
 ## 兼容性影响
 
