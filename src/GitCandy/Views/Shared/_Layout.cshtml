@@ -10,6 +10,20 @@
 <body>
     <header class="site-header">
         <a class="site-brand" asp-area="" asp-controller="Home" asp-action="Index">GitCandy</a>
+        <nav class="account-navigation" aria-label="Account">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a asp-controller="Account" asp-action="Change">@User.Identity.Name</a>
+                <form asp-controller="Account" asp-action="Logout" method="post">
+                    <button type="submit" class="link-button">Sign out</button>
+                </form>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login">Sign in</a>
+                <a asp-controller="Account" asp-action="Create">Create account</a>
+            }
+        </nav>
     </header>
     <main class="site-main" role="main">
         @RenderBody()

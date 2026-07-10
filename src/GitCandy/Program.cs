@@ -20,7 +20,6 @@ app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseRequestLocalization();
-app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 

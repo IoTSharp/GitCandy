@@ -1,0 +1,45 @@
+@model CreateAccountViewModel
+@{
+    ViewData["Title"] = "Create account";
+}
+
+<section class="account-shell">
+    <h1>Create account</h1>
+    <form asp-action="Create" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="form-field">
+            <label asp-for="UserName"></label>
+            <input asp-for="UserName" autocomplete="username" autofocus />
+            <span asp-validation-for="UserName"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="DisplayName"></label>
+            <input asp-for="DisplayName" autocomplete="name" />
+            <span asp-validation-for="DisplayName"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="email" />
+            <span asp-validation-for="Email"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="new-password" />
+            <span asp-validation-for="Password"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="ConfirmPassword"></label>
+            <input asp-for="ConfirmPassword" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="Description"></label>
+            <textarea asp-for="Description" rows="4"></textarea>
+            <span asp-validation-for="Description"></span>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Create account</button>
+            <a asp-action="Login">Sign in</a>
+        </div>
+    </form>
+</section>

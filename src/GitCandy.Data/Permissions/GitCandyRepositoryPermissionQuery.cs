@@ -31,6 +31,38 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
         return CanAccessRepositoryAsync(repositoryName, userId, isAdministrator, requiresWrite: true, cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> IsRepositoryOwnerAsync(
+        string repositoryName,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        if (isAdministrator)
+        {
+            return await _dbContext.Repositories
+                .AsNoTracking()
+                .AnyAsync(repository => repository.NormalizedName == normalizedName, cancellationToken);
+        }
+
+        return await (
+            from role in _dbContext.UserRepositoryRoles.AsNoTracking()
+            join repository in _dbContext.Repositories.AsNoTracking()
+                on role.RepositoryId equals repository.Id
+            where repository.NormalizedName == normalizedName
+                && role.UserId == userId
+                && role.IsOwner
+            select role)
+            .AnyAsync(cancellationToken);
+    }
+
     private async Task<bool> CanAccessRepositoryAsync(
         string repositoryName,
         string? userId,
@@ -51,14 +83,16 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
         if (requiresWrite)
         {
             if (await repositories.AnyAsync(
-                repository => repository.AllowAnonymousRead && repository.AllowAnonymousWrite,
+                repository => !repository.IsPrivate
+                    && repository.AllowAnonymousRead
+                    && repository.AllowAnonymousWrite,
                 cancellationToken))
             {
                 return true;
             }
         }
         else if (await repositories.AnyAsync(
-            repository => repository.AllowAnonymousRead,
+            repository => !repository.IsPrivate && repository.AllowAnonymousRead,
             cancellationToken))
         {
             return true;

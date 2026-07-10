@@ -29,8 +29,8 @@ public static class GitCandyEndpointRouteBuilderExtensions
 
         endpoints.MapControllerRoute(
             name: "account",
-            pattern: "Account/{legacyAction=Login}/{name?}",
-            defaults: new { controller = "Compatibility", action = "Account" });
+            pattern: "Account/{action=Login}/{name?}",
+            defaults: new { controller = "Account" });
 
         endpoints.MapControllerRoute(
             name: "team",

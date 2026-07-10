@@ -46,14 +46,14 @@ public sealed class RepositoryService(
         if (string.IsNullOrWhiteSpace(userId))
         {
             return await SelectSummary(repositories
-                    .Where(repository => repository.AllowAnonymousRead)
+                    .Where(repository => !repository.IsPrivate && repository.AllowAnonymousRead)
                     .OrderBy(repository => repository.NormalizedName))
                 .ToArrayAsync(cancellationToken);
         }
 
         return await SelectSummary(repositories
                 .Where(repository =>
-                    repository.AllowAnonymousRead
+                    (!repository.IsPrivate && repository.AllowAnonymousRead)
                     || _dbContext.UserRepositoryRoles.Any(role =>
                         role.RepositoryId == repository.Id
                         && role.UserId == userId
@@ -90,6 +90,20 @@ public sealed class RepositoryService(
         CancellationToken cancellationToken = default)
     {
         return _permissionQuery.CanWriteRepositoryAsync(
+            repositoryName,
+            userId,
+            isAdministrator,
+            cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> IsRepositoryOwnerAsync(
+        string repositoryName,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        return _permissionQuery.IsRepositoryOwnerAsync(
             repositoryName,
             userId,
             isAdministrator,

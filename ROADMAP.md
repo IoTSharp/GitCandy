@@ -402,11 +402,11 @@ ASP.NET Core 中间件和后台能力：
 
 - 新 SQLite 数据库可通过 EF Core migration 创建；早期 `EnsureCreated` 只作为 smoke test，不作为发布迁移依据。
 - SQL Server schema 或 migration SQL 可生成并审阅，至少覆盖 Identity schema 和 GitCandy 领域表。
-- Identity 存储层的用户创建/密码校验和团队/仓库 CRUD 测试通过；浏览器 cookie 登录由 M4 验收。
+- Identity 存储层的用户创建/密码校验和团队/仓库 CRUD 测试通过；浏览器 cookie 登录已由 M4 验收。
 - SQLite 与 SQL Server schema 差异被记录；PostgreSQL/SonnetDB 若作为可选 provider 发布，也必须各自补齐 migration SQL 和差异说明。
 - 没有隐式 lazy loading 导致的 N+1 或空集合行为变化。
 
-### ⬜ Milestone 4：认证、授权和会话
+### ✅ Milestone 4：认证、授权和会话
 
 目标：让 Web UI 和 Git HTTP 都有清晰认证方案。
 
@@ -415,20 +415,20 @@ ASP.NET Core 中间件和后台能力：
 - Web UI 使用 ASP.NET Core Identity cookie。
 - Git HTTP Basic Auth 独立认证 scheme，不能依赖浏览器 cookie 或 Session 缓存。
 
-#### ⬜ M4 拆分
+#### ✅ M4 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #040 | Identity cookie 登录 | Web UI 使用 ASP.NET Core Identity cookie |
-| ⬜ #041 | 旧认证不兼容决策 | 明确不兼容旧 `_gc_auth` cookie、旧密码 hash、旧 `AuthorizationLog` |
-| ⬜ #042 | 账户页面实现 | 决定使用 Identity Razor Pages UI，或使用 MVC `AccountController` + Razor Views 调用 Identity 服务 |
-| ⬜ #043 | `ICurrentUser` | 增加 `ICurrentUser`，替换 `Token.Current` |
-| ⬜ #044 | 授权 handler | 自定义授权过滤器迁移为 authorization requirement/handler，或以 `IAsyncAuthorizationFilter` 过渡 |
-| ⬜ #045 | Git Basic Auth scheme | Git HTTP Basic Auth 独立成认证 scheme，并使用 Identity 用户校验 |
-| ⬜ #046 | Session 收敛 | Session 只保留必要用途，Git Basic Auth 不依赖 Session 才能正确工作 |
-| ⬜ #047 | Cookie 安全设置 | 补齐 `HttpOnly`、`SecurePolicy`、`SameSite`、过期策略 |
-| ⬜ #048 | Identity 行为测试 | 注册、登录、登出、密码修改、锁定/失败计数、安全戳失效可测 |
-| ⬜ #049 | 权限行为测试 | 私有仓库匿名不可读，公有仓库按配置可读/可写，管理员、owner、team 权限通过 |
+| ✅ #040 | Identity cookie 登录 | Web UI 使用 `.GitCandy.Identity` application cookie，用户名/邮箱登录和 cookie 往返测试通过 |
+| ✅ #041 | 旧认证不兼容决策 | 已明确不兼容旧 `_gc_auth` cookie、旧密码 hash、`PasswordVersion` 和旧 `AuthorizationLog` |
+| ✅ #042 | 账户页面实现 | 已采用 MVC `AccountController` + Razor Views 实现登录、注册、改密、POST 登出和拒绝访问页面 |
+| ✅ #043 | `ICurrentUser` | 已增加 scoped `ICurrentUser`，从 `HttpContext.User` claims 读取当前 Identity 用户，不使用 `Token.Current` |
+| ✅ #044 | 授权 handler | 已实现 repository read/write/owner、team administrator、current user 和 system administrator policy/handler |
+| ✅ #045 | Git Basic Auth scheme | 已实现独立 `GitCandy.GitBasic` scheme，使用 Identity 密码、锁定和 claims；M6 endpoint 只需显式绑定该 scheme |
+| ✅ #046 | Session 收敛 | 当前新 host 没有必要 Session 用途，已移除 `AddSession`/`UseSession`；Git Basic 在无 Session 服务时通过 |
+| ✅ #047 | Cookie 安全设置 | 已配置 `HttpOnly`、`SecurePolicy=Always`、`SameSite=Lax`、8 小时期限和 sliding expiration |
+| ✅ #048 | Identity 行为测试 | 注册、登录、POST 登出、密码修改、失败计数、锁定、安全戳和另一会话旧 cookie 失效测试通过 |
+| ✅ #049 | 权限行为测试 | 私有仓库匿名拒绝、公有仓库按配置匿名读写、管理员、owner、team member/team administrator 测试通过 |
 
 验收：
 
@@ -657,7 +657,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ M1 | 新 host 起步 | 新 ASP.NET Core 10 MVC 空壳可运行 |
 | 🚧 M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
 | ✅ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建；Identity 存储和权限 smoke test 通过；SQL Server migration SQL 可生成审阅，PgSQL/SonnetDB 后续独立回补 |
-| ⬜ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
+| ✅ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
 | ⬜ M5 | Web 垂直切片 | 账户、团队、仓库 CRUD 页面迁移完成 |
 | ⬜ M6 | Git HTTP 垂直切片 | Git Smart HTTP clone/fetch/push 完成 |
 | ⬜ M7 | SSH 与后台任务 | SSH 和 scheduler 完成 |
@@ -676,8 +676,8 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #011 到 ✅ #014 | 引入 `Directory.Build.props`、`Directory.Packages.props`、`global.json`、`.slnx` |
 | ✅ #015 到 ✅ #019 | 建立新 `Program.cs`、标准 pipeline、认证/授权占位、空路由、`System.Web` 门禁和空壳构建验证 |
 | ✅ #030 到 ✅ #039 | 建立 EF Core `GitCandyDbContext` + Identity/领域 schema，完成 SQLite 新库、存储/权限 smoke tests 和 SQL Server migration SQL 闭环 |
-| ⬜ #040 到 ⬜ #049 | 迁移登录、当前用户和权限服务，打通 Web 登录/登出 |
-| ⬜ #050 到 ⬜ #059 | 迁移登录页和 `Repository/Index` 作为垂直切片 |
+| ✅ #040 到 ✅ #049 | 迁移登录、当前用户和权限服务，打通 Web 登录/登出 |
+| ⬜ #050 到 ⬜ #059 | 迁移 `Repository/Index` 和其余 MVC Controllers/Razor Views |
 | ⬜ #060 到 ⬜ #069 | 再迁 Git Smart HTTP，尽早验证 `git clone/fetch/push` |
 | ⬜ #070 到 ⬜ #079 | 迁移内置 SSH hosted service，验证 SSH clone/fetch/push 和 graceful shutdown |
 
@@ -687,7 +687,7 @@ ASP.NET Core 中间件和后台能力：
 
 1. ✅ M1 已完成：`src/GitCandy` 空壳、标准 ASP.NET Core MVC pipeline、兼容占位路由、`System.Web` 门禁和 `.slnx` 构建验证已闭环。
 2. ✅ M3 已完成：以 SQLite 为短期运行 provider，Identity/领域 migration、权限与 Identity store smoke tests、SQL Server migration SQL 已闭环。
-3. 继续推进 M4/M5 垂直切片；不扩大 SQL Server 真实部署及 PgSQL/SonnetDB migration 范围，避免阻塞 Web/Git 核心路径。
+3. ✅ M4 已完成：Identity cookie、独立 Git Basic scheme、当前用户、resource authorization handlers、Session 收敛和行为测试已闭环；下一步推进 M5 `Repository/Index` 垂直切片。
 
 ⬜ M10 的代码智能能力进入第二波实施：等 Git Smart HTTP、SSH/scheduler、部署路径稳定后，再从 ⬜ #150 schema 和 ⬜ #151 ingest 垂直切片开始推进。
 

@@ -1,5 +1,7 @@
 using System.Globalization;
 using GitCandy.Application;
+using GitCandy.Authentication;
+using GitCandy.Authorization;
 using GitCandy.Caching;
 using GitCandy.Data;
 using GitCandy.Data.Configuration;
@@ -10,6 +12,9 @@ using GitCandy.Git;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Configuration;
@@ -34,7 +39,7 @@ public static class WebServiceCollectionExtensions
     ];
 
     /// <summary>
-    /// 注册 ASP.NET Core MVC 外壳、Identity、授权、Session 和本地化占位配置。
+    /// 注册 ASP.NET Core MVC、Identity、授权和本地化配置。
     /// </summary>
     /// <param name="services">服务集合。</param>
     /// <param name="configuration">应用配置。</param>
@@ -58,9 +63,20 @@ public static class WebServiceCollectionExtensions
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
 
-        services.AddIdentity<GitCandyUser, IdentityRole>()
+        services.AddIdentity<GitCandyUser, IdentityRole>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.Lockout.AllowedForNewUsers = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+            })
             .AddEntityFrameworkStores<GitCandyDbContext>()
             .AddDefaultTokenProviders();
+
+        services.AddAuthentication()
+            .AddScheme<AuthenticationSchemeOptions, GitBasicAuthenticationHandler>(
+                GitCandyAuthenticationSchemes.GitBasic,
+                _ => { });
 
         services.AddGitCandyMigrationServices();
         services.AddGitCandyScheduler();
@@ -69,9 +85,13 @@ public static class WebServiceCollectionExtensions
         services.ConfigureApplicationCookie(options =>
         {
             options.Cookie.Name = ".GitCandy.Identity";
+            options.Cookie.HttpOnly = true;
+            options.Cookie.SameSite = SameSiteMode.Lax;
+            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
             options.AccessDeniedPath = "/Account/AccessDenied";
+            options.ExpireTimeSpan = TimeSpan.FromHours(8);
             options.SlidingExpiration = true;
         });
 
@@ -81,17 +101,31 @@ public static class WebServiceCollectionExtensions
                 AuthorizationPolicies.Administrator,
                 policy => policy.RequireAuthenticatedUser()
                     .RequireRole(RoleNames.Administrator));
+            options.AddPolicy(
+                AuthorizationPolicies.RepositoryRead,
+                policy => policy.AddRequirements(
+                    new RepositoryAuthorizationRequirement(RepositoryPermission.Read)));
+            options.AddPolicy(
+                AuthorizationPolicies.RepositoryWrite,
+                policy => policy.AddRequirements(
+                    new RepositoryAuthorizationRequirement(RepositoryPermission.Write)));
+            options.AddPolicy(
+                AuthorizationPolicies.RepositoryOwner,
+                policy => policy.RequireAuthenticatedUser()
+                    .AddRequirements(
+                        new RepositoryAuthorizationRequirement(RepositoryPermission.Owner)));
+            options.AddPolicy(
+                AuthorizationPolicies.TeamAdministrator,
+                policy => policy.RequireAuthenticatedUser()
+                    .AddRequirements(new TeamAdministratorRequirement()));
+            options.AddPolicy(
+                AuthorizationPolicies.CurrentUser,
+                policy => policy.RequireAuthenticatedUser()
+                    .AddRequirements(new CurrentUserRequirement()));
         });
 
         services.AddMemoryCache();
         services.TryAddSingleton<IApplicationCache, MemoryApplicationCache>();
-        services.AddDistributedMemoryCache();
-        services.AddSession(options =>
-        {
-            options.Cookie.Name = ".GitCandy.Session";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.IsEssential = true;
-        });
 
         services.AddLocalization();
         services.Configure<RequestLocalizationOptions>(options =>
@@ -106,8 +140,15 @@ public static class WebServiceCollectionExtensions
 
     private static IServiceCollection AddGitCandyMigrationServices(this IServiceCollection services)
     {
+        services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
         services.TryAddScoped<IMembershipService, MembershipService>();
         services.TryAddScoped<IRepositoryService, RepositoryService>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IAuthorizationHandler, RepositoryAuthorizationHandler>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IAuthorizationHandler, TeamAdministratorAuthorizationHandler>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IAuthorizationHandler, CurrentUserAuthorizationHandler>());
         services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, LogRotationJob>());

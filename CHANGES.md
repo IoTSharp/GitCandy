@@ -42,8 +42,20 @@
  - Added the M3 #037 pooled `IDbContextFactory<GitCandyDbContext>` boundary while retaining scoped `GitCandyDbContext` injection for request and application services.
  - Added the M3 #038 SQL Server provider project, separate initial migration/snapshot, and offline idempotent migration SQL validation for Identity and GitCandy domain tables.
  - Added the M3 #039 data-layer closure tests for scoped/factory context isolation, Identity password persistence, and SQLite/SQL Server schema coverage.
+ - Added the M4 MVC account flow for Identity registration, username/email login, POST logout, password changes, and access-denied handling.
+ - Added scoped `ICurrentUser` claims access and resource authorization policies for repository read/write/owner, team administrator, current user, and system administrator behavior.
+ - Added the independent `GitCandy.GitBasic` authentication scheme with Identity password, failure-count, lockout, role-claim, and Basic challenge behavior.
+ - Added M4 Kestrel/SQLite account integration tests and authentication/authorization tests covering security-stamp invalidation, stale cookies, public/private repository access, owner, team, and administrator semantics.
+
+#### Changed
+ - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
+ - Removed the unused ASP.NET Core Session registration and middleware; the migrated host and Git Basic authentication no longer emit or depend on `.GitCandy.Session`.
+ - Private repositories now reject anonymous access even if inconsistent data enables anonymous read/write flags.
+ - Changed `/Account/Logout` to an antiforgery-protected POST action.
 
 #### Migration
+ - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
+ - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP endpoint binding remains scoped to M6.
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
  - Replaced legacy `Server.MapPath`-style path assumptions in the ASP.NET Core host with `IWebHostEnvironment.ContentRootPath` and `WebRootPath` semantics.
  - Migrated the new host's legacy logger compatibility entry point to `ILoggerFactory`; log sinks are now controlled by ASP.NET Core `Logging` providers instead of the old static file writer.

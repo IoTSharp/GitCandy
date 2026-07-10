@@ -1,4 +1,6 @@
 using GitCandy.Application;
+using GitCandy.Authentication;
+using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Caching;
 using GitCandy.Data;
@@ -10,6 +12,7 @@ using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +35,7 @@ namespace GitCandy.Tests;
 public sealed class WebServiceCollectionExtensionsTests
 {
     [TestMethod]
-    public async Task AddGitCandyWebShell_WithSqliteProvider_RegistersAuthSessionAndLocalizationPlaceholders()
+    public async Task AddGitCandyWebShell_WithSqliteProvider_RegistersAuthenticationAuthorizationAndLocalization()
     {
         var tempRoot = Path.Combine(
             Path.GetTempPath(),
@@ -66,12 +69,31 @@ public sealed class WebServiceCollectionExtensionsTests
             var schemeProvider = serviceProvider.GetRequiredService<IAuthenticationSchemeProvider>();
             var identityScheme = await schemeProvider.GetSchemeAsync(IdentityConstants.ApplicationScheme);
             Assert.IsNotNull(identityScheme);
+            var gitBasicScheme = await schemeProvider.GetSchemeAsync(GitCandyAuthenticationSchemes.GitBasic);
+            Assert.IsNotNull(gitBasicScheme);
 
             var authorizationOptions = serviceProvider.GetRequiredService<IOptions<AuthorizationOptions>>().Value;
             Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.Administrator));
+            Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.RepositoryRead));
+            Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.RepositoryWrite));
+            Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.RepositoryOwner));
+            Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.TeamAdministrator));
+            Assert.IsNotNull(authorizationOptions.GetPolicy(AuthorizationPolicies.CurrentUser));
 
-            var sessionOptions = serviceProvider.GetRequiredService<IOptions<SessionOptions>>().Value;
-            Assert.AreEqual(".GitCandy.Session", sessionOptions.Cookie.Name);
+            var cookieOptions = serviceProvider
+                .GetRequiredService<IOptionsMonitor<CookieAuthenticationOptions>>()
+                .Get(IdentityConstants.ApplicationScheme);
+            Assert.AreEqual(".GitCandy.Identity", cookieOptions.Cookie.Name);
+            Assert.IsTrue(cookieOptions.Cookie.HttpOnly);
+            Assert.AreEqual(SameSiteMode.Lax, cookieOptions.Cookie.SameSite);
+            Assert.AreEqual(CookieSecurePolicy.Always, cookieOptions.Cookie.SecurePolicy);
+            Assert.AreEqual(TimeSpan.FromHours(8), cookieOptions.ExpireTimeSpan);
+            Assert.IsTrue(cookieOptions.SlidingExpiration);
+            Assert.IsFalse(services.Any(service =>
+                string.Equals(
+                    service.ServiceType.FullName,
+                    "Microsoft.AspNetCore.Session.ISessionStore",
+                    StringComparison.Ordinal)));
 
             Assert.IsNotNull(serviceProvider.GetRequiredService<IMemoryCache>());
             Assert.IsNotNull(serviceProvider.GetRequiredService<IApplicationCache>());
@@ -103,6 +125,11 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IMembershipService>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRepositoryService>());
+            Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<ICurrentUser>());
+            var authorizationHandlers = scope.ServiceProvider.GetServices<IAuthorizationHandler>().ToArray();
+            Assert.IsTrue(authorizationHandlers.Any(handler => handler is RepositoryAuthorizationHandler));
+            Assert.IsTrue(authorizationHandlers.Any(handler => handler is TeamAdministratorAuthorizationHandler));
+            Assert.IsTrue(authorizationHandlers.Any(handler => handler is CurrentUserAuthorizationHandler));
             Assert.IsTrue(scope.ServiceProvider.GetServices<ISchedulerJob>().Any(job => job is LogRotationJob));
         }
         finally

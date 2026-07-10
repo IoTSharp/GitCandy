@@ -1,0 +1,30 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    var returnUrl = ViewData["returnUrl"] as string;
+}
+
+<section class="account-shell">
+    <h1>Sign in</h1>
+    <form asp-action="Login" asp-route-returnUrl="@returnUrl" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="form-field">
+            <label asp-for="UserNameOrEmail"></label>
+            <input asp-for="UserNameOrEmail" autocomplete="username" autofocus />
+            <span asp-validation-for="UserNameOrEmail"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="Password"></label>
+            <input asp-for="Password" autocomplete="current-password" />
+            <span asp-validation-for="Password"></span>
+        </div>
+        <label class="checkbox-field">
+            <input asp-for="RememberMe" />
+            <span>@Html.DisplayNameFor(model => model.RememberMe)</span>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Sign in</button>
+            <a asp-action="Create">Create account</a>
+        </div>
+    </form>
+</section>

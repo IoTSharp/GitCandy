@@ -30,10 +30,6 @@ public sealed class CompatibilityRouteTests
         var repositoryContent = await repositoryResponse.Content.ReadAsStringAsync();
         StringAssert.Contains(repositoryContent, "Repository/Index");
 
-        using var accountResponse = await httpClient.GetAsync("/Account/Login");
-        Assert.AreEqual(HttpStatusCode.OK, accountResponse.StatusCode);
-        var accountContent = await accountResponse.Content.ReadAsStringAsync();
-        StringAssert.Contains(accountContent, "Account/Login");
     }
 
     [TestMethod]

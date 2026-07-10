@@ -1,0 +1,34 @@
+@model ChangePasswordViewModel
+@{
+    ViewData["Title"] = "Change password";
+    var changed = ViewData["changed"] as bool? == true;
+}
+
+<section class="account-shell">
+    <h1>Change password</h1>
+    @if (changed)
+    {
+        <p class="status-message">Password changed.</p>
+    }
+    <form asp-action="Change" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div class="form-field">
+            <label asp-for="CurrentPassword"></label>
+            <input asp-for="CurrentPassword" autocomplete="current-password" autofocus />
+            <span asp-validation-for="CurrentPassword"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="NewPassword"></label>
+            <input asp-for="NewPassword" autocomplete="new-password" />
+            <span asp-validation-for="NewPassword"></span>
+        </div>
+        <div class="form-field">
+            <label asp-for="ConfirmPassword"></label>
+            <input asp-for="ConfirmPassword" autocomplete="new-password" />
+            <span asp-validation-for="ConfirmPassword"></span>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="primary-button">Change password</button>
+        </div>
+    </form>
+</section>
