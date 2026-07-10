@@ -1,53 +1,58 @@
-﻿## GitCandy
-GitCandy© 是一个基于 ASP.NET MVC 的 [Git](http://git-scm.com/documentation) 版本控制服务端，支持公有和私有代码库，可不受限制的创建代码代码库，随时随地的与团队进行协作。
+# GitCandy
 
-演示网站不可用
+GitCandy 是基于 ASP.NET Core 10 MVC 与 EF Core 的轻量自托管 Git 服务。单个 GitCandy 进程承载 Web UI、Git Smart HTTP、内置 SSH、Quartz 调度和后台任务入口。
 
-源代码： [http://github.com/Aimeast/GitCandy](http://github.com/Aimeast/GitCandy)
+## 支持的部署方式
 
----
-### 系统要求
-* [IIS 7.0](http://www.iis.net/learn)
-* [.NET Framework 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)
-* [ASP.NET MVC 5](http://www.asp.net/mvc/tutorials/mvc-5)
-* [Git](http://git-for-windows.github.io/)
-* [Sqlite](http://system.data.sqlite.org/index.html/doc/trunk/www/downloads.wiki) 或 [Sql Server](http://www.microsoft.com/en-us/sqlserver/get-sql-server/try-it.aspx)
+- Docker Compose，可使用 GHCR 的 `ghcr.io/iotsharp/gitcandy` 或 Docker Hub 的 `iotsharp/gitcandy`。
+- Linux x64 自包含包，以 systemd 服务运行。
+- Windows x64 自包含包，以 Windows Service 运行。
 
----
-### 安装
-* 下载最新[发布](http://github.com/Aimeast/GitCandy/releases)的版本或自己编译最新的[dev](http://github.com/Aimeast/GitCandy/dev)分支源码
-* 在IIS创建一个站点，并把二进制文件和资源文件复制到站点目录
-* 如果用了 Visual Studio 的发布功能，还要复制`GitCandy\bin\[NativeBinaries & x86 & x64]`文件夹到站点目录
-* 用`/Sql/Create.[Sqlite | MsSql].sql`脚本创建一个数据库。如果创建的是Sqlite数据库，还需把数据库文件复制到`App_Data`文件夹
-* 更新`Web.config`文件的数据库连接串
-* 准备两个文件夹分别用来存储`代码库`和`缓存`
-* 打开新建的站点，默认登录用户名是`admin`，密码是`gitcandy`
-* 转到`设置`页面，分别设置`代码库`，`缓存`和`git-core`的路径
-* 推荐在`Web.config`设置`<compilation debug="false" />`
+不支持 IIS 部署。对外提供 Web UI 时必须在 GitCandy 前配置 TLS 反向代理，因为 Identity cookie 仅允许通过 HTTPS 发送。
 
-##### *注*
-* `代码库`和`缓存`路径示例：`x:\Repos`，`x:\Cache`
-* `git-core`路径示例：`x:\PortableGit\libexec\git-core`，`x:\PortableGit\mingw64\libexec\git-core`
+## Docker Compose
 
----
-### 更新日志
-跳转到[日志页](http://github.com/Aimeast/GitCandy/blob/dev/CHANGES.md)
+```bash
+cp .env.example .env
+docker compose pull
+docker compose up -d
+docker compose ps
+```
 
----
-### 鸣谢 (按字母序)
-* [ASP.NET MVC](http://aspnetwebstack.codeplex.com/) @ [Apache License 2.0](http://aspnetwebstack.codeplex.com/license)
-* [Bootstrap](http://github.com/twbs/bootstrap) @ [MIT License](http://github.com/twbs/bootstrap/blob/master/LICENSE)
-* [Bootstrap-switch](http://github.com/nostalgiaz/bootstrap-switch) @ [Apache License 2.0](http://github.com/nostalgiaz/bootstrap-switch/blob/master/LICENSE)
-* [EntityFramework](http://entityframework.codeplex.com/) @ [Apache License 2.0](http://entityframework.codeplex.com/license)
-* [FxSsh](http://github.com/Aimeast/FxSsh) @ [MIT license](http://github.com/Aimeast/FxSsh/blob/master/LICENSE.md)
-* [Highlight.js](http://github.com/isagalaev/highlight.js) @ [New BSD License](http://github.com/isagalaev/highlight.js/blob/master/LICENSE)
-* [jQuery](http://github.com/jquery/jquery) @ [MIT License](http://github.com/jquery/jquery/blob/master/MIT-LICENSE.txt)
-* [LibGit2Sharp](http://github.com/libgit2/libgit2sharp) @ [MIT License](http://github.com/libgit2/libgit2sharp/blob/master/LICENSE.md)
-* [marked](http://github.com/chjj/marked) @ [MIT License](http://github.com/chjj/marked/blob/master/LICENSE)
-* [Microsoft.Composition (MEF2)](http://mef.codeplex.com/) @ [Microsoft Public License](http://mef.codeplex.com/license)
-* [Newtonsoft.Json](http://json.codeplex.com/) @ [MIT License](http://json.codeplex.com/license)
-* [SharpZipLib](http://github.com/icsharpcode/SharpZipLib) @ [GPL License v2](http://github.com/icsharpcode/SharpZipLib/blob/master/doc/COPYING.txt)
+在源码目录可执行 `docker compose up --build -d`，构建参数已经写入 `docker-compose.yml` 的 `build` 段；Release 部署通常直接拉取预构建镜像。
 
----
-### 协议
-MIT 协议
+一次性的 `migrate` 服务会先创建或升级 SQLite/Identity 数据库，成功后才启动主应用。持久状态位于 `gitcandy-data` volume；HTTP 和 SSH 默认映射到宿主机 `8080` 与 `2222` 端口。
+
+两个镜像仓库都可以拉取：
+
+```bash
+docker pull ghcr.io/iotsharp/gitcandy:latest
+docker pull iotsharp/gitcandy:latest
+```
+
+带 tag 的 GitHub Release 同时提供 Linux/Windows 服务包、migration SQL、Compose 文件和可通过 `docker load` 导入的镜像归档。
+
+## 运维入口
+
+- 存活检查：`/health/live`
+- 就绪检查：`/health/ready`
+- 显式数据库迁移：`GitCandy --migrate`
+- 部署、配置、备份、恢复与回滚：[docs/deployment.md](docs/deployment.md)
+- 数据库 provider 说明：[docs/database-providers.md](docs/database-providers.md)
+- 迁移路线图：[ROADMAP.md](ROADMAP.md)
+- 变更记录：[CHANGES.md](CHANGES.md)
+
+## 开发
+
+```bash
+dotnet tool restore
+dotnet restore GitCandy.slnx
+dotnet build GitCandy.slnx
+dotnet test GitCandy.slnx
+```
+
+`GitCandy.slnx` 是当前 ASP.NET Core 主线 solution。旧 `GitCandy.sln` 和 MVC5 源码只保留为迁移行为参考。
+
+## 协议
+
+MIT，参见 [LICENSE.md](LICENSE.md)。

@@ -9,11 +9,13 @@ using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
 using GitCandy.Diagnostics;
 using GitCandy.Git;
+using GitCandy.Operations;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
@@ -43,10 +45,12 @@ public static class WebServiceCollectionExtensions
     /// </summary>
     /// <param name="services">服务集合。</param>
     /// <param name="configuration">应用配置。</param>
+    /// <param name="contentRootPath">应用 content root。省略时使用应用基目录，主要供不启动 Web host 的测试使用。</param>
     /// <returns>同一个服务集合。</returns>
     public static IServiceCollection AddGitCandyWebShell(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        string? contentRootPath = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -55,6 +59,10 @@ public static class WebServiceCollectionExtensions
             .AddViewLocalization();
         services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
+        services.AddDataProtection()
+            .SetApplicationName("GitCandy")
+            .PersistKeysToFileSystem(new DirectoryInfo(
+                ResolveDataProtectionKeysPath(configuration, contentRootPath)));
         services.AddGitSmartHttpOptions(configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
@@ -64,6 +72,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IRequestProfilerAccessor, HttpContextRequestProfilerAccessor>();
 
         services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+        services.AddGitCandyHealthChecks();
 
         services.AddIdentity<GitCandyUser, IdentityRole>(options =>
             {
@@ -157,6 +166,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
+        services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, LogRotationJob>());
 
         return services;
@@ -217,6 +227,39 @@ public static class WebServiceCollectionExtensions
             ServiceDescriptor.Singleton<IValidateOptions<GitCandyApplicationOptions>, GitCandyApplicationOptionsValidator>());
 
         return services;
+    }
+
+    private static string ResolveDataProtectionKeysPath(
+        IConfiguration configuration,
+        string? contentRootPath)
+    {
+        var configuredPath = configuration[$"{GitCandyApplicationOptions.SectionName}:{nameof(GitCandyApplicationOptions.DataProtectionKeysPath)}"]
+            ?? "App_Data/DataProtectionKeys";
+        var path = configuredPath.Trim()
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
+        if (path.StartsWith($"~{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+        {
+            path = path[2..];
+        }
+
+        if (Path.IsPathFullyQualified(path))
+        {
+            return Path.GetFullPath(path);
+        }
+
+        var rootPath = Path.GetFullPath(contentRootPath ?? AppContext.BaseDirectory);
+        var fullPath = Path.GetFullPath(path, rootPath);
+        var relativePath = Path.GetRelativePath(rootPath, fullPath);
+        if (relativePath.Equals("..", StringComparison.Ordinal)
+            || relativePath.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+            || Path.IsPathRooted(relativePath))
+        {
+            throw new InvalidOperationException(
+                "The Data Protection key path must stay inside the content root when configured as a relative path.");
+        }
+
+        return fullPath;
     }
 
     private static IServiceCollection AddGitSmartHttpOptions(

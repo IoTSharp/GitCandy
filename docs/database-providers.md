@@ -81,6 +81,12 @@ EF Core only scaffolds migrations for the active provider. Every first-stage sch
 
 ## Migration Commands
 
+Restore the repository-pinned EF Core tool before running migration commands:
+
+```powershell
+dotnet tool restore
+```
+
 SQLite:
 
 ```powershell

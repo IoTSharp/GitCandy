@@ -1,0 +1,13 @@
+.git
+.github
+.vs
+artifacts
+bin
+obj
+packages
+GitCandy
+**/bin
+**/obj
+**/*.db
+**/*.log
+**/App_Data

@@ -643,6 +643,8 @@ public sealed class WebServiceCollectionExtensionsTests
 
     private sealed class RecordingSshServerRuntime : ISshServerRuntime
     {
+        public bool IsRunning { get; private set; }
+
         public int StartCalls { get; private set; }
 
         public int StopCalls { get; private set; }
@@ -655,6 +657,7 @@ public sealed class WebServiceCollectionExtensionsTests
         {
             StartCalls++;
             StartedPort = port;
+            IsRunning = true;
             return Task.CompletedTask;
         }
 
@@ -662,6 +665,7 @@ public sealed class WebServiceCollectionExtensionsTests
         {
             StopCalls++;
             StopCancellationCanBeCanceled = cancellationToken.CanBeCanceled;
+            IsRunning = false;
             return Task.CompletedTask;
         }
     }

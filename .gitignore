@@ -41,6 +41,7 @@ dlldata.c
 # DNX
 project.lock.json
 artifacts/
+[Aa]pp_[Dd]ata/
 
 *_i.c
 *_p.c

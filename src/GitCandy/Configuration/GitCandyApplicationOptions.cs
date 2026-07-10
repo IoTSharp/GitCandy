@@ -104,4 +104,9 @@ public sealed class GitCandyApplicationOptions
     /// 内置 SSH server host key 文件路径。相对路径基于应用 content root。
     /// </summary>
     public string SshHostKeyPath { get; set; } = "App_Data/ssh-host-key.xml";
+
+    /// <summary>
+    /// ASP.NET Core Data Protection key ring 路径。必须持久化以保证重启后 Identity cookie 可继续使用。
+    /// </summary>
+    public string DataProtectionKeysPath { get; set; } = "App_Data/DataProtectionKeys";
 }

@@ -1,53 +1,58 @@
-﻿## GitCandy
-GitCandy© is a [Git](http://git-scm.com/documentation) distributed version control platform based on ASP.NET MVC application, which supports public and private repositories. You can create and collaborate your repository with your team anytime anywhere without any limit.
+# GitCandy
 
-Demo is unavaliable.
+GitCandy is a lightweight self-hosted Git service built on ASP.NET Core 10 MVC and EF Core. One GitCandy process hosts the Web UI, Git Smart HTTP, the built-in SSH server, Quartz jobs, and background entry points.
 
-Get source and fork me on [http://github.com/Aimeast/GitCandy](http://github.com/Aimeast/GitCandy).
+## Supported deployments
 
----
-### Prerequisites
-* [IIS 7.0](http://www.iis.net/learn)
-* [.NET Framework 4.5](http://www.microsoft.com/en-us/download/details.aspx?id=30653)
-* [ASP.NET MVC 5](http://www.asp.net/mvc/tutorials/mvc-5)
-* [Git](http://git-for-windows.github.io/)
-* [Sqlite](http://system.data.sqlite.org/index.html/doc/trunk/www/downloads.wiki) or [Sql Server](http://www.microsoft.com/en-us/sqlserver/get-sql-server/try-it.aspx)
+- Docker Compose using `ghcr.io/iotsharp/gitcandy` or `iotsharp/gitcandy` from Docker Hub.
+- Linux x64 as a self-contained systemd service.
+- Windows x64 as a self-contained Windows Service.
 
----
-### Installation
-* Download last [release](http://github.com/Aimeast/GitCandy/releases) or build [dev](http://github.com/Aimeast/GitCandy/dev) branch by yourself
-* Create a web site on IIS, copy binary and resource files to site path
-* Copy `GitCandy\bin\[NativeBinaries & x86 & x64]` folders to destination if you are publishing the website
-* Create a database by `/Sql/Create.[Sqlite | MsSql].sql`, copy database file to `App_Data` folder if any
-* Update connection string in `Web.config` file
-* Prepare two folders for storage `Repositories` and `Cache`
-* Navigate to your site and login with default username `admin`, password `gitcandy`
-* Go to `Settings` page for set folders path of `Repositories`, `Cache` and `git-core`
-* You are recommended to set `<compilation debug="false" />` in `Web.config`
+IIS deployment is not supported. Put a TLS reverse proxy in front of GitCandy when exposing the Web UI because Identity cookies are Secure-only.
 
-##### *note*
-* The `Repositories` or `Cache` path looks like `x:\Repos` or `x:\Cache`
-* The `git-core` path looks like `x:\PortableGit\libexec\git-core` or `x:\PortableGit\mingw64\libexec\git-core`
+## Docker Compose
 
----
-### Changes
-Go to [changes page](http://github.com/Aimeast/GitCandy/blob/dev/CHANGES.md)
+```bash
+cp .env.example .env
+docker compose pull
+docker compose up -d
+docker compose ps
+```
 
----
-### Thanks for (alphabet)
-* [ASP.NET MVC](http://aspnetwebstack.codeplex.com/) @ [Apache License 2.0](http://aspnetwebstack.codeplex.com/license)
-* [Bootstrap](http://github.com/twbs/bootstrap) @ [MIT License](http://github.com/twbs/bootstrap/blob/master/LICENSE)
-* [Bootstrap-switch](http://github.com/nostalgiaz/bootstrap-switch) @ [Apache License 2.0](http://github.com/nostalgiaz/bootstrap-switch/blob/master/LICENSE)
-* [EntityFramework](http://entityframework.codeplex.com/) @ [Apache License 2.0](http://entityframework.codeplex.com/license)
-* [FxSsh](http://github.com/Aimeast/FxSsh) @ [MIT license](http://github.com/Aimeast/FxSsh/blob/master/LICENSE.md)
-* [Highlight.js](http://github.com/isagalaev/highlight.js) @ [New BSD License](http://github.com/isagalaev/highlight.js/blob/master/LICENSE)
-* [jQuery](http://github.com/jquery/jquery) @ [MIT License](http://github.com/jquery/jquery/blob/master/MIT-LICENSE.txt)
-* [LibGit2Sharp](http://github.com/libgit2/libgit2sharp) @ [MIT License](http://github.com/libgit2/libgit2sharp/blob/master/LICENSE.md)
-* [marked](http://github.com/chjj/marked) @ [MIT License](http://github.com/chjj/marked/blob/master/LICENSE)
-* [Microsoft.Composition (MEF2)](http://mef.codeplex.com/) @ [Microsoft Public License](http://mef.codeplex.com/license)
-* [Newtonsoft.Json](http://json.codeplex.com/) @ [MIT License](http://json.codeplex.com/license)
-* [SharpZipLib](http://github.com/icsharpcode/SharpZipLib) @ [GPL License v2](http://github.com/icsharpcode/SharpZipLib/blob/master/doc/COPYING.txt)
+From a source checkout, `docker compose up --build -d` builds with the `build` section in `docker-compose.yml`. Release deployments normally pull the prebuilt image.
 
----
-### License
-The MIT license
+The one-shot `migrate` service creates or upgrades the SQLite/Identity database before the application starts. Persistent state is stored in the `gitcandy-data` volume. HTTP and SSH default to host ports `8080` and `2222`.
+
+Images are published to both registries:
+
+```bash
+docker pull ghcr.io/iotsharp/gitcandy:latest
+docker pull iotsharp/gitcandy:latest
+```
+
+Tagged GitHub Releases also contain Linux and Windows service packages, migration SQL, Compose files, and a loadable image archive.
+
+## Operations
+
+- Liveness: `/health/live`
+- Readiness: `/health/ready`
+- Explicit database migration: `GitCandy --migrate`
+- Detailed deployment, configuration, backup, restore, and rollback guide: [docs/deployment.md](docs/deployment.md)
+- Database provider notes: [docs/database-providers.md](docs/database-providers.md)
+- Migration roadmap: [ROADMAP.md](ROADMAP.md)
+- Changes: [CHANGES.md](CHANGES.md)
+
+## Development
+
+```bash
+dotnet tool restore
+dotnet restore GitCandy.slnx
+dotnet build GitCandy.slnx
+dotnet test GitCandy.slnx
+```
+
+`GitCandy.slnx` is the active ASP.NET Core solution. The legacy `GitCandy.sln` and MVC5 source remain only as migration behavior references.
+
+## License
+
+MIT. See [LICENSE.md](LICENSE.md).

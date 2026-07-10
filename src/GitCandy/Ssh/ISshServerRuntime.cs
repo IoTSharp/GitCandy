@@ -6,6 +6,11 @@ namespace GitCandy.Ssh;
 public interface ISshServerRuntime
 {
     /// <summary>
+    /// 获取内置 SSH listener 当前是否正在运行。
+    /// </summary>
+    bool IsRunning { get; }
+
+    /// <summary>
     /// 启动内置 SSH server。
     /// </summary>
     /// <param name="port">监听端口。</param>

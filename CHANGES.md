@@ -57,6 +57,11 @@
  - Added the real in-process SSH listener for the ASP.NET Core host, with public-key Identity authentication, repository authorization, and shared `IGitTransportBackend` streaming.
  - Added persistent RSA SSH host-key generation and one-time import from the legacy user configuration XML.
  - Added real Git/OpenSSH clone, fetch, and push coverage plus listener lifecycle, occupied-port, host-key migration, and Quartz shutdown tests.
+ - Added Docker Compose deployment with an explicit one-shot migration service and persistent application data volume.
+ - Added self-contained Linux systemd and Windows Service release packages and installation scripts.
+ - Added liveness and readiness endpoints covering the database, repository/cache storage, Git backend, and built-in SSH listener.
+ - Added tag-based release automation for Linux/Windows packages, migration SQL, a downloadable image archive, GHCR, and Docker Hub.
+ - Added a persistent ASP.NET Core Data Protection key ring so Identity cookies survive container and service restarts.
 
 #### Changed
  - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
@@ -72,6 +77,9 @@
  - SSH now allows only `git-upload-pack`, `git-receive-pack`, and `git-upload-archive`; password login, shell, SFTP, forwarding, and arbitrary environment variables remain disabled.
  - The migrated SSH compatibility stack now advertises only group14-SHA1, RSA, AES-CTR, and HMAC-SHA1, removing group1, DSA, CBC, 3DES, and HMAC-MD5 from the new host.
  - Quartz now interrupts cancellation-aware jobs during host shutdown and waits for their cleanup to complete.
+ - Deployment support now targets Docker Compose, Linux systemd, and Windows Service only; IIS is no longer supported.
+ - Database migration is now an explicit `GitCandy --migrate` operation and remains separate from normal application startup.
+ - Pinned the SQLite native runtime to `SQLitePCLRaw.lib.e_sqlite3` 3.53.3 because fresh release restores reject the vulnerable 2.1.11 transitive version.
 
 #### Migration
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
@@ -99,6 +107,7 @@
  - Renamed the planned ASP.NET Core host path from `src/GitCandy.Web` to `src/GitCandy` to reflect the single-process main-program architecture.
  - Replaced the M2 SSH lifecycle placeholder with the M7 in-process listener. Configure `GitCandy:Application:EnableSsh`, `SshPort`, and `SshHostKeyPath`; existing RSA host keys can be imported from `UserConfigurationPath`.
  - Existing DSA and non-RSA user keys are not accepted by the migrated SSH stack. Current OpenSSH clients require explicit legacy SHA-1 algorithm opt-in until the separately scoped SSH protocol upgrade is completed.
+ - Release deployments persist SQLite, repositories, SSH host keys, and Data Protection keys outside the application directory; backup and rollback must treat them as one versioned recovery set.
 
 ---
 ### GitCandy v0.2 - [view diff](http://github.com/Aimeast/GitCandy/compare/v0.1...v0.2) - Jul 27, 2016

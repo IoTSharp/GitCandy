@@ -21,6 +21,7 @@ internal sealed class GitCandyApplicationPathValidationHostedService(
         _ = _applicationPaths.CachePath;
         _ = _applicationPaths.GitCorePath;
         _ = _applicationPaths.SshHostKeyPath;
+        _ = _applicationPaths.DataProtectionKeysPath;
         _ = _applicationPaths.ResolvePathWithinRepositoryRoot(".");
         _ = _applicationPaths.ResolvePathWithinCacheRoot(".");
 

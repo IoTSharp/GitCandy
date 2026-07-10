@@ -1,0 +1,250 @@
+name: Release GitCandy
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GHCR_IMAGE: ghcr.io/iotsharp/gitcandy
+  DOCKERHUB_IMAGE: iotsharp/gitcandy
+
+jobs:
+  validate:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore GitCandy.slnx
+
+      - name: Build
+        run: dotnet build GitCandy.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test GitCandy.slnx --configuration Release --no-build --no-restore
+
+  service-packages:
+    name: Publish ${{ matrix.rid }} service package
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+          - os: windows-latest
+            rid: win-x64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Publish self-contained application
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          dotnet publish src/GitCandy/GitCandy.csproj `
+            --configuration Release `
+            --runtime "${{ matrix.rid }}" `
+            --self-contained true `
+            --output "dist/app" `
+            -p:Version=$version `
+            -p:DebugType=None `
+            -p:DebugSymbols=false
+
+      - name: Package Linux service
+        if: matrix.rid == 'linux-x64'
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p dist/package/app
+          cp -a dist/app/. dist/package/app/
+          cp deploy/linux/install.sh deploy/linux/gitcandy.service deploy/linux/appsettings.Production.json dist/package/
+          chmod +x dist/package/install.sh dist/package/app/GitCandy
+          tar -C dist/package -czf "dist/gitcandy-${version}-linux-x64.tar.gz" .
+
+      - name: Package Windows service
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          New-Item -ItemType Directory -Force -Path dist/package/app | Out-Null
+          Copy-Item dist/app/* dist/package/app -Recurse -Force
+          Copy-Item deploy/windows/Install-GitCandyService.ps1 dist/package
+          Copy-Item deploy/windows/Uninstall-GitCandyService.ps1 dist/package
+          Copy-Item deploy/windows/appsettings.Production.json dist/package
+          Compress-Archive -Path dist/package/* -DestinationPath "dist/gitcandy-$version-win-x64.zip"
+
+      - name: Upload service package
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-${{ matrix.rid }}
+          path: dist/gitcandy-*
+          if-no-files-found: error
+
+  migration-sql:
+    name: Generate migration SQL
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore tools and projects
+        run: |
+          dotnet tool restore
+          dotnet restore GitCandy.slnx
+
+      - name: Build migration projects
+        run: dotnet build GitCandy.slnx --configuration Release --no-restore
+
+      - name: Generate SQL scripts
+        run: |
+          mkdir -p dist/sql
+          dotnet ef migrations script \
+            --project src/GitCandy.Data.Sqlite \
+            --startup-project src/GitCandy.Data.Sqlite \
+            --configuration Release \
+            --no-build \
+            --output dist/sql/sqlite.sql
+          dotnet ef migrations script \
+            --project src/GitCandy.Data.SqlServer \
+            --startup-project src/GitCandy.Data.SqlServer \
+            --configuration Release \
+            --no-build \
+            --idempotent \
+            --output dist/sql/sqlserver-idempotent.sql
+          version="${GITHUB_REF_NAME#v}"
+          (cd dist/sql && zip "../gitcandy-${version}-migration-sql.zip" ./*.sql)
+
+      - name: Upload migration SQL
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-sql
+          path: dist/gitcandy-*-migration-sql.zip
+          if-no-files-found: error
+
+  container-image:
+    name: Publish container image
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Generate image tags and labels
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_IMAGE }}
+            ${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+
+      - name: Export downloadable image archive
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          docker pull "${GHCR_IMAGE}:${version}"
+          docker save "${GHCR_IMAGE}:${version}" | gzip -9 > "gitcandy-${version}-linux-amd64-image.tar.gz"
+
+      - name: Verify anonymous registry pulls
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          docker image rm "${GHCR_IMAGE}:${version}"
+          docker logout ghcr.io
+          docker logout docker.io
+          docker pull "${GHCR_IMAGE}:${version}"
+          docker pull "${DOCKERHUB_IMAGE}:${version}"
+
+      - name: Package Compose deployment files
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          zip "gitcandy-${version}-compose.zip" docker-compose.yml .env.example
+
+      - name: Upload container artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-image
+          path: |
+            gitcandy-*-linux-amd64-image.tar.gz
+            gitcandy-*-compose.zip
+          if-no-files-found: error
+
+  github-release:
+    name: Create GitHub Release
+    needs:
+      - service-packages
+      - migration-sql
+      - container-image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create release and upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${GITHUB_REF_NAME}" release/* --generate-notes --verify-tag

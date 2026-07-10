@@ -37,6 +37,7 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
             ? string.Empty
             : ResolveContentPath(value.GitCorePath);
         SshHostKeyPath = ResolveContentPath(value.SshHostKeyPath);
+        DataProtectionKeysPath = ResolveContentPath(value.DataProtectionKeysPath);
     }
 
     /// <inheritdoc />
@@ -62,6 +63,9 @@ public sealed class GitCandyApplicationPaths : IGitCandyApplicationPaths
 
     /// <inheritdoc />
     public string SshHostKeyPath { get; }
+
+    /// <inheritdoc />
+    public string DataProtectionKeysPath { get; }
 
     /// <inheritdoc />
     public string ResolveContentPath(string configuredPath)

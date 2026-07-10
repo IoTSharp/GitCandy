@@ -1,0 +1,24 @@
+[Unit]
+Description=GitCandy Git hosting service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=gitcandy
+Group=gitcandy
+WorkingDirectory=/opt/gitcandy
+ExecStart=/opt/gitcandy/GitCandy
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+Environment=ASPNETCORE_ENVIRONMENT=Production
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/gitcandy
+
+[Install]
+WantedBy=multi-user.target

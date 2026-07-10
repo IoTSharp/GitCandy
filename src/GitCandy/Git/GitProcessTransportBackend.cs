@@ -10,14 +10,14 @@ namespace GitCandy.Git;
 /// </summary>
 public sealed class GitProcessTransportBackend(
     IGitRepositoryPathResolver pathResolver,
-    IGitCandyApplicationPaths applicationPaths,
+    IGitExecutableResolver executableResolver,
     IOptions<GitSmartHttpOptions> options,
     ILogger<GitProcessTransportBackend> logger)
     : IGitTransportBackend, IDisposable
 {
     private const int MaxCapturedStandardErrorLength = 8192;
     private readonly IGitRepositoryPathResolver _pathResolver = pathResolver;
-    private readonly IGitCandyApplicationPaths _applicationPaths = applicationPaths;
+    private readonly IGitExecutableResolver _executableResolver = executableResolver;
     private readonly GitSmartHttpOptions _options = options.Value;
     private readonly ILogger<GitProcessTransportBackend> _logger = logger;
     private readonly SemaphoreSlim _operationSlots = new(options.Value.MaxConcurrentOperations);
@@ -158,7 +158,7 @@ public sealed class GitProcessTransportBackend(
     {
         var startInfo = new ProcessStartInfo
         {
-            FileName = ResolveGitExecutable(),
+            FileName = _executableResolver.Resolve(),
             CreateNoWindow = true,
             RedirectStandardError = true,
             RedirectStandardInput = true,
@@ -186,29 +186,6 @@ public sealed class GitProcessTransportBackend(
         }
 
         return startInfo;
-    }
-
-    private string ResolveGitExecutable()
-    {
-        if (string.IsNullOrWhiteSpace(_applicationPaths.GitCorePath))
-        {
-            return OperatingSystem.IsWindows() ? "git.exe" : "git";
-        }
-
-        var fileNames = OperatingSystem.IsWindows()
-            ? new[] { "git.exe", "git" }
-            : new[] { "git", "git.exe" };
-        foreach (var fileName in fileNames)
-        {
-            var candidate = Path.Combine(_applicationPaths.GitCorePath, fileName);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        throw new GitTransportException(
-            "GitCorePath does not contain a Git executable.");
     }
 
     private string ResolveExistingRepositoryPath(GitRepositoryContext repository)

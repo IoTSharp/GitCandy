@@ -219,6 +219,8 @@ public sealed class HostDiagnosticsTests
 
     private sealed class ThrowingSshServerRuntime(Exception exception) : ISshServerRuntime
     {
+        public bool IsRunning => false;
+
         public Task StartAsync(int port, CancellationToken cancellationToken = default)
         {
             throw exception;

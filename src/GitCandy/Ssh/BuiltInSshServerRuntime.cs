@@ -20,6 +20,10 @@ public sealed class BuiltInSshServerRuntime(
     private readonly ConcurrentDictionary<Session, SessionRegistration> _sessions = new();
     private CancellationTokenSource? _serverStopping;
     private SshServer? _server;
+    private bool _isRunning;
+
+    /// <inheritdoc />
+    public bool IsRunning => Volatile.Read(ref _isRunning);
 
     /// <inheritdoc />
     public async Task StartAsync(int port, CancellationToken cancellationToken = default)
@@ -46,6 +50,7 @@ public sealed class BuiltInSshServerRuntime(
             {
                 server.Start();
                 _server = server;
+                Volatile.Write(ref _isRunning, true);
             }
             catch
             {
@@ -76,6 +81,7 @@ public sealed class BuiltInSshServerRuntime(
             }
 
             _server = null;
+            Volatile.Write(ref _isRunning, false);
             _serverStopping?.Cancel();
             server.ConnectionAccepted -= HandleConnectionAccepted;
             server.ExceptionRasied -= HandleServerException;

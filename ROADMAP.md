@@ -534,7 +534,7 @@ ASP.NET Core 中间件和后台能力：
 - SSH clone/fetch/push 通过。
 - 端口被占用时日志可诊断，应用行为明确。
 
-### ⬜ Milestone 8：部署、运维和文档
+### ✅ Milestone 8：部署、运维和文档
 
 目标：让新版本能被部署和回滚。
 
@@ -543,19 +543,19 @@ ASP.NET Core 中间件和后台能力：
 - 完成迁移发布前的部署、备份、回滚、配置迁移和健康检查闭环。
 - 面向部署者的变更必须同步 README/CHANGES 或迁移说明。
 
-#### ⬜ M8 拆分
+#### ✅ M8 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #080 | 部署方式说明 | 明确 IIS in-process/out-of-process、Kestrel + reverse proxy、可选 Docker |
-| ⬜ #081 | 配置迁移指南 | `Web.config` connectionStrings/appSettings 到 `appsettings.json`/环境变量的对照表 |
-| ⬜ #082 | 旧数据策略 | 明确旧用户数据不兼容；旧仓库/团队元数据若要迁移，使用独立导入工具 |
-| ⬜ #083 | 文件系统路径指南 | 说明 repository、cache、git-core、SSH host keys、logs 路径 |
-| ⬜ #084 | Health checks | 增加数据库连接、repository path、cache path、Git backend、SSH listener 检查 |
-| ⬜ #085 | 备份策略 | 明确数据库、repositories、cache、host keys 的备份和恢复策略 |
-| ⬜ #086 | Migration SQL | 发布前生成 migration SQL，生产环境不在启动时盲目改库 |
-| ⬜ #087 | 回滚方案 | 有可执行的回滚方案和前置备份要求 |
-| ⬜ #088 | 文档/CHANGES 更新 | 面向用户、部署者、数据库、认证、公开 URL 的变更同步文档 |
+| ✅ #080 | 部署方式说明 | 只支持 Docker Compose、Linux systemd、Windows Service；明确不支持 IIS |
+| ✅ #081 | 配置迁移指南 | `Web.config` connectionStrings/appSettings 到 `appsettings.json`/环境变量的对照表 |
+| ✅ #082 | 旧数据策略 | 明确旧用户数据不兼容；旧仓库/团队元数据若要迁移，使用独立导入工具 |
+| ✅ #083 | 文件系统路径指南 | 说明 repository、cache、git-core、SSH host keys、Data Protection keys、logs 路径 |
+| ✅ #084 | Health checks | 增加数据库连接、repository path、cache path、Git backend、SSH listener 检查 |
+| ✅ #085 | 备份策略 | 明确数据库、repositories、cache、host keys 和 key ring 的备份和恢复策略 |
+| ✅ #086 | Migration SQL | Release CI 生成 SQLite/SQL Server migration SQL；生产启动不自动改库 |
+| ✅ #087 | 回滚方案 | 有可执行的版本固定、schema 快照恢复和前置备份要求 |
+| ✅ #088 | 文档/CHANGES 更新 | 面向用户、部署者、数据库、认证、公开 URL 的变更同步文档 |
 
 验收：
 

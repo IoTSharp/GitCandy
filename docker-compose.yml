@@ -1,0 +1,42 @@
+name: gitcandy
+
+x-gitcandy-service: &gitcandy-service
+  image: ${GITCANDY_IMAGE:-ghcr.io/iotsharp/gitcandy:latest}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment:
+    ASPNETCORE_ENVIRONMENT: Production
+    ASPNETCORE_HTTP_PORTS: "8080"
+    ConnectionStrings__GitCandy: Data Source=/var/lib/gitcandy/GitCandy.db
+    GitCandy__Application__RepositoryPath: /var/lib/gitcandy/repositories
+    GitCandy__Application__CachePath: /var/lib/gitcandy/cache
+    GitCandy__Application__LogPathFormat: /var/lib/gitcandy/logs/gitcandy-{0}.log
+    GitCandy__Application__UserConfigurationPath: /var/lib/gitcandy/config.xml
+    GitCandy__Application__SshHostKeyPath: /var/lib/gitcandy/ssh-host-key.xml
+    GitCandy__Application__DataProtectionKeysPath: /var/lib/gitcandy/data-protection-keys
+    GitCandy__Application__SshPort: "2222"
+  volumes:
+    - gitcandy-data:/var/lib/gitcandy
+
+services:
+  migrate:
+    <<: *gitcandy-service
+    command: ["--migrate"]
+    restart: "no"
+
+  gitcandy:
+    <<: *gitcandy-service
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${GITCANDY_HTTP_PORT:-8080}:8080"
+      - "${GITCANDY_SSH_PORT:-2222}:2222"
+    read_only: true
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
+volumes:
+  gitcandy-data:

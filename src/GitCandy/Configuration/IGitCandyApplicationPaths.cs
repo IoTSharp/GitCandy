@@ -46,6 +46,11 @@ public interface IGitCandyApplicationPaths
     string SshHostKeyPath { get; }
 
     /// <summary>
+    /// ASP.NET Core Data Protection key ring 目录的绝对路径。
+    /// </summary>
+    string DataProtectionKeysPath { get; }
+
+    /// <summary>
     /// 将配置路径解析为基于内容根目录的绝对路径。
     /// </summary>
     /// <param name="configuredPath">配置中的路径值。</param>
