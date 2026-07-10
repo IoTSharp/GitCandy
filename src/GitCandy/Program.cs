@@ -13,10 +13,6 @@ builder.Services.AddGitCandyWebShell(builder.Configuration, builder.Environment.
 var app = builder.Build();
 
 await app.Services.MigrateGitCandyDatabaseAsync();
-if (args.Contains("--migrate", StringComparer.Ordinal))
-{
-    return;
-}
 
 app.UseGitCandyRequestProfiler();
 

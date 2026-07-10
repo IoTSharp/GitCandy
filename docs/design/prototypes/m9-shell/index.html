@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>GitCandy application shell</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+  <script src="prototype.js" defer></script>
+</head>
+<body>
+  <header class="global-header">
+    <button class="icon-command navigation-toggle" type="button" aria-label="Open navigation" aria-controls="primary-navigation" aria-expanded="false">
+      <span aria-hidden="true"></span>
+    </button>
+
+    <a class="brand" href="#" aria-label="GitCandy home">
+      <span class="brand-mark" aria-hidden="true">GC</span>
+      <span class="brand-name">GitCandy</span>
+    </a>
+
+    <label class="global-search">
+      <span class="visually-hidden">Search repositories, users, and teams</span>
+      <input type="search" placeholder="Search GitCandy">
+    </label>
+
+    <div class="header-commands">
+      <button class="button button-primary" type="button"><span aria-hidden="true">+</span> New repository</button>
+      <div class="theme-control" aria-label="Theme mode">
+        <button type="button" data-theme-value="system" aria-pressed="true">System</button>
+        <button type="button" data-theme-value="light" aria-pressed="false">Light</button>
+        <button type="button" data-theme-value="dark" aria-pressed="false">Dark</button>
+      </div>
+      <button class="account-command" type="button" aria-label="Open account menu">
+        <span class="avatar" aria-hidden="true">MC</span>
+        <span class="account-name">m5-admin</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="navigation-backdrop" data-navigation-close></div>
+
+  <div class="application-frame">
+    <aside id="primary-navigation" class="sidebar" aria-label="Primary navigation">
+      <nav class="navigation-groups">
+        <div class="navigation-group">
+          <a class="navigation-item is-active" href="#" aria-current="page">
+            <span class="navigation-indicator" aria-hidden="true"></span>
+            Repositories
+            <span class="navigation-count">12</span>
+          </a>
+          <a class="navigation-item" href="#">
+            <span class="navigation-indicator" aria-hidden="true"></span>
+            Teams
+            <span class="navigation-count">4</span>
+          </a>
+        </div>
+
+        <div class="navigation-group">
+          <div class="navigation-label">Administration</div>
+          <a class="navigation-item" href="#"><span class="navigation-indicator" aria-hidden="true"></span>Users</a>
+          <a class="navigation-item" href="#"><span class="navigation-indicator" aria-hidden="true"></span>Settings</a>
+        </div>
+      </nav>
+
+      <div class="sidebar-theme">
+        <span>Theme</span>
+        <div class="theme-control" aria-label="Theme mode">
+          <button type="button" data-theme-value="system" aria-pressed="true">System</button>
+          <button type="button" data-theme-value="light" aria-pressed="false">Light</button>
+          <button type="button" data-theme-value="dark" aria-pressed="false">Dark</button>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="#">About GitCandy</a>
+        <span>Alpha · .NET 10</span>
+      </div>
+    </aside>
+
+    <main class="workspace" id="main-content">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="#">GitCandy</a>
+        <span aria-hidden="true">/</span>
+        <span>Repositories</span>
+      </nav>
+
+      <header class="page-heading">
+        <div>
+          <h1>Repositories</h1>
+          <p>Projects you can access on this server.</p>
+        </div>
+        <div class="page-commands">
+          <button class="button" type="button">Import</button>
+          <button class="button button-primary" type="button"><span aria-hidden="true">+</span> New repository</button>
+        </div>
+      </header>
+
+      <section class="summary-strip" aria-label="Repository summary">
+        <div><strong>12</strong><span>Visible</span></div>
+        <div><strong>8</strong><span>Owned</span></div>
+        <div><strong>3</strong><span>Private</span></div>
+        <div><strong>4</strong><span>Teams</span></div>
+      </section>
+
+      <div class="content-toolbar">
+        <label class="filter-input">
+          <span class="visually-hidden">Filter repositories</span>
+          <input type="search" placeholder="Filter repositories">
+        </label>
+        <div class="segmented-control" aria-label="Repository scope">
+          <button class="is-selected" type="button" aria-pressed="true">All</button>
+          <button type="button" aria-pressed="false">Owned</button>
+          <button type="button" aria-pressed="false">Member</button>
+        </div>
+        <label class="sort-control">
+          <span>Sort</span>
+          <select>
+            <option>Recently updated</option>
+            <option>Name</option>
+            <option>Visibility</option>
+          </select>
+        </label>
+      </div>
+
+      <section class="repository-list" aria-label="Repository list">
+        <div class="repository-list-header" aria-hidden="true">
+          <span>Repository</span>
+          <span>Activity</span>
+          <span>Visibility</span>
+        </div>
+
+        <a class="repository-row" href="#">
+          <div class="repository-identity">
+            <span class="repository-mark" aria-hidden="true">GC</span>
+            <span>
+              <strong>GitCandy</strong>
+              <small>Lightweight self-hosted Git service</small>
+              <span class="repository-meta"><span>C#</span><span>main</span><span>24.8 MB</span></span>
+            </span>
+          </div>
+          <div class="repository-activity"><strong>12 min ago</strong><small>refactor logging integration</small></div>
+          <div><span class="status status-public">Public</span></div>
+        </a>
+
+        <a class="repository-row" href="#">
+          <div class="repository-identity">
+            <span class="repository-mark mark-cyan" aria-hidden="true">API</span>
+            <span>
+              <strong>hearon-api</strong>
+              <small>Device management and timing API</small>
+              <span class="repository-meta"><span>C#</span><span>master</span><span>18.2 MB</span></span>
+            </span>
+          </div>
+          <div class="repository-activity"><strong>Yesterday</strong><small>fix service health reporting</small></div>
+          <div><span class="status status-private">Private</span></div>
+        </a>
+
+        <a class="repository-row" href="#">
+          <div class="repository-identity">
+            <span class="repository-mark mark-amber" aria-hidden="true">DOC</span>
+            <span>
+              <strong>platform-docs</strong>
+              <small>Architecture decisions and operations guides</small>
+              <span class="repository-meta"><span>Markdown</span><span>main</span><span>3.1 MB</span></span>
+            </span>
+          </div>
+          <div class="repository-activity"><strong>Jul 8</strong><small>document rollback procedure</small></div>
+          <div><span class="status status-private">Private</span></div>
+        </a>
+
+        <a class="repository-row" href="#">
+          <div class="repository-identity">
+            <span class="repository-mark mark-red" aria-hidden="true">OPS</span>
+            <span>
+              <strong>deployment</strong>
+              <small>Service packages and deployment manifests</small>
+              <span class="repository-meta"><span>PowerShell</span><span>main</span><span>6.7 MB</span></span>
+            </span>
+          </div>
+          <div class="repository-activity"><strong>Jul 4</strong><small>add Windows service package</small></div>
+          <div><span class="status status-private">Private</span></div>
+        </a>
+      </section>
+
+      <footer class="content-footer">
+        <span>Showing 4 of 12 repositories</span>
+        <button class="button" type="button">Load more</button>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

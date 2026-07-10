@@ -563,7 +563,7 @@ ASP.NET Core 中间件和后台能力：
 - 可以创建并启动新的 EF Core/Identity 数据库。
 - 有回滚方案和备份说明。
 
-### ⬜ Milestone 9：迁移稳定后的独立改进
+### 🚧 Milestone 9：迁移稳定后的独立改进
 
 目标：收拢第一轮迁移之外的改进项，避免塞进主迁移大改。
 
@@ -571,26 +571,38 @@ ASP.NET Core 中间件和后台能力：
 
 - 这些都值得做，但必须在行为迁移稳定后按独立变更推进。
 - 每个编号都应独立评估收益、维护成本、兼容性和回滚方案。
+- M9 是并行改进池，不要求完成 Identity、SSH、Nullable 等工作后才开始 UI；各工作流只遵守自身依赖顺序。
+- UI 工作流固定按 `#090 -> #096 -> #100 -> #101/#102/#103 -> #104 -> #105` 推进，原型未评审前不修改生产 Razor 页面。
 
-#### ⬜ M9 拆分
+#### 🚧 M9 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #090 | UI 现代化 | 从 Bootstrap 3 升级到更现代设计系统，独立验收视觉和交互兼容 |
+| 🚧 #090 | UI 信息架构与双主题原型基线 | 盘点页面、角色和状态；定义浅色/深色 token、整体布局和桌面/移动原型，不修改生产 Razor 页面 |
 | ⬜ #091 | Identity 增强 | 调整密码策略、多因素认证、外部登录等账户能力 |
 | ⬜ #092 | SSH 协议栈替换或升级 | 替换或升级自写 SSH 协议栈，并验证 SSH clone/fetch/push |
 | ⬜ #093 | Nullable 全面启用 | 全面 nullable enable 和代码清理，不用无说明的 `!` 消警告 |
 | ⬜ #094 | 架构拆分深化 | 在行为稳定后再推进更完整的 Clean Architecture 拆分 |
 | ⬜ #095 | Observability | 引入 OpenTelemetry tracing/metrics/logging |
-| ⬜ #096 | 前端资产管线 | 引入 CDN/npm/Vite/esbuild/WebOptimizer 等前端资产管线 |
+| ⬜ #096 | 前端资产管线 | 在 #090 原型和依赖清单稳定后，独立评估并引入 npm/Vite/esbuild/WebOptimizer 等资产管线；不在此项迁移业务页面 |
 | ⬜ #097 | LibGit2Sharp 升级 | 单独评估 native binary、API 差异和 Git 操作回归验证 |
 | ⬜ #098 | 减少 Git helper 依赖 | 在协议测试保护网完整后，评估用 LibGit2Sharp/托管实现替代部分 `git.exe` helper 的可行性 |
 | ⬜ #099 | 外部 OpenSSH 可选适配 | 若企业部署需要，再独立评估 OpenSSH forced command 适配；不得改变内置 SSH 默认路线 |
+| ⬜ #100 | 双主题运行机制与应用框架 | 实现 System/Light/Dark 主题选择、持久化、首屏无闪烁，以及全局 header/navigation/content/footer 响应式框架 |
+| ⬜ #101 | 仓库工作区 UI | 按原型迁移仓库列表、详情、代码树、提交、diff、clone URL 和权限操作；保持公开 URL 与 Git 协议行为 |
+| ⬜ #102 | 账户与凭据 UI | 按原型迁移登录、注册、账户、密码和 SSH key 页面；不改变 Identity、cookie 或权限语义 |
+| ⬜ #103 | 团队与管理 UI | 按原型迁移用户、团队、协作者和设置页面；服务端继续执行全部安全关键授权 |
+| ⬜ #104 | 响应式、无障碍与完整状态 | 覆盖桌面/移动、键盘、焦点、对比度、reduced motion，以及 loading/empty/error/denied/destructive 状态 |
+| ⬜ #105 | 视觉回归与 Bootstrap 3 收尾 | 建立 Light/Dark 与桌面/移动 Playwright 截图基线，确认替代能力后移除 Bootstrap 3 运行时引用并记录回滚方式 |
 
 验收：
 
 - 不混入主迁移路线的大 PR。
 - 每个改进项都有独立兼容性说明、回滚方案和验证结果。
+- `#090` 必须先交付页面/角色/状态矩阵、主题 token、布局规则和可交互框架原型，由评审结论冻结生产实现边界。
+- `#096` 只建立资产交付能力；`#100` 到 `#103` 按独立垂直切片逐批修改生产 UI，不合并成一次大改。
+- UI 验收至少覆盖匿名用户、普通用户、repository owner、administrator，以及 Light/Dark、桌面/移动和权限失败状态。
+- UI 变更不得改变公开路由、表单字段、antiforgery、Identity cookie、Git HTTP/SSH 或服务端权限判断。
 
 ### ⬜ Milestone 10：Agent Memory / Codebase Intelligence
 
