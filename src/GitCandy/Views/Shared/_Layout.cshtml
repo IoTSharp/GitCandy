@@ -1,37 +1,90 @@
-﻿<!DOCTYPE html>
-<html lang="en">
+@{
+    var currentUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var isAdministrator = User.IsInRole(RoleNames.Administrator);
+}
+<!DOCTYPE html>
+<html lang="@(ViewData["Lang"] ?? "en-US")">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - GitCandy</title>
-    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/Content/bootstrap.css" />
+    <link rel="stylesheet" href="~/Content/bootstrap-switch.css" />
+    <link rel="stylesheet" href="~/Content/highlight.css" />
+    <link rel="stylesheet" href="~/Content/Site.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-    <header class="site-header">
-        <a class="site-brand" asp-area="" asp-controller="Home" asp-action="Index">GitCandy</a>
-        <nav class="account-navigation" aria-label="Account">
-            @if (User.Identity?.IsAuthenticated == true)
-            {
-                <a asp-controller="Account" asp-action="Change">@User.Identity.Name</a>
-                <form asp-controller="Account" asp-action="Logout" method="post">
-                    <button type="submit" class="link-button">Sign out</button>
-                </form>
-            }
-            else
-            {
-                <a asp-controller="Account" asp-action="Login">Sign in</a>
-                <a asp-controller="Account" asp-action="Create">Create account</a>
-            }
-        </nav>
-    </header>
-    <main class="site-main" role="main">
+    <div class="navbar navbar-default">
+        <div class="container">
+            <div class="navbar-header">
+                <button class="navbar-toggle" type="button" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">GitCandy<sub>Alpha</sub></a>
+            </div>
+            <div class="navbar-collapse collapse navbar-responsive-collapse">
+                <ul class="nav navbar-nav">
+                    <li><a asp-controller="Repository" asp-action="Index">@Text["Shared_Repositories"]</a></li>
+                    <li><a asp-controller="Home" asp-action="About">@Text["Shared_About"]</a></li>
+                    @if (isAdministrator)
+                    {
+                        <li><a asp-controller="Account" asp-action="Index">@Text["Shared_Users"]</a></li>
+                        <li><a asp-controller="Team" asp-action="Index">@Text["Shared_Teams"]</a></li>
+                        <li><a asp-controller="Setting" asp-action="Edit">@Text["Shared_Settings"]</a></li>
+                    }
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <li><a asp-controller="Account" asp-action="Detail" asp-route-name="@User.Identity.Name">@User.Identity.Name</a></li>
+                        <li>
+                            <form asp-controller="Account" asp-action="Logout" asp-route-returnUrl="@currentUrl" method="post" class="navbar-form">
+                                <button type="submit" class="btn btn-link navbar-btn">@Text["Shared_Logout"]</button>
+                            </form>
+                        </li>
+                    }
+                    else
+                    {
+                        <li><a asp-controller="Account" asp-action="Create">@Text["Shared_Register"]</a></li>
+                        <li><a asp-controller="Account" asp-action="Login" asp-route-returnUrl="@currentUrl">@Text["Shared_Login"]</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <main class="container" role="main">
         @RenderBody()
     </main>
 
-    <footer class="site-footer" title="@Context.GetGitCandyRequestProfiler()?.Elapsed">
-        &copy; 2026 - GitCandy
+    <footer class="container footer" title="@Context.GetGitCandyRequestProfiler()?.Elapsed">
+        <div class="page-divider"></div>
+        <div class="clearfix">
+            <div class="pull-right btn-group dropup">
+                <button type="button" class="btn btn-link dropdown-toggle" data-toggle="dropdown">
+                    @(ViewData["Language"] ?? "English") <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a asp-controller="Home" asp-action="Language" asp-route-lang="zh-cn" asp-route-returnUrl="@currentUrl">简体中文</a></li>
+                    <li><a asp-controller="Home" asp-action="Language" asp-route-lang="en-us" asp-route-returnUrl="@currentUrl">English</a></li>
+                    <li><a asp-controller="Home" asp-action="Language" asp-route-lang="fr-fr" asp-route-returnUrl="@currentUrl">Français</a></li>
+                </ul>
+            </div>
+            <div class="pull-left">&copy; 2013-@DateTime.UtcNow.Year Aimeast. All rights reserved.</div>
+        </div>
     </footer>
+
+    <script src="~/Scripts/jquery-2.0.3.js"></script>
+    <script src="~/Scripts/bootstrap.js"></script>
+    <script src="~/Scripts/bootstrap-switch.js"></script>
+    <script src="~/Scripts/bootstrap3-typeahead.js"></script>
+    <script src="~/Scripts/highlight.pack.js"></script>
+    <script src="~/Scripts/marked.js"></script>
+    <script src="~/Scripts/common.js"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

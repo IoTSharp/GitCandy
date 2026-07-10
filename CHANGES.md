@@ -46,16 +46,28 @@
  - Added scoped `ICurrentUser` claims access and resource authorization policies for repository read/write/owner, team administrator, current user, and system administrator behavior.
  - Added the independent `GitCandy.GitBasic` authentication scheme with Identity password, failure-count, lockout, role-claim, and Basic challenge behavior.
  - Added M4 Kestrel/SQLite account integration tests and authentication/authorization tests covering security-stamp invalidation, stale cookies, public/private repository access, owner, team, and administrator semantics.
+ - Added M5 ASP.NET Core MVC controllers and Razor Views for account, team, and repository metadata CRUD, member/collaborator management, account SSH keys, About, and read-only settings.
+ - Added M5 application services and strongly typed view models so MVC controllers do not contain complex EF Core queries.
+ - Added standard `Resources/SharedResource*.resx` localization for English, Simplified Chinese, and French.
+ - Added Bootstrap 3, bootstrap-switch, jQuery, highlight.js, marked, common.js, and Glyphicon assets under `wwwroot` with direct static references.
+ - Added Kestrel/SQLite MVC page smoke tests for form validation, antiforgery-protected CRUD, public/private repository visibility, localization, and static assets.
 
 #### Changed
  - Hardened the Identity application cookie as `.GitCandy.Identity` with `HttpOnly`, `SecurePolicy=Always`, `SameSite=Lax`, an eight-hour lifetime, and sliding expiration.
  - Removed the unused ASP.NET Core Session registration and middleware; the migrated host and Git Basic authentication no longer emit or depend on `.GitCandy.Session`.
  - Private repositories now reject anonymous access even if inconsistent data enables anonymous read/write flags.
  - Changed `/Account/Logout` to an antiforgery-protected POST action.
+ - Changed account, team, and repository delete operations from query-driven GET requests to antiforgery-protected POST forms.
+ - Restored the legacy start-page behavior so `/` redirects to `/Repository`.
+ - Repository, account, and team pages now filter private repository names using the current viewer's repository permissions.
 
 #### Migration
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
  - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP endpoint binding remains scoped to M6.
+ - Migrated the M5 account/team/repository public URL shapes to real ASP.NET Core controllers; Git Smart HTTP remains on the M6 placeholder endpoint.
+ - Repository CRUD in M5 manages EF Core metadata and authorization relationships only; bare repository creation/import/deletion remains behind the planned M6 `IGitTransportBackend` boundary.
+ - Migrated language selection to the standard ASP.NET Core culture cookie while temporarily retaining the legacy `Lang` cookie.
+ - Kept settings read-only in M5; configuration persistence, process restart, and SSH host-key regeneration remain scoped to M8/M7.
  - Migrated legacy `Web.config appSettings` keys `LogPathFormat` and `UserConfiguration` to `appsettings.json` with temporary legacy aliases.
  - Replaced legacy `Server.MapPath`-style path assumptions in the ASP.NET Core host with `IWebHostEnvironment.ContentRootPath` and `WebRootPath` semantics.
  - Migrated the new host's legacy logger compatibility entry point to `ILoggerFactory`; log sinks are now controlled by ASP.NET Core `Logging` providers instead of the old static file writer.

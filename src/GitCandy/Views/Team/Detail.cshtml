@@ -1,0 +1,14 @@
+@model TeamDetailsViewModel
+@{
+    ViewData["Title"] = Model.Team.Name;
+}
+<h3>@Model.Team.Name</h3>
+<dl class="dl-horizontal">
+    <dt>Description</dt><dd>@Model.Team.Description</dd>
+    <dt>Members</dt><dd>@foreach (var member in Model.Team.Members) { <a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName" class="label label-default">@member.DisplayName</a> }</dd>
+    <dt>@Text["Shared_Repositories"]</dt><dd>@foreach (var repository in Model.Team.Repositories) { <a asp-controller="Repository" asp-action="Detail" asp-route-name="@repository" class="label label-default">@repository</a> }</dd>
+</dl>
+@if (Model.CanManage)
+{
+    <p><a asp-action="Edit" asp-route-name="@Model.Team.Name" class="btn btn-primary">Edit</a> <a asp-action="Users" asp-route-name="@Model.Team.Name" class="btn btn-info">Members</a></p>
+}

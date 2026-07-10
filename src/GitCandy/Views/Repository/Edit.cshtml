@@ -1,0 +1,6 @@
+@model RepositoryFormViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.Name}";
+}
+<h3>Edit @Model.Name</h3>
+<partial name="_Form" model="Model" />

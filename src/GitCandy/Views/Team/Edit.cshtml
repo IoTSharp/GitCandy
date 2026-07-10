@@ -1,0 +1,11 @@
+@model TeamFormViewModel
+@{
+    ViewData["Title"] = $"Edit {Model.Name}";
+}
+<h3>Edit @Model.Name</h3>
+<form asp-action="Edit" asp-route-name="@Model.Name" method="post" class="form-horizontal">
+    <input asp-for="Name" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div class="form-group"><label asp-for="Description" class="col-md-3 control-label"></label><div class="col-md-6"><textarea asp-for="Description" rows="4" class="form-control"></textarea><span asp-validation-for="Description" class="text-danger"></span></div></div>
+    <div class="form-group"><div class="col-md-offset-3 col-md-6"><button type="submit" class="btn btn-primary">@Text["Shared_Save"]</button> <a asp-action="Detail" asp-route-name="@Model.Name" class="btn btn-default">@Text["Shared_Back"]</a> @if (User.IsInRole(RoleNames.Administrator)) { <a asp-action="Delete" asp-route-name="@Model.Name" class="btn btn-danger">@Text["Shared_Delete"]</a> }</div></div>
+</form>

@@ -1,0 +1,14 @@
+@model RepositoryDetailsViewModel
+@{
+    ViewData["Title"] = Model.Repository.Name;
+}
+<h3>@Model.Repository.Name</h3>
+<dl class="dl-horizontal">
+    <dt>Private</dt><dd>@(Model.Repository.IsPrivate ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
+    <dt>Anonymous read</dt><dd>@(Model.Repository.AllowAnonymousRead ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
+    <dt>Anonymous write</dt><dd>@(Model.Repository.AllowAnonymousWrite ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
+    <dt>Description</dt><dd>@Model.Repository.Description</dd>
+    <dt>Collaborators</dt><dd>@foreach (var user in Model.Repository.Users) { <a asp-controller="Account" asp-action="Detail" asp-route-name="@user.UserName" class="label label-default">@user.UserName</a> }</dd>
+    <dt>@Text["Shared_Teams"]</dt><dd>@foreach (var team in Model.Repository.Teams) { <a asp-controller="Team" asp-action="Detail" asp-route-name="@team.TeamName" class="label label-default">@team.TeamName</a> }</dd>
+</dl>
+<p><a asp-action="Tree" asp-route-name="@Model.Repository.Name" class="btn btn-default">Repository tree</a> @if (Model.CanManage) { <a asp-action="Edit" asp-route-name="@Model.Repository.Name" class="btn btn-primary">Edit</a> <a asp-action="Coop" asp-route-name="@Model.Repository.Name" class="btn btn-info">Relationships</a> }</p>

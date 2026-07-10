@@ -1,0 +1,130 @@
+﻿
+.page-divider {
+    margin: 20px 0 10px 0;
+    border: 0;
+    border-top: 1px solid #eee;
+}
+
+.center {
+    display: table;
+    width: auto;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.border-area {
+    position: relative;
+    margin: 5px 0;
+    padding: 5px 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    -webkit-border-radius: 4px;
+       -moz-border-radius: 4px;
+            border-radius: 4px;
+}
+
+.remover {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+}
+
+.disable-mask {
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0.6;
+    position: absolute;
+    background: #999;
+    z-index: 1000;
+    top: -0.5px;
+}
+
+.alert_placeholder {
+    height: 45px;
+}
+
+.branch-selector {
+    max-height: 300px;
+    overflow: auto;
+}
+
+.keep-space {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.footer {
+    padding: 0 0 10px 0;
+}
+
+.git-text {
+    cursor: auto !important;
+}
+
+.blame-code {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none;
+}
+
+.blame-info {
+    width: 300px;
+}
+
+.url-path {
+    width: 300px;
+}
+.url-path > input {
+    background: #fff !important;
+}
+
+[aria-label] {
+    position: relative;
+}
+    [aria-label]:after {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 50%;
+        padding: 5px 8px;
+        border-radius: 3px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        content: attr(aria-label);
+        margin-top: 7px;
+        font-size: 12px;
+        white-space: pre;
+        pointer-events: none;
+        transform: translateX(50%);
+        z-index: 10000;
+    }
+
+    [aria-label]:hover:after, [aria-label]:focus:after {
+        display: block;
+    }
+
+/* override bootstrap */
+@media print {
+    a[href]:after {
+        content: none !important;
+    }
+}
+
+.dl-horizontal dt { padding:5px 0; }
+.dl-horizontal dd { padding:5px 0; }
+
+@media (min-width: 768px) {
+  .dl-horizontal dt { width: 240px; }
+  .dl-horizontal dd { margin-left: 260px; }
+}
+@media (min-width: 470px) {
+  .nav-justified > li {
+    display: table-cell;
+    width: 1%;
+  }
+  .nav-justified > li > a {
+    margin-bottom: 0;
+  }
+}

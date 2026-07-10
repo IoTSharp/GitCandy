@@ -1,0 +1,22 @@
+@model RepositoryIndexViewModel
+@{
+    ViewData["Title"] = Text["Repository_ListTitle"];
+}
+<h4>@Text["Repository_ListTitle"]</h4>
+@if (Model.CanCreateRepository)
+{
+    <p class="text-right"><a asp-action="Create" class="btn btn-primary">@Text["Shared_Create"]</a></p>
+}
+<table class="table table-hover border-area">
+    <thead><tr><th>Name</th><th>Description</th><th>Visibility</th></tr></thead>
+    <tbody>
+    @foreach (var repository in Model.Repositories)
+    {
+        <tr>
+            <td><a asp-action="Tree" asp-route-name="@repository.Name">@repository.Name</a></td>
+            <td>@repository.Description</td>
+            <td>@(repository.IsPrivate ? "Private" : "Public")</td>
+        </tr>
+    }
+    </tbody>
+</table>

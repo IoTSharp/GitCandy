@@ -51,7 +51,8 @@ public static class WebServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        services.AddControllersWithViews();
+        services.AddControllersWithViews()
+            .AddViewLocalization();
         services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
         services.TryAddEnumerable(
@@ -127,7 +128,7 @@ public static class WebServiceCollectionExtensions
         services.AddMemoryCache();
         services.TryAddSingleton<IApplicationCache, MemoryApplicationCache>();
 
-        services.AddLocalization();
+        services.AddLocalization(options => options.ResourcesPath = "Resources");
         services.Configure<RequestLocalizationOptions>(options =>
         {
             options.DefaultRequestCulture = new RequestCulture("en-US");
@@ -142,7 +143,10 @@ public static class WebServiceCollectionExtensions
     {
         services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
         services.TryAddScoped<IMembershipService, MembershipService>();
+        services.TryAddScoped<IUserAdministrationService, UserAdministrationService>();
+        services.TryAddScoped<ITeamService, TeamService>();
         services.TryAddScoped<IRepositoryService, RepositoryService>();
+        services.TryAddScoped<IRepositoryManagementService, RepositoryManagementService>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, RepositoryAuthorizationHandler>());
         services.TryAddEnumerable(

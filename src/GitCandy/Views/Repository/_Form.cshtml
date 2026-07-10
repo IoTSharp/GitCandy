@@ -1,0 +1,13 @@
+@model RepositoryFormViewModel
+@{
+    var isEdit = string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "Edit", StringComparison.OrdinalIgnoreCase);
+}
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-name="@(isEdit ? Model.Name : null)" method="post" class="form-horizontal">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div class="form-group"><label asp-for="Name" class="col-md-3 control-label"></label><div class="col-md-6">@if (isEdit) { <input asp-for="Name" type="hidden" /><p class="form-control-static">@Model.Name</p> } else { <input asp-for="Name" class="form-control" /><span asp-validation-for="Name" class="text-danger"></span> }</div></div>
+    <div class="form-group"><label asp-for="IsPrivate" class="col-md-3 control-label"></label><div class="col-md-6"><div class="switch" data-on-label="@Text["Shared_Yes"]" data-off-label="@Text["Shared_No"]"><input asp-for="IsPrivate" data-size="small" /></div></div></div>
+    <div class="form-group"><label asp-for="AllowAnonymousRead" class="col-md-3 control-label"></label><div class="col-md-6"><div class="switch" data-on-label="@Text["Shared_Yes"]" data-off-label="@Text["Shared_No"]"><input asp-for="AllowAnonymousRead" data-size="small" /></div></div></div>
+    <div class="form-group"><label asp-for="AllowAnonymousWrite" class="col-md-3 control-label"></label><div class="col-md-6"><div class="switch" data-on-label="@Text["Shared_Yes"]" data-off-label="@Text["Shared_No"]"><input asp-for="AllowAnonymousWrite" data-size="small" /></div></div></div>
+    <div class="form-group"><label asp-for="Description" class="col-md-3 control-label"></label><div class="col-md-6"><textarea asp-for="Description" rows="4" class="form-control"></textarea><span asp-validation-for="Description" class="text-danger"></span></div></div>
+    <div class="form-group"><div class="col-md-offset-3 col-md-6"><button type="submit" class="btn btn-primary">@(isEdit ? Text["Shared_Save"] : Text["Shared_Create"])</button> <a asp-action="@(isEdit ? "Detail" : "Index")" asp-route-name="@(isEdit ? Model.Name : null)" class="btn btn-default">@Text["Shared_Back"]</a> @if (isEdit) { <a asp-action="Delete" asp-route-name="@Model.Name" class="btn btn-danger">@Text["Shared_Delete"]</a> }</div></div>
+</form>

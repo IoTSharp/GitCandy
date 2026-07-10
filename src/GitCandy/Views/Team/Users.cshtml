@@ -1,0 +1,30 @@
+@model TeamDetailsViewModel
+@{
+    ViewData["Title"] = $"Members - {Model.Team.Name}";
+}
+<h3>Members of @Model.Team.Name</h3>
+<table class="table table-striped">
+    <thead><tr><th>User</th><th>Role</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var member in Model.Team.Members)
+    {
+        <tr>
+            <td><a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName">@member.DisplayName</a></td>
+            <td>@(member.IsAdministrator ? "Administrator" : "Member")</td>
+            <td class="text-right">
+                <form asp-action="ChooseUser" method="post" class="form-inline">
+                    <input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="User" value="@member.UserName" />
+                    <button type="submit" name="Act" value="@(member.IsAdministrator ? "member" : "admin")" class="btn btn-default btn-xs">@(member.IsAdministrator ? "Make member" : "Make administrator")</button>
+                    <button type="submit" name="Act" value="del" class="btn btn-danger btn-xs">@Text["Shared_Delete"]</button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+<form asp-action="ChooseUser" method="post" class="form-inline">
+    <input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="Act" value="add" />
+    <div class="form-group"><label for="User">Username</label> <input id="User" name="User" class="form-control" required /></div>
+    <button type="submit" class="btn btn-primary">Add member</button>
+    <a asp-action="Detail" asp-route-name="@Model.Team.Name" class="btn btn-default">@Text["Shared_Back"]</a>
+</form>

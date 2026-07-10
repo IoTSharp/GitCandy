@@ -57,7 +57,7 @@ public sealed class AccountAuthenticationTests
         Assert.AreEqual("Account User", createdUser.DisplayName);
         Assert.IsTrue(await fixture.CheckPasswordAsync(createdUser, OriginalPassword));
 
-        var authenticatedHome = await fixture.GetStringAsync("/");
+        var authenticatedHome = await fixture.GetStringAsync("/Repository");
         StringAssert.Contains(authenticatedHome, "account-user");
 
         var changeToken = await fixture.GetAntiforgeryTokenAsync("/Account/Change");
@@ -75,7 +75,7 @@ public sealed class AccountAuthenticationTests
         var changedPage = await fixture.GetStringAsync("/Account/Change?changed=true");
         StringAssert.Contains(changedPage, "Password changed.");
 
-        var logoutToken = await fixture.GetAntiforgeryTokenAsync("/");
+        var logoutToken = await fixture.GetAntiforgeryTokenAsync("/Repository");
         using var logoutResponse = await fixture.PostFormAsync(
             "/Account/Logout",
             logoutToken,
@@ -112,12 +112,12 @@ public sealed class AccountAuthenticationTests
         await fixture.CreateUserAsync("stamp-user", "stamp-user@example.com", OriginalPassword);
         await fixture.LoginAsync("stamp-user", OriginalPassword);
 
-        StringAssert.Contains(await fixture.GetStringAsync("/"), "stamp-user");
+        StringAssert.Contains(await fixture.GetStringAsync("/Repository"), "stamp-user");
 
         await fixture.UpdateSecurityStampAsync("stamp-user");
-        var homeAfterStampChange = await fixture.GetStringAsync("/");
+        var homeAfterStampChange = await fixture.GetStringAsync("/Repository");
 
-        StringAssert.Contains(homeAfterStampChange, "Sign in");
+        StringAssert.Contains(homeAfterStampChange, "Login");
         Assert.IsFalse(homeAfterStampChange.Contains(">stamp-user<", StringComparison.Ordinal));
     }
 
@@ -143,8 +143,8 @@ public sealed class AccountAuthenticationTests
             });
         Assert.AreEqual(HttpStatusCode.Redirect, changeResponse.StatusCode);
 
-        var secondSessionHome = await fixture.GetStringAsync("/", secondClient);
-        StringAssert.Contains(secondSessionHome, "Sign in");
+        var secondSessionHome = await fixture.GetStringAsync("/Repository", secondClient);
+        StringAssert.Contains(secondSessionHome, "Login");
         Assert.IsFalse(secondSessionHome.Contains(">multi-session-user<", StringComparison.Ordinal));
     }
 

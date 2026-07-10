@@ -437,7 +437,7 @@ ASP.NET Core 中间件和后台能力：
 - 公有仓库匿名按配置可读/可写。
 - 管理员、仓库 owner、团队权限测试通过。
 
-### ⬜ Milestone 5：MVC Controllers 和 Razor Views 迁移
+### ✅ Milestone 5：MVC Controllers 和 Razor Views 迁移
 
 目标：迁移页面功能，但不顺手重做 UI。
 
@@ -446,20 +446,20 @@ ASP.NET Core 中间件和后台能力：
 - 第一轮保持现有 Razor 页面和 Bootstrap 3 视觉行为。
 - 迁移页面可用性、表单验证和 URL 兼容，不引入新前端构建链。
 
-#### ⬜ M5 拆分
+#### ✅ M5 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #050 | Controller API 迁移 | 控制器从 `System.Web.Mvc.Controller` 迁移到 `Microsoft.AspNetCore.Mvc.Controller` |
-| ⬜ #051 | Web API 替换 | 替换 `HttpException`、`Request.Url`、`Request.UserHostAddress`、`Response.AddHeader`、`Response.Cookies.Set` 等 |
-| ⬜ #052 | Razor imports | Views 增加 `_ViewImports.cshtml`，移除 `Views/Web.config` |
-| ⬜ #053 | Helper 迁移 | `System.Web.Mvc.Html` helper、`MvcHtmlString` 改为 ASP.NET Core helper/tag helper、`IHtmlContent` 或 `HtmlString` |
-| ⬜ #054 | URL helper 迁移 | `ViewContext.HttpContext.Request.Url.PathAndQuery` 改为 ASP.NET Core API |
-| ⬜ #055 | 资源与本地化 | `App_GlobalResources` 迁移到标准 resx/localization 方案，必要时保留强类型资源访问 |
-| ⬜ #056 | 静态资源迁移 | `Content`、`Scripts`、`fonts` 迁移到 `wwwroot` |
-| ⬜ #057 | Bundling 过渡 | `System.Web.Optimization` 第一阶段替换为直接静态引用 |
-| ⬜ #058 | 页面 smoke tests | 主要页面可打开、表单可提交、验证信息正确 |
-| ⬜ #059 | URL 与视觉兼容 | 静态资源、语言切换、字体、highlight、marked、bootstrap-switch 工作，页面 URL 与旧版兼容 |
+| ✅ #050 | Controller API 迁移 | 控制器从 `System.Web.Mvc.Controller` 迁移到 `Microsoft.AspNetCore.Mvc.Controller` |
+| ✅ #051 | Web API 替换 | 替换 `HttpException`、`Request.Url`、`Request.UserHostAddress`、`Response.AddHeader`、`Response.Cookies.Set` 等 |
+| ✅ #052 | Razor imports | Views 增加 `_ViewImports.cshtml`，移除 `Views/Web.config` |
+| ✅ #053 | Helper 迁移 | `System.Web.Mvc.Html` helper、`MvcHtmlString` 改为 ASP.NET Core helper/tag helper、`IHtmlContent` 或 `HtmlString` |
+| ✅ #054 | URL helper 迁移 | `ViewContext.HttpContext.Request.Url.PathAndQuery` 改为 ASP.NET Core API |
+| ✅ #055 | 资源与本地化 | `App_GlobalResources` 迁移到标准 resx/localization 方案，必要时保留强类型资源访问 |
+| ✅ #056 | 静态资源迁移 | `Content`、`Scripts`、`fonts` 迁移到 `wwwroot` |
+| ✅ #057 | Bundling 过渡 | `System.Web.Optimization` 第一阶段替换为直接静态引用 |
+| ✅ #058 | 页面 smoke tests | 主要页面可打开、表单可提交、验证信息正确 |
+| ✅ #059 | URL 与视觉兼容 | 静态资源、语言切换、字体、highlight、marked、bootstrap-switch 工作，页面 URL 与旧版兼容 |
 
 验收：
 
@@ -658,7 +658,7 @@ ASP.NET Core 中间件和后台能力：
 | 🚧 M2 | 横切基础设施 | 配置、日志、缓存、DI、hosted services 接入 |
 | ✅ M3 | 新数据层 | EF Core + Identity 新 schema 可通过 SQLite migration 创建；Identity 存储和权限 smoke test 通过；SQL Server migration SQL 可生成审阅，PgSQL/SonnetDB 后续独立回补 |
 | ✅ M4 | 认证与权限 | Web Identity cookie、Git Basic Auth、权限语义测试通过 |
-| ⬜ M5 | Web 垂直切片 | 账户、团队、仓库 CRUD 页面迁移完成 |
+| ✅ M5 | Web 垂直切片 | 账户、团队、仓库 CRUD 页面迁移完成 |
 | ⬜ M6 | Git HTTP 垂直切片 | Git Smart HTTP clone/fetch/push 完成 |
 | ⬜ M7 | SSH 与后台任务 | SSH 和 scheduler 完成 |
 | ⬜ M8 | 发布闭环 | 部署文档、迁移脚本、回滚方案完成 |

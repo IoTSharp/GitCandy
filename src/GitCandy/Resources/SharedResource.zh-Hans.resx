@@ -1,0 +1,733 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Account_AccountAlreadyExists" xml:space="preserve">
+    <value>用户名已存在。</value>
+  </data>
+  <data name="Account_CantRemoveSelf" xml:space="preserve">
+    <value>不能删除自己</value>
+  </data>
+  <data name="Account_ChangePassword" xml:space="preserve">
+    <value>修改密码</value>
+  </data>
+  <data name="Account_ChangePasswordTitle" xml:space="preserve">
+    <value>修改密码</value>
+  </data>
+  <data name="Account_ConformPassword" xml:space="preserve">
+    <value>确认密码</value>
+  </data>
+  <data name="Account_CreateTitle" xml:space="preserve">
+    <value>注册</value>
+  </data>
+  <data name="Account_CreationUnsuccessfull" xml:space="preserve">
+    <value>创建用户失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Account_DeleteTitle" xml:space="preserve">
+    <value>确认删除用户 {0}</value>
+  </data>
+  <data name="Account_DeletionWords" xml:space="preserve">
+    <value>你确认要删除用户 "{0}" 吗？</value>
+  </data>
+  <data name="Account_Description" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Account_DetailTitle" xml:space="preserve">
+    <value>用户 {0}</value>
+  </data>
+  <data name="Account_EditTitle" xml:space="preserve">
+    <value>编辑用户 {0}</value>
+  </data>
+  <data name="Account_Email" xml:space="preserve">
+    <value>电子邮件</value>
+  </data>
+  <data name="Account_EmailAlreadyExists" xml:space="preserve">
+    <value>电子邮件地址已存在</value>
+  </data>
+  <data name="Account_ForgotPassword" xml:space="preserve">
+    <value>忘记用户名或密码了</value>
+  </data>
+  <data name="Account_ForgotTitle" xml:space="preserve">
+    <value>忘记密码</value>
+  </data>
+  <data name="Account_IsSystemAdministrator" xml:space="preserve">
+    <value>管理员</value>
+  </data>
+  <data name="Account_ListTitle" xml:space="preserve">
+    <value>用户列表</value>
+  </data>
+  <data name="Account_LoginFailed" xml:space="preserve">
+    <value>用户名或密码错误</value>
+  </data>
+  <data name="Account_LoginTitle" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="Account_NewPassword" xml:space="preserve">
+    <value>新密码</value>
+  </data>
+  <data name="Account_Nickname" xml:space="preserve">
+    <value>昵称</value>
+  </data>
+  <data name="Account_OldPassword" xml:space="preserve">
+    <value>旧密码</value>
+  </data>
+  <data name="Account_OldPasswordError" xml:space="preserve">
+    <value>旧密码错误</value>
+  </data>
+  <data name="Account_Password" xml:space="preserve">
+    <value>密码</value>
+  </data>
+  <data name="Account_PasswordError" xml:space="preserve">
+    <value>密码错误</value>
+  </data>
+  <data name="Account_Repositories" xml:space="preserve">
+    <value>代码库</value>
+  </data>
+  <data name="Account_SshKeys" xml:space="preserve">
+    <value>SSH密钥</value>
+  </data>
+  <data name="Account_Teams" xml:space="preserve">
+    <value>团队</value>
+  </data>
+  <data name="Account_UpdateUnsuccessfull" xml:space="preserve">
+    <value>更新用户失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Account_Username" xml:space="preserve">
+    <value>用户名</value>
+  </data>
+  <data name="Account_UsernameOrEmail" xml:space="preserve">
+    <value>用户名或电子邮件</value>
+  </data>
+  <data name="Account_UsersFound" xml:space="preserve">
+    <value>发现 {0} 个用户</value>
+  </data>
+  <data name="Account_SSH" xml:space="preserve">
+    <value>SSH</value>
+  </data>
+  <data name="Home_AboutDescription" xml:space="preserve">
+    <value>GitCandy&amp;copy; 是一个基于ASP.NET MVC的[Git](http://git-scm.com/documentation)分布式版本控制平台，支持公共和私有代码库。可以不受限制的创建代码库，与你的团队一块协作。
+
+演示地址：[http://gitcandy.com](http://gitcandy.com)
+
+获取源码并衍生：[http://github.com/Aimeast/GitCandy](http://github.com/Aimeast/GitCandy)
+
+---
+#### 鸣谢 (字母序)</value>
+  </data>
+  <data name="Home_AboutTitle" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="Repository_Ahead" xml:space="preserve">
+    <value>领先</value>
+  </data>
+  <data name="Repository_AllowAnonymousRead" xml:space="preserve">
+    <value>匿名读取</value>
+  </data>
+  <data name="Repository_AllowAnonymousWrite" xml:space="preserve">
+    <value>匿名写入</value>
+  </data>
+  <data name="Repository_AlreadyExists" xml:space="preserve">
+    <value>代码库已存在。</value>
+  </data>
+  <data name="Repository_AuthoredAt" xml:space="preserve">
+    <value>编写于</value>
+  </data>
+  <data name="Repository_BaseBranch" xml:space="preserve">
+    <value>基于此分支</value>
+  </data>
+  <data name="Repository_Behind" xml:space="preserve">
+    <value>落后</value>
+  </data>
+  <data name="Repository_BinaryFileWrods" xml:space="preserve">
+    <value>不支持预览二进制文件</value>
+  </data>
+  <data name="Repository_Blame" xml:space="preserve">
+    <value>审阅</value>
+  </data>
+  <data name="Repository_BlameTitle" xml:space="preserve">
+    <value>{2} 在 {1} · {0}</value>
+  </data>
+  <data name="Repository_BlobTitle" xml:space="preserve">
+    <value>{2} 在 {1} · {0}</value>
+  </data>
+  <data name="Repository_BranchDeletionWords" xml:space="preserve">
+    <value>你确认要删除分支 "{0}" 吗？</value>
+  </data>
+  <data name="Repository_Branches" xml:space="preserve">
+    <value>分支</value>
+  </data>
+  <data name="Repository_BranchesTitle" xml:space="preserve">
+    <value>分支 · {0}</value>
+  </data>
+  <data name="Repository_ChangedSummary" xml:space="preserve">
+    <value>共计: 修改{0}个文件，增加{1}行、删除{2}行。</value>
+  </data>
+  <data name="Repository_Collaborations" xml:space="preserve">
+    <value>你参与的代码库</value>
+  </data>
+  <data name="Repository_CollaborationTitle" xml:space="preserve">
+    <value>参与 · {0}</value>
+  </data>
+  <data name="Repository_Collaborators" xml:space="preserve">
+    <value>参与者</value>
+  </data>
+  <data name="Repository_Commits" xml:space="preserve">
+    <value>提交</value>
+  </data>
+  <data name="Repository_CommitsTitle" xml:space="preserve">
+    <value>提交记录 {1} · {0}</value>
+  </data>
+  <data name="Repository_CommittedAt" xml:space="preserve">
+    <value>提交于</value>
+  </data>
+  <data name="Repository_CommitTitle" xml:space="preserve">
+    <value>{2} 在 {1} · {0}</value>
+  </data>
+  <data name="Repository_Compare" xml:space="preserve">
+    <value>比较</value>
+  </data>
+  <data name="Repository_CompareNothing" xml:space="preserve">
+    <value>没有什么可比较</value>
+  </data>
+  <data name="Repository_CompareTitle" xml:space="preserve">
+    <value>比较 · {0}</value>
+  </data>
+  <data name="Repository_Contributors" xml:space="preserve">
+    <value>参与</value>
+  </data>
+  <data name="Repository_ContributorsTitle" xml:space="preserve">
+    <value>参与者 · {0}</value>
+  </data>
+  <data name="Repository_Copied" xml:space="preserve">
+    <value>已复制</value>
+  </data>
+  <data name="Repository_CopyToClipboard" xml:space="preserve">
+    <value>复制到剪切板</value>
+  </data>
+  <data name="Repository_CreateTitle" xml:space="preserve">
+    <value>创建代码库</value>
+  </data>
+  <data name="Repository_CreationUnsuccessfull" xml:space="preserve">
+    <value>创建代码库失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Repository_CurrentBranch" xml:space="preserve">
+    <value>当前分支</value>
+  </data>
+  <data name="Repository_CurrentCommits" xml:space="preserve">
+    <value>当前分支的提交总数</value>
+  </data>
+  <data name="Repository_CurrentContributors" xml:space="preserve">
+    <value>当前分支的参与者</value>
+  </data>
+  <data name="Repository_CurrentFiles" xml:space="preserve">
+    <value>当前分支的文件数</value>
+  </data>
+  <data name="Repository_CurrentSourceSize" xml:space="preserve">
+    <value>当前分支的源代码大小</value>
+  </data>
+  <data name="Repository_DefaultBranch" xml:space="preserve">
+    <value>默认分支</value>
+  </data>
+  <data name="Repository_DefaultCommits" xml:space="preserve">
+    <value>默认分支的提交总数</value>
+  </data>
+  <data name="Repository_DefaultContributors" xml:space="preserve">
+    <value>默认分支的参与者</value>
+  </data>
+  <data name="Repository_DefaultFiles" xml:space="preserve">
+    <value>默认分支的文件总数</value>
+  </data>
+  <data name="Repository_DefaultSourceSize" xml:space="preserve">
+    <value>默认分支的源代码大小</value>
+  </data>
+  <data name="Repository_DeleteTitle" xml:space="preserve">
+    <value>确认删除代码库 {0}</value>
+  </data>
+  <data name="Repository_DeletionWords" xml:space="preserve">
+    <value>你确认要删除代码库 "{0}" 吗？</value>
+  </data>
+  <data name="Repository_Description" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Repository_DetailTitle" xml:space="preserve">
+    <value>代码库 {0}</value>
+  </data>
+  <data name="Repository_EditTitle" xml:space="preserve">
+    <value>编辑代码库 {0}</value>
+  </data>
+  <data name="Repository_EmptyWords" xml:space="preserve">
+    <value>这是个空仓库或导入远程仓库尚未完成。推送一个代码库到 HEAD(master) 分支才能在此显示。</value>
+  </data>
+  <data name="Repository_FileAdded" xml:space="preserve">
+    <value>增加</value>
+  </data>
+  <data name="Repository_FileCopied" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="Repository_FileDeleted" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Repository_FileIgnored" xml:space="preserve">
+    <value>忽略</value>
+  </data>
+  <data name="Repository_FileModified" xml:space="preserve">
+    <value>修改</value>
+  </data>
+  <data name="Repository_FileRenamed" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="Repository_FileTypeChanged" xml:space="preserve">
+    <value>改变类型</value>
+  </data>
+  <data name="Repository_FileUnmodified" xml:space="preserve">
+    <value>未修改</value>
+  </data>
+  <data name="Repository_FileUntracked" xml:space="preserve">
+    <value>未跟踪</value>
+  </data>
+  <data name="Repository_GitUrl" xml:space="preserve">
+    <value>Git 地址</value>
+  </data>
+  <data name="Repository_HeadNotSet" xml:space="preserve">
+    <value>HEAD 还未设置</value>
+  </data>
+  <data name="Repository_History" xml:space="preserve">
+    <value>提交记录</value>
+  </data>
+  <data name="Repository_HistoryFor" xml:space="preserve">
+    <value>提交记录 ·</value>
+  </data>
+  <data name="Repository_HowInit" xml:space="preserve">
+    <value>如何初始化仓库</value>
+  </data>
+  <data name="Repository_IsPrivate" xml:space="preserve">
+    <value>私有代码库</value>
+  </data>
+  <data name="Repository_Import" xml:space="preserve">
+    <value>导入</value>
+  </data>
+  <data name="Repository_ImportTips" xml:space="preserve">
+    <value>仅支持http(s)协议</value>
+  </data>
+  <data name="Repository_ListTitle" xml:space="preserve">
+    <value>代码库列表</value>
+  </data>
+  <data name="Repository_Name" xml:space="preserve">
+    <value>代码库名</value>
+  </data>
+  <data name="Repository_NormalView" xml:space="preserve">
+    <value>标准视图</value>
+  </data>
+  <data name="Repository_NoTags" xml:space="preserve">
+    <value>没有找到标签</value>
+  </data>
+  <data name="Repository_Parents" xml:space="preserve">
+    <value>父辈</value>
+  </data>
+  <data name="Repository_PopularRepositories" xml:space="preserve">
+    <value>大家的代码库</value>
+  </data>
+  <data name="Repository_Raw" xml:space="preserve">
+    <value>原文件</value>
+  </data>
+  <data name="Repository_Relationship" xml:space="preserve">
+    <value>关联</value>
+  </data>
+  <data name="Repository_RemoteUrlTitle" xml:space="preserve">
+    <value>远程仓库地址</value>
+  </data>
+  <data name="Repository_RepositorySize" xml:space="preserve">
+    <value>代码库大小</value>
+  </data>
+  <data name="Repository_ShortAllowRead" xml:space="preserve">
+    <value>读</value>
+  </data>
+  <data name="Repository_ShortAllowWrite" xml:space="preserve">
+    <value>写</value>
+  </data>
+  <data name="Repository_ShortIsOwner" xml:space="preserve">
+    <value>我的</value>
+  </data>
+  <data name="Repository_ShortNonAllowRead" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="Repository_ShortNonAllowWrite" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="Repository_ShortNotOwner" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="Repository_Statistics" xml:space="preserve">
+    <value>统计</value>
+  </data>
+  <data name="Repository_Tags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Repository_TagDeletionWords" xml:space="preserve">
+    <value>你确认要删除标签 "{0}" 吗？</value>
+  </data>
+  <data name="Repository_TagsTitle" xml:space="preserve">
+    <value>标签 · {0}</value>
+  </data>
+  <data name="Repository_Teams" xml:space="preserve">
+    <value>团队</value>
+  </data>
+  <data name="Repository_Tree" xml:space="preserve">
+    <value>浏览</value>
+  </data>
+  <data name="Repository_TreeTitle" xml:space="preserve">
+    <value>{2} 在 {1} · {0}</value>
+  </data>
+  <data name="Repository_UpdateUnsuccessfull" xml:space="preserve">
+    <value>更新代码库失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Repository_Zip" xml:space="preserve">
+    <value>打包下载</value>
+  </data>
+  <data name="Repository_ZipCR" xml:space="preserve">
+    <value>以 CR (\r) 下载</value>
+  </data>
+  <data name="Repository_ZipCRLF" xml:space="preserve">
+    <value>以 CRLF (\r\n) 下载</value>
+  </data>
+  <data name="Repository_ZipLF" xml:space="preserve">
+    <value>以 LF (\n) 下载</value>
+  </data>
+  <data name="Setting_AllowRegisterUser" xml:space="preserve">
+    <value>允许用户注册</value>
+  </data>
+  <data name="Setting_AllowRepositoryCreation" xml:space="preserve">
+    <value>允许创建代码库</value>
+  </data>
+  <data name="Setting_CachePath" xml:space="preserve">
+    <value>缓存文件夹路径</value>
+  </data>
+  <data name="Setting_EditTitle" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Setting_EnableSsh" xml:space="preserve">
+    <value>开启SSH</value>
+  </data>
+  <data name="Setting_ForceSsl" xml:space="preserve">
+    <value>强制使用HTTPS链接</value>
+  </data>
+  <data name="Setting_GitCorePath" xml:space="preserve">
+    <value>git-core文件夹路径</value>
+  </data>
+  <data name="Setting_IsPublicServer" xml:space="preserve">
+    <value>是否为开放服务</value>
+  </data>
+  <data name="Setting_LocalSkipCustomError" xml:space="preserve">
+    <value>跳过本地错误</value>
+  </data>
+  <data name="Setting_NumberOfCommitsPerPage" xml:space="preserve">
+    <value>每一页显示提交记录数</value>
+  </data>
+  <data name="Setting_NumberOfItemsPerList" xml:space="preserve">
+    <value>每一页显示条目数</value>
+  </data>
+  <data name="Setting_NumberOfRepositoryContributors" xml:space="preserve">
+    <value>显示参与者的条目数</value>
+  </data>
+  <data name="Setting_ReGenSsh" xml:space="preserve">
+    <value>重新生成SSH密钥</value>
+  </data>
+  <data name="Setting_ReGenSshTitle" xml:space="preserve">
+    <value>确认重新生成SSH密钥</value>
+  </data>
+  <data name="Setting_ReGenSshWords" xml:space="preserve">
+    <value>你确定要重新生成SSH密钥吗？</value>
+  </data>
+  <data name="Setting_RepositoryPath" xml:space="preserve">
+    <value>代码库存储路径</value>
+  </data>
+  <data name="Setting_RestartTitle" xml:space="preserve">
+    <value>确认重启</value>
+  </data>
+  <data name="Setting_RestartWords" xml:space="preserve">
+    <value>你确认要重新本程序吗？</value>
+  </data>
+  <data name="Setting_SshPort" xml:space="preserve">
+    <value>SSH端口</value>
+  </data>
+  <data name="Setting_SslPort" xml:space="preserve">
+    <value>HTTPS 链接端口号</value>
+  </data>
+  <data name="Setting_UpdateSettingsUnsuccessfull" xml:space="preserve">
+    <value>更新设置失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Shared_About" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="Shared_Add" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Shared_AppTitle" xml:space="preserve">
+    <value>GitCandy</value>
+  </data>
+  <data name="Shared_Back" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="Shared_Conform" xml:space="preserve">
+    <value>确认</value>
+  </data>
+  <data name="Shared_Create" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="Shared_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Shared_Detail" xml:space="preserve">
+    <value>详情</value>
+  </data>
+  <data name="Shared_Edit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Shared_Generate" xml:space="preserve">
+    <value>生成</value>
+  </data>
+  <data name="Shared_Lanuages" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Shared_Login" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="Shared_Logout" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="Shared_No" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="Shared_None" xml:space="preserve">
+    <value>无</value>
+  </data>
+  <data name="Shared_Register" xml:space="preserve">
+    <value>注册</value>
+  </data>
+  <data name="Shared_Remove" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Shared_Repositories" xml:space="preserve">
+    <value>代码库</value>
+  </data>
+  <data name="Shared_Reset" xml:space="preserve">
+    <value>重置</value>
+  </data>
+  <data name="Shared_Restart" xml:space="preserve">
+    <value>重启</value>
+  </data>
+  <data name="Shared_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Shared_Search" xml:space="preserve">
+    <value>搜索</value>
+  </data>
+  <data name="Shared_Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Shared_SomethingWrong" xml:space="preserve">
+    <value>哪儿错了呀</value>
+  </data>
+  <data name="Shared_Teams" xml:space="preserve">
+    <value>团队</value>
+  </data>
+  <data name="Shared_TitleFormat" xml:space="preserve">
+    <value>{0} - GitCandy</value>
+  </data>
+  <data name="Shared_Users" xml:space="preserve">
+    <value>用户</value>
+  </data>
+  <data name="Shared_Yes" xml:space="preserve">
+    <value>是</value>
+  </data>
+  <data name="Team_AlreadyExists" xml:space="preserve">
+    <value>这个团队名字已经存在</value>
+  </data>
+  <data name="Team_ChooseUserTitle" xml:space="preserve">
+    <value>选择团队 {0} 的成员</value>
+  </data>
+  <data name="Team_CreationTitle" xml:space="preserve">
+    <value>创建团队</value>
+  </data>
+  <data name="Team_CreationUnsuccessfull" xml:space="preserve">
+    <value>创建团队失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Team_DeleteTitle" xml:space="preserve">
+    <value>确认删除团队 {0}</value>
+  </data>
+  <data name="Team_DeletionWords" xml:space="preserve">
+    <value>你确认要删除团队 "{0}" 吗？</value>
+  </data>
+  <data name="Team_Description" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Team_DetailTitle" xml:space="preserve">
+    <value>团队 {0}</value>
+  </data>
+  <data name="Team_EditTitle" xml:space="preserve">
+    <value>编辑团队 {0}</value>
+  </data>
+  <data name="Team_ListTitle" xml:space="preserve">
+    <value>团队列表</value>
+  </data>
+  <data name="Team_Members" xml:space="preserve">
+    <value>成员</value>
+  </data>
+  <data name="Team_Name" xml:space="preserve">
+    <value>团队名</value>
+  </data>
+  <data name="Team_Repositories" xml:space="preserve">
+    <value>代码库</value>
+  </data>
+  <data name="Team_ShortAdministrator" xml:space="preserve">
+    <value>管理员</value>
+  </data>
+  <data name="Team_ShortNonAdministrator" xml:space="preserve">
+    <value>否</value>
+  </data>
+  <data name="Team_TeamsFound" xml:space="preserve">
+    <value>发现 {0} 个团队</value>
+  </data>
+  <data name="Team_UpdateUnsuccessfull" xml:space="preserve">
+    <value>更新团队失败，请纠正后再次尝试。</value>
+  </data>
+  <data name="Validation_Compare" xml:space="preserve">
+    <value>"{0}" 和 "{1}" 必须一致</value>
+  </data>
+  <data name="Validation_Email" xml:space="preserve">
+    <value>"{0}" 不是有效的电子邮件地址</value>
+  </data>
+  <data name="Validation_Filepath" xml:space="preserve">
+    <value>"{0}" 不是有效的 "{1}" 文件路径</value>
+  </data>
+  <data name="Validation_Name" xml:space="preserve">
+    <value>"{0}" 不规范</value>
+  </data>
+  <data name="Validation_NumberRange" xml:space="preserve">
+    <value>{0} 必须介于 {1} 和 {2} 之间</value>
+  </data>
+  <data name="Validation_Required" xml:space="preserve">
+    <value>"{0}" 必须填写</value>
+  </data>
+  <data name="Validation_StringLength" xml:space="preserve">
+    <value>"{0}" 不能超过 {1} 个字符</value>
+  </data>
+  <data name="Validation_StringLengthRange" xml:space="preserve">
+    <value>"{0}" 必须介于 {1} 和 {2} 个字符之间</value>
+  </data>
+</root>

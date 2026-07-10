@@ -1,0 +1,20 @@
+@model SshKeysViewModel
+@{
+    ViewData["Title"] = $"SSH keys - {Model.UserName}";
+}
+<h3>SSH keys for @Model.UserName</h3>
+<table class="table table-striped">
+    <thead><tr><th>Type</th><th>Fingerprint</th><th>Imported</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var key in Model.Keys)
+    {
+        <tr><td>@key.KeyType</td><td><code>@key.Fingerprint</code></td><td>@key.ImportedAtUtc.ToString("u")</td><td><form asp-action="ChooseSsh" asp-route-act="del" asp-route-fingerprint="@key.Fingerprint" method="post"><input type="hidden" name="User" value="@Model.UserName" /><input type="hidden" name="PublicKey" value="delete" /><button type="submit" class="btn btn-danger btn-xs">@Text["Shared_Delete"]</button></form></td></tr>
+    }
+    </tbody>
+</table>
+<form asp-action="ChooseSsh" method="post">
+    <input type="hidden" name="User" value="@Model.UserName" />
+    <div class="form-group"><label for="PublicKey">OpenSSH public key</label><textarea id="PublicKey" name="PublicKey" rows="4" class="form-control"></textarea></div>
+    <button type="submit" class="btn btn-primary">Add key</button>
+    <a asp-action="Detail" asp-route-name="@Model.UserName" class="btn btn-default">@Text["Shared_Back"]</a>
+</form>

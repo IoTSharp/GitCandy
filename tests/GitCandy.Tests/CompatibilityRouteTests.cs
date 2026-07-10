@@ -14,29 +14,24 @@ namespace GitCandy.Tests;
 public sealed class CompatibilityRouteTests
 {
     [TestMethod]
-    public async Task MapGitCandyCompatibilityRoutes_WithPlaceholderPaths_ReturnsExpectedResponses()
+    public async Task MapGitCandyCompatibilityRoutes_WithRootPath_RedirectsToRepositoryIndex()
     {
         await using var app = await StartRouteTestAppAsync();
-        using var httpClient = new HttpClient
+        using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
         {
             BaseAddress = new Uri(GetServerAddress(app)),
         };
 
         using var homeResponse = await httpClient.GetAsync("/");
-        Assert.AreEqual(HttpStatusCode.OK, homeResponse.StatusCode);
-
-        using var repositoryResponse = await httpClient.GetAsync("/Repository");
-        Assert.AreEqual(HttpStatusCode.OK, repositoryResponse.StatusCode);
-        var repositoryContent = await repositoryResponse.Content.ReadAsStringAsync();
-        StringAssert.Contains(repositoryContent, "Repository/Index");
-
+        Assert.AreEqual(HttpStatusCode.Redirect, homeResponse.StatusCode);
+        Assert.AreEqual("/Repository", homeResponse.Headers.Location?.OriginalString);
     }
 
     [TestMethod]
     public async Task MapGitCandyCompatibilityRoutes_WithGitSmartHttpPaths_ReturnsNotImplementedPlaceholder()
     {
         await using var app = await StartRouteTestAppAsync();
-        using var httpClient = new HttpClient
+        using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
         {
             BaseAddress = new Uri(GetServerAddress(app)),
         };
