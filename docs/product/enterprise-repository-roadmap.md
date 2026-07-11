@@ -1,8 +1,8 @@
 # 企业仓库命名空间、身份与镜像能力规划
 
-评估日期：2026-07-10
+评估日期：2026-07-11
 
-本文补充 `ROADMAP.md` 中的 M10-M12，明确 GitCandy 面向企业内部 Git 管理时的仓库 URL、名称变更、团队角色、企业身份和远程仓库同步边界。本文是产品与架构规划，不表示对应能力已经实现。
+本文补充 `ROADMAP.md` 中的 M10、M14 和 M15，明确 GitCandy 面向企业内部 Git 管理时的仓库 URL、名称变更、团队角色、企业身份和远程仓库同步边界。本文是产品与架构规划，不表示对应能力已经实现。
 
 ## 1. 产品决策摘要
 
@@ -178,7 +178,7 @@
 | 用户改名占用 | 旧 username 可被其他人立即认领，个人 profile 不保证跳转 | namespace redirect 依赖旧路径未被占用 | 实例管理员可控 | 企业实例强调组织管理 | 企业内网不能接受立即抢注；统一 namespace claim + 限频 + 保留期 |
 | 团队/组织角色 | Owner/member、team maintainer、repository roles，企业版有自定义组织角色 | Guest/Reporter/Developer/Maintainer/Owner 等分级和继承 | Owner team、admin/general team、按 unit 权限 | 国内企业组织和项目协作 | 先落地 Owner/Leader/Deputy/Member 四级管理角色，仓库权限独立，不一开始复制复杂自定义角色系统 |
 | 企业身份 | SAML/SCIM、Enterprise Managed Users；SCIM 负责自动增删成员 | SAML/SCIM，可同步 group membership | LDAP/OAuth 等自托管集成取向 | 国内企业身份生态 | 标准 OIDC/SAML + SCIM 为核心，企业微信/飞书/钉钉使用 provider adapter；停用和 break-glass 是必测项 |
-| Pull mirror | 没有与 GitLab 相同的通用计划 pull mirror 管理面，通常使用 import/API/automation | 原生 pull mirror、分支过滤、手动触发和状态 | 创建 mirror 后周期 pull，可手动同步 | 重点对照 GitHub 导入/同步工作流，API 细节在 connector spike 核实 | M12 首批能力，remote 权威、GitCandy 只读、周期对账和可诊断状态 |
+| Pull mirror | 没有与 GitLab 相同的通用计划 pull mirror 管理面，通常使用 import/API/automation | 原生 pull mirror、分支过滤、手动触发和状态 | 创建 mirror 后周期 pull，可手动同步 | 重点对照 GitHub 导入/同步工作流，API 细节在 connector spike 核实 | M15 首批能力，remote 权威、GitCandy 只读、周期对账和可诊断状态 |
 | Push mirror | 通常由外部自动化推送到 GitHub | 原生 push mirror、保护分支过滤、divergent ref 策略 | 周期/推送触发的 push mirror；文档明确可能 force overwrite | 重点对照国内网络和企业账号授权体验 | post-receive 异步入队，默认 non-destructive，强制覆盖需显式审计确认 |
 | 双向 mirror | 依赖外部自动化 | 支持但官方明确警告竞态和冲突 | 通常通过组合 pull/push，风险由管理员承担 | 实施前验证产品/API 行为 | 不进入第一阶段；只在单向镜像稳定后做实验性切片 |
 | 自动化凭据 | GitHub App 优先，细粒度权限和短期 token | OAuth/PAT/deploy key 等 | PAT/账号或 SSH，能力因方向而异 | OAuth v5/企业授权 | provider-neutral connection + secret reference；GitHub 优先 App，避免长期个人 token |
@@ -188,9 +188,10 @@
 ## 8. 实施顺序与验收重点
 
 1. M10 先建立稳定 namespace ID、统一 resolver、alias 和真实 Git 客户端兼容测试。没有这层，企业目录改名和远程 repository rename 都会继续扩散字符串外键。
-2. M11 在 namespace 基础上建立团队四级角色、connection abstraction，再先交付 Microsoft Entra OIDC + SCIM 垂直切片，随后接企业微信、飞书、钉钉 adapter。
-3. M12 先做通用 remote/account/secret/job 模型和 GitHub 连接，再扩 GitLab、Gitee；Pull 与 Push 分两个垂直切片，双向最后单独评估。
-4. M13 Code Intelligence 继续使用稳定 repository ID 和新权限模型，不自己保存 namespace slug 或外部账号 token。
+2. M11-M13 先建立 Issue、PR/Review、PAT、通知、审计、webhook 和 branch protection，使企业身份接入后能直接复用完整协作权限与审计边界。
+3. M14 在 namespace 基础上建立团队四级角色、connection abstraction，再先交付 Microsoft Entra OIDC + SCIM 垂直切片，随后接企业微信、飞书、钉钉 adapter。
+4. M15 先做通用 remote/account/secret/job 模型和 GitHub 连接，再扩 GitLab、Gitee；Pull 与 Push 分两个垂直切片，双向最后单独评估。
+5. M16 Code Intelligence 继续使用稳定 repository ID 和新权限模型，不自己保存 namespace slug 或外部账号 token。
 
 跨里程碑必测：
 
