@@ -50,6 +50,14 @@ Name history defaults are configured under `GitCandy:Namespaces`:
 
 The rename limit applies to successful user/team namespace slug changes in a rolling window. Display-name changes do not create aliases or consume the limit. See [the M10 migration record](docs/migration/m10-stable-namespaces.md) before upgrading an existing database.
 
+## Repository Issues
+
+Each readable repository exposes an Issue workspace at `/{namespace}/{repository}/issues`. Authenticated readers can create and discuss Issues; authors, assignees, repository owners, and administrators receive the corresponding edit and state-management permissions. Private repository Issue routes, references, and inbox notifications always recheck repository read access.
+
+Issue descriptions and comments use restricted CommonMark with fenced code blocks and task lists. Raw HTML is disabled and rendered HTML is sanitized before storage. Repository owners can manage labels, milestones, assignees, relations, subscriptions, and discussion locks. Templates live at `.gitcandy/ISSUE_TEMPLATE/{name}.md`; `default.md` is used when no name is supplied. Successful Smart HTTP or built-in SSH pushes apply `fixes #N`, `closes #N`, and `resolves #N` from the default branch HEAD idempotently.
+
+See [the M11 migration record](docs/migration/m11-issues.md) for schema, dependency, backup, and rollback details.
+
 ## Operations
 
 - Liveness: `/health/live`

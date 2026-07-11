@@ -6,6 +6,7 @@ using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Git;
+using GitCandy.Issues;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
@@ -23,7 +24,9 @@ public sealed class GitController(
     IRepositoryService repositoryService,
     IRepositoryAddressResolver addressResolver,
     IGitServiceFactory gitServiceFactory,
+    IRepositoryBrowserService repositoryBrowserService,
     IGitTransportBackend transportBackend,
+    IIssueService issueService,
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService,
     IOptions<GitSmartHttpOptions> options,
@@ -35,7 +38,9 @@ public sealed class GitController(
     private readonly IRepositoryService _repositoryService = repositoryService;
     private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
     private readonly IGitServiceFactory _gitServiceFactory = gitServiceFactory;
+    private readonly IRepositoryBrowserService _repositoryBrowserService = repositoryBrowserService;
     private readonly IGitTransportBackend _transportBackend = transportBackend;
+    private readonly IIssueService _issueService = issueService;
     private readonly IAuthenticationService _authenticationService = authenticationService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly GitSmartHttpOptions _options = options.Value;
@@ -210,6 +215,12 @@ public sealed class GitController(
                 Response.Body,
                 timeoutSource.Token);
             await Response.Body.FlushAsync(timeoutSource.Token);
+            if (operation.Service == GitTransportService.ReceivePack
+                && !operation.AdvertiseRefs
+                && principal.FindFirstValue(ClaimTypes.NameIdentifier) is string actorUserId)
+            {
+                await ApplyClosingReferencesAsync(address.RepositoryId, actorUserId, repositoryContext);
+            }
             return new EmptyResult();
         }
         catch (InvalidDataException)
@@ -249,6 +260,27 @@ public sealed class GitController(
             {
                 await gzipStream.DisposeAsync();
             }
+        }
+    }
+
+    private async Task ApplyClosingReferencesAsync(long repositoryId, string actorUserId, GitRepositoryContext repository)
+    {
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var commit = _repositoryBrowserService.ReadCommits(
+                repository, revision: null, page: 1, pageSize: 1, timeout.Token)?.Commits.FirstOrDefault();
+            if (commit is not null)
+            {
+                await _issueService.ApplyClosingReferencesAsync(
+                    repositoryId, actorUserId, commit.Message, commit.Id, timeout.Token);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Issue closing references could not be processed after a successful push.");
         }
     }
 

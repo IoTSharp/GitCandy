@@ -73,6 +73,19 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     /// <summary>旧 Git 项目地址映射。</summary>
     public DbSet<GitCandyLegacyRepositoryRoute> LegacyRepositoryRoutes => Set<GitCandyLegacyRepositoryRoute>();
 
+    public DbSet<GitCandyWorkItemSequence> WorkItemSequences => Set<GitCandyWorkItemSequence>();
+    public DbSet<GitCandyIssue> Issues => Set<GitCandyIssue>();
+    public DbSet<GitCandyIssueComment> IssueComments => Set<GitCandyIssueComment>();
+    public DbSet<GitCandyIssueEdit> IssueEdits => Set<GitCandyIssueEdit>();
+    public DbSet<GitCandyIssueTimelineEvent> IssueTimelineEvents => Set<GitCandyIssueTimelineEvent>();
+    public DbSet<GitCandyIssueLabel> IssueLabels => Set<GitCandyIssueLabel>();
+    public DbSet<GitCandyIssueLabelLink> IssueLabelLinks => Set<GitCandyIssueLabelLink>();
+    public DbSet<GitCandyIssueMilestone> IssueMilestones => Set<GitCandyIssueMilestone>();
+    public DbSet<GitCandyIssueSubscription> IssueSubscriptions => Set<GitCandyIssueSubscription>();
+    public DbSet<GitCandyIssueNotification> IssueNotifications => Set<GitCandyIssueNotification>();
+    public DbSet<GitCandyIssueRelation> IssueRelations => Set<GitCandyIssueRelation>();
+    public DbSet<GitCandyIssueReference> IssueReferences => Set<GitCandyIssueReference>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -99,6 +112,7 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         base.OnModelCreating(builder);
 
         builder.ConfigureNamespaceModel();
+        builder.ConfigureIssueModel();
 
         builder.Entity<GitCandyUser>(entity =>
         {

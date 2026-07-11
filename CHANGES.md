@@ -3,6 +3,12 @@
 ---
 ### Unreleased
 #### Added
+ - Added the M11 repository Issue workflow at `/{namespace}/{repository}/issues`, including create/edit/open/close/reopen, comments, timeline, labels, milestones, assignees, subscriptions, relations, discussion locking, and a persistent notification inbox.
+ - Added repository-scoped shared work-item numbering, optimistic concurrency, edit history, references, notification, and metadata tables with SQLite and SQL Server migrations.
+ - Added restricted CommonMark rendering with fenced code, task lists, mentions, work-item/commit links, disabled raw HTML, and final HTML allow-list sanitization through Markdig and HtmlSanitizer.
+ - Added repository Issue templates from `.gitcandy/ISSUE_TEMPLATE/{name}.md`, with `default.md` fallback, bounded content, validated names, and query-string prefill support.
+ - Added idempotent `fixes`, `closes`, and `resolves #N` processing after successful Smart HTTP and built-in SSH pushes to the default branch HEAD.
+ - Added SQLite concurrency/XSS/notification tests, SQL Server migration SQL checks, and a Kestrel Issue create/list/detail/private-denial smoke test.
  - Added M10 stable user/team namespaces, namespace and repository aliases, global name claims, rename audit events, explicit legacy repository mappings, and immutable physical repository storage names.
  - Added canonical `/{namespace}/{repository}[.git]` Web and Git Smart HTTP routes plus matching SSH paths, all resolved to stable repository IDs before authorization and transport execution.
  - Added configurable 365-day alias retention, rolling three-per-seven-day namespace rename limits, idempotent background expiry cleanup, administrator extension/override controls, and rename/alias management pages.
@@ -84,6 +90,7 @@
  - Added real `git lfs` push/fetch/clone integration coverage and repository browser/lifecycle boundary tests.
 
 #### Changed
+ - Private repository Issue routes and notification reads now recheck repository read permission and suppress inaccessible work-item existence with a not-found result.
  - User and team display names are now independent from URL slugs; changing display text does not change repository URLs.
  - Repository deletion retains current and historical names as reserved tombstone claims while removing the physical Git/LFS data and legacy route target.
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
@@ -118,6 +125,7 @@
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
+ - The M11 SQLite and SQL Server migrations add Issue collaboration tables and backfill one `WorkItemSequences` row per existing repository without changing Identity, repository storage, Git URLs, or Git wire behavior. Back up the database before upgrade; rollback requires restoring that backup with the previous application version. See [the M11 migration record](docs/migration/m11-issues.md).
  - The M10 SQLite and SQL Server migrations create stable namespaces for existing users/teams, assign each existing repository to its first owner namespace (or the reserved `legacy` namespace when no owner exists), preserve the existing physical directory as `StorageName`, and create explicit `/git/{project}` mappings.
  - Upgrades now fail on user/team/reserved-slug collisions instead of silently rewriting public URLs. Resolve those conflicts before applying the migration. Rollback requires restoring the pre-M10 database backup together with the previous application version; repository directories are not renamed by this migration.
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.

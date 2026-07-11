@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using GitCandy.Issues;
 
 namespace GitCandy.Git;
 
@@ -21,6 +22,7 @@ public static class GitCandyGitServiceCollectionExtensions
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
         services.TryAddSingleton<IManagedGitRepositoryService, LibGit2RepositoryService>();
         services.TryAddSingleton<IRepositoryBrowserService, RepositoryBrowserService>();
+        services.TryAddScoped<IIssueTemplateService, IssueTemplateService>();
         services.TryAddSingleton<IGitLfsObjectStore, GitLfsObjectStore>();
         services.TryAddScoped<GitCandy.Application.IRepositoryLifecycleService, RepositoryLifecycleService>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();

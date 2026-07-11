@@ -17,6 +17,8 @@ public static class GitCandyEndpointRouteBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(endpoints);
 
+        endpoints.MapControllers();
+
         endpoints.MapControllerRoute(
             name: "account",
             pattern: "Account/{action}/{name?}",

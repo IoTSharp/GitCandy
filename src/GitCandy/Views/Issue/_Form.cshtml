@@ -1,0 +1,17 @@
+@model IssueFormViewModel
+@{ var isEdit = ViewContext.RouteData.Values["action"]?.ToString() == "Edit"; }
+<form method="post" class="account-form issue-form">
+    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+    <input asp-for="Version" type="hidden" />
+    <div class="form-field"><label asp-for="Title"></label><input asp-for="Title" autocomplete="off" autofocus /><span asp-validation-for="Title"></span></div>
+    <div class="form-field"><label asp-for="Body">Description</label><textarea asp-for="Body" rows="16" placeholder="Use Markdown to describe the issue"></textarea><span asp-validation-for="Body"></span></div>
+    @if (!isEdit && Model.Metadata is not null)
+    {
+        <div class="issue-metadata-grid">
+            <div class="form-field"><label asp-for="AssigneeUserId">Assignee</label><select asp-for="AssigneeUserId"><option value="">Unassigned</option>@foreach (var item in Model.Metadata.Assignees) { <option value="@item.UserId">@item.UserName</option> }</select></div>
+            <div class="form-field"><label asp-for="MilestoneId">Milestone</label><select asp-for="MilestoneId"><option value="">No milestone</option>@foreach (var item in Model.Metadata.Milestones.Where(item => !item.IsArchived && !item.IsClosed)) { <option value="@item.Id">@item.Title</option> }</select></div>
+        </div>
+        <fieldset class="form-field"><legend>Labels</legend><div class="issue-label-picker">@foreach (var label in Model.Metadata.Labels.Where(item => !item.IsArchived)) { <label><input type="checkbox" name="LabelIds" value="@label.Id" checked="@Model.LabelIds.Contains(label.Id)" /><span class="issue-label" style="--label-color:#@label.Color">@label.Name</span></label> }</div></fieldset>
+    }
+    <div class="form-actions"><button class="btn btn-primary" type="submit"><i data-lucide="check"></i> @(isEdit ? "Save changes" : "Create issue")</button><a class="btn" href="../"><i data-lucide="arrow-left"></i> Cancel</a></div>
+</form>

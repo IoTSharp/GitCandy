@@ -658,7 +658,7 @@ ASP.NET Core 中间件和后台能力：
 
 详细设计和竞品依据见 `docs/product/enterprise-repository-roadmap.md`。
 
-### ⬜ Milestone 11：Issues 与仓库讨论闭环
+### ✅ Milestone 11：Issues 与仓库讨论闭环
 
 目标：为每个仓库提供轻量但完整的问题跟踪能力，让缺陷、需求、任务、技术讨论和代码片段可以被创建、分类、指派、引用、订阅和关闭，并为 M12 PR 复用 timeline、Markdown、mention 和通知基础。
 
@@ -670,20 +670,20 @@ ASP.NET Core 中间件和后台能力：
 - 私有仓库 Issue、标题、评论、引用和通知必须复用仓库读取权限，不能通过全局列表、mention、搜索或错误消息泄漏存在性。
 - 第一版通知以持久化站内 inbox 为准，邮件只是可选投递器；通知发送前和读取时都要复核权限。
 
-#### ⬜ M11 拆分
+#### ✅ M11 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #120 | Work item 编号与 Issue schema | 建立 repository-scoped sequence、Issue、timeline event、subscription 和乐观并发字段；SQLite migration 可运行，SQL Server migration SQL 可审阅，并发创建不重号 |
-| ⬜ #121 | Issue CRUD、状态与列表 | 实现 create/read/edit/open/close/reopen、author/assignee 权限、分页、open/closed、author/assignee/label/milestone 过滤和稳定排序 |
-| ⬜ #122 | 安全 Markdown 与评论 | 实现 body/comment、fenced code block、inline code、task list 和编辑历史；HTML sanitization、危险 URL、超长内容和 XSS 测试闭环 |
-| ⬜ #123 | Labels、Milestones 与 Assignees | 仓库级 label 颜色/描述、milestone 截止时间/进度、负责人和协作者管理；删除/归档元数据不破坏历史 Issue |
-| ⬜ #124 | Mention、引用、订阅与通知 | 支持 `@user`、`#123`、`owner/repo#123`、commit SHA、assignment/reply/status 通知和订阅/退订；目标不可读时不建可见反向引用 |
-| ⬜ #125 | Issue templates | 从受控仓库路径读取 Markdown template，支持默认模板、query 预填和缺失/无效模板降级；template 不能读取仓库根之外文件 |
-| ⬜ #126 | 关系与自动关闭语义 | 支持 related、duplicate、blocks/blocked-by；PR merge 或默认分支 commit 中的 `fixes/closes/resolves #123` 幂等关闭并记录 timeline |
-| ⬜ #127 | 讨论治理与速率限制 | repository owner 可锁定/解锁讨论；编辑、隐藏和删除保留审计语义，对匿名/低权限创建与 mention fan-out 设置独立限流 |
-| ⬜ #128 | Issue MVC 垂直切片 | 完成仓库 Issue 导航、列表、详情、创建/编辑、timeline、metadata 和通知 inbox 的 Razor UI，覆盖 empty/error/denied/mobile 状态 |
-| ⬜ #129 | Issue 权限与集成验证 | 覆盖 public/private、author、assignee、owner、team、administrator、并发编号、Markdown XSS、跨仓库引用、通知泄漏和 SQLite/Kestrel smoke tests |
+| ✅ #120 | Work item 编号与 Issue schema | 建立 repository-scoped sequence、Issue、timeline event、subscription 和乐观并发字段；SQLite migration 可运行，SQL Server migration SQL 可审阅，并发创建不重号 |
+| ✅ #121 | Issue CRUD、状态与列表 | 实现 create/read/edit/open/close/reopen、author/assignee 权限、分页、open/closed、author/assignee/label/milestone 过滤和稳定排序 |
+| ✅ #122 | 安全 Markdown 与评论 | 实现 body/comment、fenced code block、inline code、task list 和编辑历史；HTML sanitization、危险 URL、超长内容和 XSS 测试闭环 |
+| ✅ #123 | Labels、Milestones 与 Assignees | 仓库级 label 颜色/描述、milestone 截止时间/进度、负责人和协作者管理；删除/归档元数据不破坏历史 Issue |
+| ✅ #124 | Mention、引用、订阅与通知 | 支持 `@user`、`#123`、`owner/repo#123`、commit SHA、assignment/reply/status 通知和订阅/退订；目标不可读时不建可见反向引用 |
+| ✅ #125 | Issue templates | 从受控仓库路径读取 Markdown template，支持默认模板、query 预填和缺失/无效模板降级；template 不能读取仓库根之外文件 |
+| ✅ #126 | 关系与自动关闭语义 | 支持 related、duplicate、blocks/blocked-by；PR merge 或默认分支 commit 中的 `fixes/closes/resolves #123` 幂等关闭并记录 timeline |
+| ✅ #127 | 讨论治理与速率限制 | repository owner 可锁定/解锁讨论；编辑、隐藏和删除保留审计语义，对匿名/低权限创建与 mention fan-out 设置独立限流 |
+| ✅ #128 | Issue MVC 垂直切片 | 完成仓库 Issue 导航、列表、详情、创建/编辑、timeline、metadata 和通知 inbox 的 Razor UI，覆盖 empty/error/denied/mobile 状态 |
+| ✅ #129 | Issue 权限与集成验证 | 覆盖 public/private、author、assignee、owner、team、administrator、并发编号、Markdown XSS、跨仓库引用、通知泄漏和 SQLite/Kestrel smoke tests |
 
 验收：
 
@@ -906,7 +906,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ M8 | 发布闭环 | 部署文档、迁移脚本、回滚方案完成 |
 | ✅ M9 | 迁移后改进池 | 仓库工作区、生命周期、代码浏览与 Git LFS 均已完成可验证闭环 |
 | ✅ M10 | 稳定命名空间 | `/{namespace}/{repository}[.git]`、改名限频、历史 alias、Web/Git HTTP/SSH 兼容与提示闭环 |
-| ⬜ M11 | Issues | Issue、评论、代码块、labels、milestones、assignees、references、notifications 和权限闭环 |
+| ✅ M11 | Issues | Issue、评论、代码块、labels、milestones、assignees、references、notifications 和权限闭环 |
 | ⬜ M12 | Pull Request 与 Review | draft、commits、files changed、行内 review、approval、merge/squash 和并发/权限闭环 |
 | ⬜ M13 | 合并治理与集成 | PAT、webhook、status/check、branch protection、CODEOWNERS、审计、release 和外部 CI 闭环 |
 | ⬜ M14 | 企业组织与身份 | 四级团队角色、Microsoft Entra ID、企业微信、飞书、钉钉登录/目录同步和管理员连接界面闭环 |

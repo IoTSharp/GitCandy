@@ -35,4 +35,7 @@ public sealed class GitCandyUser : IdentityUser
     /// 用户导入的 SSH 公钥。
     /// </summary>
     public ICollection<GitCandySshKey> SshKeys { get; set; } = [];
+
+    /// <summary>用户创建的 Issues。</summary>
+    public ICollection<GitCandyIssue> AuthoredIssues { get; set; } = [];
 }

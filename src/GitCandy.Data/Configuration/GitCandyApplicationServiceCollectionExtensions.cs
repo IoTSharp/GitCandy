@@ -1,5 +1,6 @@
 using GitCandy.Application;
 using GitCandy.Ssh;
+using GitCandy.Issues;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -27,6 +28,8 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<IRepositoryAddressResolver, RepositoryAddressResolver>();
         services.TryAddScoped<INamespaceProvisioningService, NamespaceProvisioningService>();
         services.TryAddScoped<INameManagementService, NameManagementService>();
+        services.TryAddSingleton<IIssueMarkdownRenderer, IssueMarkdownRenderer>();
+        services.TryAddScoped<IIssueService, IssueService>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ISshAccessService, SshAccessService>();
 

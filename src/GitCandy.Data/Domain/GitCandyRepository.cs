@@ -76,4 +76,10 @@ public sealed class GitCandyRepository
     /// 团队仓库角色。
     /// </summary>
     public ICollection<GitCandyTeamRepositoryRole> TeamRoles { get; } = [];
+
+    /// <summary>仓库级共享 work item 编号序列。</summary>
+    public GitCandyWorkItemSequence? WorkItemSequence { get; set; }
+
+    /// <summary>仓库 Issues。</summary>
+    public ICollection<GitCandyIssue> Issues { get; } = [];
 }

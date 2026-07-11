@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text;
 using GitCandy.Git;
+using GitCandy.Issues;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
@@ -14,6 +15,8 @@ internal sealed class GitSshSession : IDisposable
     private readonly ISshAccessService _accessService;
     private readonly IGitRepositoryPathResolver _pathResolver;
     private readonly IGitTransportBackend _transportBackend;
+    private readonly IRepositoryBrowserService _repositoryBrowserService;
+    private readonly IIssueService _issueService;
     private readonly GitSshExtendedDataSender _extendedDataSender;
     private readonly ILogger<GitSshSession> _logger;
     private readonly CancellationTokenSource _sessionCancellation;
@@ -31,12 +34,16 @@ internal sealed class GitSshSession : IDisposable
         ISshAccessService accessService,
         IGitRepositoryPathResolver pathResolver,
         IGitTransportBackend transportBackend,
+        IRepositoryBrowserService repositoryBrowserService,
+        IIssueService issueService,
         ILogger<GitSshSession> logger)
     {
         _session = session;
         _accessService = accessService;
         _pathResolver = pathResolver;
         _transportBackend = transportBackend;
+        _repositoryBrowserService = repositoryBrowserService;
+        _issueService = issueService;
         _extendedDataSender = new GitSshExtendedDataSender(session);
         _logger = logger;
         _sessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(serverStoppingToken);
@@ -283,7 +290,9 @@ internal sealed class GitSshSession : IDisposable
             _transportBackend.EnsureRepositoryExists(repository);
             return new AuthorizedGitCommand(
                 repository,
+                address.RepositoryId,
                 parsedCommand.Service,
+                principal.UserId,
                 principal.UserName,
                 _gitProtocolVersion,
                 address.UsedAlias ? address.CanonicalPath : null);
@@ -334,6 +343,10 @@ internal sealed class GitSshSession : IDisposable
                 input,
                 output,
                 _sessionCancellation.Token);
+            if (command.Service == GitTransportService.ReceivePack)
+            {
+                await ApplyClosingReferencesAsync(command);
+            }
             if (command.CanonicalPath is not null)
             {
                 await SendCanonicalAddressWarningAsync(channel, command.CanonicalPath);
@@ -397,9 +410,37 @@ internal sealed class GitSshSession : IDisposable
             canonicalPath);
     }
 
+    private async Task ApplyClosingReferencesAsync(AuthorizedGitCommand command)
+    {
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_sessionCancellation.Token);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            var commit = _repositoryBrowserService.ReadCommits(
+                command.Repository, revision: null, page: 1, pageSize: 1, timeout.Token)?.Commits.FirstOrDefault();
+            if (commit is not null)
+            {
+                await _issueService.ApplyClosingReferencesAsync(
+                    command.RepositoryId,
+                    command.ActorUserId,
+                    commit.Message,
+                    commit.Id,
+                    timeout.Token);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(
+                exception,
+                "Issue closing references could not be processed after a successful SSH push.");
+        }
+    }
+
     private sealed record AuthorizedGitCommand(
         GitRepositoryContext Repository,
+        long RepositoryId,
         GitTransportService Service,
+        string ActorUserId,
         string ActorName,
         string? ProtocolVersion,
         string? CanonicalPath);

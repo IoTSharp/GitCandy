@@ -1305,6 +1305,236 @@ code {
   display: none;
 }
 
+.issue-toolbar,
+.issue-state-tabs,
+.issue-list-item,
+.discussion-post > header,
+.timeline-event,
+.notification-item,
+.metadata-list li {
+  display: flex;
+  align-items: center;
+}
+
+.issue-toolbar {
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.issue-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.issue-state-tabs a {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 10px 14px;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+}
+
+.issue-state-tabs a.is-active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.issue-list {
+  border-top: 1px solid var(--border);
+}
+
+.issue-list-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.issue-list-item h2 {
+  margin: 0 0 5px;
+  font-size: 15px;
+}
+
+.issue-list-item p,
+.notification-item p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.issue-labels,
+.issue-label-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.issue-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 2px 8px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--label-color);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--label-color) 18%, transparent);
+}
+
+.issue-metadata-grid,
+.issue-detail-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.issue-detail-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  align-items: start;
+}
+
+.issue-number {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.discussion-post {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.discussion-post > header {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  background: var(--surface-subtle);
+}
+
+.markdown-body {
+  min-height: 54px;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body pre {
+  max-width: 100%;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 4px;
+  background: var(--code-background);
+}
+
+.markdown-body img {
+  max-width: 100%;
+}
+
+.issue-timeline {
+  padding: 0;
+  list-style: none;
+}
+
+.timeline-event {
+  gap: 9px;
+  min-height: 38px;
+  padding: 7px 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.timeline-event time {
+  margin-left: auto;
+}
+
+.issue-sidebar section,
+.issue-sidebar > form {
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.issue-sidebar h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.issue-sidebar form {
+  display: flex;
+  gap: 6px;
+}
+
+.issue-sidebar select {
+  min-width: 0;
+  width: 100%;
+}
+
+.discussion-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.discussion-actions textarea {
+  width: 100%;
+}
+
+.metadata-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 3px 0;
+  color: var(--text-muted);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.metadata-list {
+  padding: 0;
+  list-style: none;
+}
+
+.metadata-list li {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-list {
+  border-top: 1px solid var(--border);
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 14px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notification-item.is-unread {
+  box-shadow: inset 3px 0 var(--accent);
+  background: var(--surface-subtle);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1390,6 +1620,9 @@ code {
   }
 
   .split-layout,
+  .issue-detail-layout,
+  .issue-metadata-grid,
+  .issue-filters,
   .row,
   .form-horizontal .form-group {
     grid-template-columns: 1fr;

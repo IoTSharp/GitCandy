@@ -1,0 +1,5 @@
+@model IssueNotificationIndexViewModel
+@{ ViewData["Title"] = "Notifications"; }
+<header class="page-heading"><div><h1>Notifications</h1><p>Repository discussions you follow.</p></div></header>
+@if (Model.Notifications.Count == 0) { <section class="empty-state"><div><i data-lucide="inbox"></i><h2>Inbox is clear</h2></div></section> }
+else { <div class="notification-list">@foreach (var item in Model.Notifications) { <article class="notification-item @(item.ReadAtUtc is null ? "is-unread" : null)"><i data-lucide="bell"></i><div><a asp-controller="Issue" asp-action="Detail" asp-route-namespaceSlug="@item.NamespaceSlug" asp-route-project="@item.RepositorySlug" asp-route-number="@item.IssueNumber"><strong>@item.NamespaceSlug/@item.RepositorySlug#@item.IssueNumber</strong> @item.IssueTitle</a><p>@item.Type by @(item.Actor ?? "GitCandy") · @item.CreatedAtUtc.ToString("u")</p></div>@if (item.ReadAtUtc is null) { <form asp-action="Read" asp-route-id="@item.Id" method="post"><button class="icon-button" type="submit" aria-label="Mark as read" data-tooltip="Mark as read"><i data-lucide="check"></i></button></form> }</article> }</div> }

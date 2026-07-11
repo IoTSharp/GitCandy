@@ -1,0 +1,57 @@
+@model IssueIndexViewModel
+@{ ViewData["Title"] = $"{Model.Repository.RepositorySlug} issues"; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><span>Issues</span></nav>
+<nav class="repository-navigation" aria-label="Repository navigation">
+    <a href="@Model.Repository.CanonicalPath"><i data-lucide="folder-tree"></i> Code</a>
+    <a class="is-active" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug"><i data-lucide="circle-dot"></i> Issues</a>
+</nav>
+<header class="page-heading">
+    <div><h1>Issues</h1><p>Track work and repository discussions.</p></div>
+    <div class="page-actions">
+        @if (User.Identity?.IsAuthenticated == true) { <a asp-controller="Notification" asp-action="Index" class="btn"><i data-lucide="inbox"></i> Inbox</a> }
+        @if (Model.CanManage) { <a asp-action="Settings" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" class="btn"><i data-lucide="settings"></i> Settings</a> }
+        @if (Model.CanCreate) { <a asp-action="Create" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" class="btn btn-primary"><i data-lucide="plus"></i> New issue</a> }
+    </div>
+</header>
+<div class="issue-toolbar">
+    <div class="issue-state-tabs">
+        <a class="@(Model.Query.State == IssueState.Open ? "is-active" : null)" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="Open"><i data-lucide="circle-dot"></i> Open</a>
+        <a class="@(Model.Query.State == IssueState.Closed ? "is-active" : null)" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="Closed"><i data-lucide="circle-check"></i> Closed</a>
+    </div>
+</div>
+<form asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" method="get" class="issue-filters">
+    <input type="hidden" name="state" value="@Model.Query.State" />
+    <input name="author" value="@Model.Query.Author" placeholder="Author" aria-label="Author" />
+    <select name="assignee" aria-label="Assignee"><option value="">Any assignee</option>@foreach (var item in Model.Metadata.Assignees) { <option value="@item.UserName" selected="@(item.UserName == Model.Query.Assignee)">@item.UserName</option> }</select>
+    <select name="label" aria-label="Label"><option value="">Any label</option>@foreach (var item in Model.Metadata.Labels.Where(item => !item.IsArchived)) { <option value="@item.Name" selected="@(item.Name == Model.Query.Label)">@item.Name</option> }</select>
+    <select name="milestoneId" aria-label="Milestone"><option value="">Any milestone</option>@foreach (var item in Model.Metadata.Milestones.Where(item => !item.IsArchived)) { <option value="@item.Id" selected="@(item.Id == Model.Query.MilestoneId)">@item.Title</option> }</select>
+    <button class="btn" type="submit"><i data-lucide="search"></i> Filter</button>
+</form>
+@if (Model.Issues.Items.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="circle-dot"></i><h2>No @Model.Query.State.ToString().ToLowerInvariant() issues</h2><p>This repository has no matching issues.</p></div></section>
+}
+else
+{
+    <div class="issue-list">
+    @foreach (var issue in Model.Issues.Items)
+    {
+        <article class="issue-list-item">
+            <i data-lucide="@(issue.State == IssueState.Open ? "circle-dot" : "circle-check")"></i>
+            <div>
+                <h2><a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@issue.Number">@issue.Title</a></h2>
+                <div class="issue-labels">@foreach (var label in issue.Labels) { <span class="issue-label" style="--label-color:#@label.Color">@label.Name</span> }</div>
+                <p>#@issue.Number opened by @issue.Author · updated @issue.UpdatedAtUtc.ToString("u") @if (issue.Assignee is not null) { <span>· assigned to @issue.Assignee</span> }</p>
+            </div>
+            <span><i data-lucide="message-square"></i> @issue.CommentCount</span>
+        </article>
+    }
+    </div>
+    @if (Model.Issues.TotalCount > Model.Issues.PageSize)
+    {
+        <nav class="pagination" aria-label="Issue pages">
+            @if (Model.Issues.Page > 1) { <a class="btn" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="@Model.Query.State" asp-route-author="@Model.Query.Author" asp-route-assignee="@Model.Query.Assignee" asp-route-label="@Model.Query.Label" asp-route-milestoneId="@Model.Query.MilestoneId" asp-route-page="@(Model.Issues.Page - 1)"><i data-lucide="arrow-left"></i> Previous</a> }
+            @if (Model.Issues.Page * Model.Issues.PageSize < Model.Issues.TotalCount) { <a class="btn" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="@Model.Query.State" asp-route-author="@Model.Query.Author" asp-route-assignee="@Model.Query.Assignee" asp-route-label="@Model.Query.Label" asp-route-milestoneId="@Model.Query.MilestoneId" asp-route-page="@(Model.Issues.Page + 1)">Next <i data-lucide="arrow-right"></i></a> }
+        </nav>
+    }
+}

@@ -16,4 +16,13 @@ internal static class SchemaLimits
     public const int SshKeyType = 20;
     public const int SshFingerprint = 47;
     public const int SshPublicKey = 600;
+    public const int IssueTitle = 256;
+    public const int IssueBody = 65536;
+    public const int IssueDetail = 1000;
+    public const int IssueLabelName = 50;
+    public const int IssueLabelColor = 6;
+    public const int IssueLabelDescription = 200;
+    public const int IssueMilestoneTitle = 100;
+    public const int IssueMilestoneDescription = 2000;
+    public const int CommitSha = 64;
 }

@@ -115,6 +115,7 @@ internal sealed class RepositoryManagementService(
 
         var repository = CreateEntity(command);
         repository.NamespaceId = namespaceId.Value;
+        repository.WorkItemSequence = new GitCandyWorkItemSequence();
         repository.UserRoles.Add(new GitCandyUserRepositoryRole
         {
             UserId = creatorUserId,

@@ -1,0 +1,49 @@
+@model IssueDetailViewModel
+@{ ViewData["Title"] = $"#{Model.Issue.Number} {Model.Issue.Title}"; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><a asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug">Issues</a><span>/</span><span>#@Model.Issue.Number</span></nav>
+<header class="page-heading issue-heading">
+    <div><h1>@Model.Issue.Title <span class="issue-number">#@Model.Issue.Number</span></h1><p><span class="status-badge @(Model.Issue.State == IssueState.Open ? "status-public" : "status-private")">@Model.Issue.State</span> opened by @Model.Issue.Author on @Model.Issue.CreatedAtUtc.ToString("u")</p></div>
+    <div class="page-actions">@if (Model.CanManage) { <a class="btn" asp-action="Settings" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug"><i data-lucide="settings"></i> Settings</a> } @if (Model.CanEdit) { <a class="btn" asp-action="Edit" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number"><i data-lucide="pencil"></i> Edit</a> }</div>
+</header>
+@if (TempData["IssueError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
+<div class="issue-detail-layout">
+    <div class="issue-conversation">
+        <article class="discussion-post"><header><strong>@Model.Issue.Author</strong><span>@Model.Issue.CreatedAtUtc.ToString("u")</span></header><div class="markdown-body">@Html.Raw(Model.Issue.BodyHtml)</div></article>
+        <ol class="issue-timeline">
+        @foreach (var item in Model.Issue.Timeline.Where(item => item.Type != IssueEventType.Created))
+        {
+            <li class="@(item.BodyHtml is null ? "timeline-event" : "discussion-post")">
+                @if (item.BodyHtml is not null)
+                {
+                    <header><strong>@item.Actor</strong><span>@item.CreatedAtUtc.ToString("u") @if (item.EditedAtUtc is not null) { <span>· edited</span> }</span></header><div class="markdown-body">@Html.Raw(item.BodyHtml)</div>
+                    @if (item.CommentId is long commentId && (item.CanEdit || Model.CanManage))
+                    {
+                        <div class="discussion-actions">
+                            @if (item.CanEdit) { <details><summary>Edit</summary><form asp-action="EditComment" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" asp-route-commentId="@commentId" method="post"><textarea name="body" rows="6" maxlength="65536" required>@item.BodyMarkdown</textarea><button class="btn" type="submit">Save</button></form></details> }
+                            @if (Model.CanManage) { <form asp-action="HideComment" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" asp-route-commentId="@commentId" method="post"><button class="btn" type="submit"><i data-lucide="eye-off"></i> Hide</button></form> }
+                        </div>
+                    }
+                }
+                else { <i data-lucide="activity"></i><span><strong>@item.Actor</strong> @item.Type.ToString().ToLowerInvariant() @item.Detail</span><time>@item.CreatedAtUtc.ToString("u")</time> }
+            </li>
+        }
+        </ol>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            if (!Model.Issue.IsLocked || Model.CanManage)
+            {
+                <form asp-action="Comment" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post" class="account-form comment-form"><div class="form-field"><label for="body">Add a comment</label><textarea id="body" name="body" rows="8" required maxlength="65536"></textarea></div><div class="form-actions"><button class="btn btn-primary" type="submit"><i data-lucide="message-square"></i> Comment</button></div></form>
+            }
+            else { <div class="alert alert-info"><i data-lucide="lock"></i> This discussion is locked.</div> }
+        }
+    </div>
+    <aside class="issue-sidebar">
+        <section><h2>Assignee</h2><p>@(Model.Issue.Assignee ?? "Unassigned")</p>@if (Model.CanManage) { <form asp-action="Assignee" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><select name="assigneeUserId"><option value="">Unassigned</option>@foreach (var item in Model.Metadata.Assignees) { <option value="@item.UserId" selected="@(item.UserId == Model.Issue.AssigneeUserId)">@item.UserName</option> }</select><button class="icon-button" type="submit" aria-label="Save assignee" data-tooltip="Save assignee"><i data-lucide="check"></i></button></form> }</section>
+        <section><h2>Milestone</h2><p>@(Model.Issue.Milestone ?? "None")</p>@if (Model.CanManage) { <form asp-action="Milestone" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><select name="milestoneId"><option value="">None</option>@foreach (var milestone in Model.Metadata.Milestones.Where(item => !item.IsArchived)) { <option value="@milestone.Id" selected="@(milestone.Id == Model.Issue.MilestoneId)">@milestone.Title</option> }</select><button class="icon-button" type="submit" aria-label="Save milestone" data-tooltip="Save milestone"><i data-lucide="check"></i></button></form> }</section>
+        <section><h2>Labels</h2><div class="issue-labels">@foreach (var label in Model.Issue.Labels) { <span class="issue-label" style="--label-color:#@label.Color">@label.Name</span> }</div>@if (Model.CanManage) { @foreach (var label in Model.Metadata.Labels.Where(item => !item.IsArchived)) { var selected = Model.Issue.Labels.Any(item => item.Id == label.Id); <form asp-action="Label" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><input type="hidden" name="labelId" value="@label.Id" /><input type="hidden" name="selected" value="@(!selected ? "true" : "false")" /><button class="metadata-toggle" type="submit"><i data-lucide="@(selected ? "check-square" : "square")"></i> @label.Name</button></form> } }</section>
+        @if (User.Identity?.IsAuthenticated == true) { <form asp-action="Subscription" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><input type="hidden" name="subscribed" value="@(!Model.Issue.IsSubscribed ? "true" : "false")" /><button class="btn" type="submit"><i data-lucide="bell"></i> @(Model.Issue.IsSubscribed ? "Unsubscribe" : "Subscribe")</button></form> }
+        @if (Model.CanChangeState) { <form asp-action="State" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><input type="hidden" name="state" value="@(Model.Issue.State == IssueState.Open ? "Closed" : "Open")" /><button class="btn" type="submit"><i data-lucide="@(Model.Issue.State == IssueState.Open ? "circle-check" : "rotate-ccw")"></i> @(Model.Issue.State == IssueState.Open ? "Close issue" : "Reopen issue")</button></form> }
+        @if (Model.CanManage) { <form asp-action="Lock" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><input type="hidden" name="locked" value="@(!Model.Issue.IsLocked ? "true" : "false")" /><button class="btn" type="submit"><i data-lucide="lock"></i> @(Model.Issue.IsLocked ? "Unlock discussion" : "Lock discussion")</button></form> }
+        @if (Model.CanManage) { <section><h2>Relationship</h2><form asp-action="Relation" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.Issue.Number" method="post"><select name="relationType" asp-items="Html.GetEnumSelectList<IssueRelationType>()"></select><input name="targetNumber" type="number" min="1" placeholder="#" required /><button class="icon-button" type="submit" aria-label="Add relationship" data-tooltip="Add relationship"><i data-lucide="link"></i></button></form></section> }
+    </aside>
+</div>
