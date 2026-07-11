@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using GitCandy.Application;
 using GitCandy.Authentication;
 using GitCandy.Configuration;
 using GitCandy.Data.Identity;
@@ -17,10 +18,12 @@ namespace GitCandy.Controllers;
 public sealed class AccountSecurityController(
     UserManager<GitCandyUser> userManager,
     SignInManager<GitCandyUser> signInManager,
+    INamespaceProvisioningService namespaceProvisioningService,
     IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
 {
     private readonly UserManager<GitCandyUser> _userManager = userManager;
     private readonly SignInManager<GitCandyUser> _signInManager = signInManager;
+    private readonly INamespaceProvisioningService _namespaceProvisioningService = namespaceProvisioningService;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
 
     [HttpGet("Security")]
@@ -381,6 +384,13 @@ public sealed class AccountSecurityController(
         if (!createResult.Succeeded)
         {
             AddIdentityErrors(createResult);
+            return View(model);
+        }
+
+        if (await _namespaceProvisioningService.EnsureUserNamespaceAsync(user.Id) is null)
+        {
+            await _userManager.DeleteAsync(user);
+            ModelState.AddModelError(nameof(model.UserName), "The user name is reserved or already occupied by a user or team namespace.");
             return View(model);
         }
 

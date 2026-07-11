@@ -14,6 +14,8 @@ namespace GitCandy.Controllers;
 [AutoValidateAntiforgeryToken]
 public sealed class RepositoryController(
     IRepositoryService repositoryService,
+    IRepositoryAddressResolver addressResolver,
+    INameManagementService nameManagementService,
     IRepositoryManagementService repositoryManagementService,
     IRepositoryLifecycleService repositoryLifecycleService,
     IRepositoryBrowserService repositoryBrowserService,
@@ -23,7 +25,10 @@ public sealed class RepositoryController(
     ICurrentUser currentUser,
     IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
 {
+    private const string ResolvedRepositoryItemKey = "GitCandy.ResolvedRepository";
     private readonly IRepositoryService _repositoryService = repositoryService;
+    private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
+    private readonly INameManagementService _nameManagementService = nameManagementService;
     private readonly IRepositoryManagementService _repositoryManagementService = repositoryManagementService;
     private readonly IRepositoryLifecycleService _repositoryLifecycleService = repositoryLifecycleService;
     private readonly IRepositoryBrowserService _repositoryBrowserService = repositoryBrowserService;
@@ -54,7 +59,7 @@ public sealed class RepositoryController(
     public IActionResult Create()
     {
         return CanCreateRepository()
-            ? View(new RepositoryFormViewModel())
+            ? View(new RepositoryFormViewModel { NamespaceSlug = _currentUser.UserName })
             : Forbid();
     }
 
@@ -124,7 +129,9 @@ public sealed class RepositoryController(
             return denied;
         }
 
-        var repository = await _repositoryManagementService.GetRepositoryAsync(name, cancellationToken);
+        var repository = await _repositoryManagementService.GetRepositoryAsync(
+            GetResolvedRepository().RepositoryId,
+            cancellationToken);
         if (repository is null)
         {
             return NotFound();
@@ -147,7 +154,9 @@ public sealed class RepositoryController(
             return denied;
         }
 
-        var repository = await _repositoryManagementService.GetRepositoryAsync(name, cancellationToken);
+        var repository = await _repositoryManagementService.GetRepositoryAsync(
+            GetResolvedRepository().RepositoryId,
+            cancellationToken);
         return repository is null
             ? NotFound()
             : View(new RepositoryFormViewModel
@@ -157,7 +166,7 @@ public sealed class RepositoryController(
                 IsPrivate = repository.IsPrivate,
                 AllowAnonymousRead = repository.AllowAnonymousRead,
                 AllowAnonymousWrite = repository.AllowAnonymousWrite,
-                DefaultBranch = TryGetDefaultBranch(name)
+                DefaultBranch = TryGetDefaultBranch(GetResolvedRepository().StorageName)
             });
     }
 
@@ -209,10 +218,87 @@ public sealed class RepositoryController(
             return denied;
         }
 
-        var repository = await _repositoryManagementService.GetRepositoryAsync(name, cancellationToken);
+        var repository = await _repositoryManagementService.GetRepositoryAsync(
+            GetResolvedRepository().RepositoryId,
+            cancellationToken);
         return repository is null
             ? NotFound()
             : View(new RepositoryDetailsViewModel { Repository = repository, CanManage = true });
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Rename(string name, CancellationToken cancellationToken)
+    {
+        var address = await _addressResolver.ResolveLegacyAsync(name, cancellationToken);
+        if (address is null)
+        {
+            return NotFound();
+        }
+
+        var denied = await RequireRepositoryAsync(address.RepositoryId, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var snapshot = await _nameManagementService.GetRepositorySnapshotAsync(address.RepositoryId, cancellationToken);
+        return snapshot is null
+            ? NotFound()
+            : View("~/Views/Shared/Rename.cshtml", new NameChangeViewModel
+            {
+                CurrentSlug = snapshot.CurrentSlug,
+                NewSlug = snapshot.CurrentSlug,
+                SubjectType = NameSubjectType.Repository,
+                Snapshot = snapshot
+            });
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> Rename(NameChangeViewModel model, CancellationToken cancellationToken)
+    {
+        var address = await _addressResolver.ResolveLegacyAsync(model.CurrentSlug, cancellationToken);
+        if (address is null)
+        {
+            return NotFound();
+        }
+
+        var denied = await RequireRepositoryAsync(address.RepositoryId, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var snapshot = await _nameManagementService.GetRepositorySnapshotAsync(address.RepositoryId, cancellationToken);
+        model.Snapshot = snapshot;
+        model.SubjectType = NameSubjectType.Repository;
+        if (!ModelState.IsValid || snapshot is null || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return View("~/Views/Shared/Rename.cshtml", model);
+        }
+
+        var changeOverride = _currentUser.IsAdministrator && model.UseOverride
+            ? new NameChangeOverride(model.OverrideReason ?? string.Empty, model.ConfirmOverride)
+            : null;
+        var result = await _nameManagementService.RenameRepositoryAsync(
+            address.RepositoryId,
+            model.NewSlug,
+            _currentUser.UserId,
+            changeOverride,
+            cancellationToken);
+        if (result.Status != NameChangeStatus.Succeeded)
+        {
+            ModelState.AddModelError(nameof(model.NewSlug), result.Status switch
+            {
+                NameChangeStatus.Occupied => "This repository URL is occupied by a current name or retained alias.",
+                NameChangeStatus.ConfirmationRequired => "An override requires a reason and explicit confirmation.",
+                _ => "The repository URL could not be changed."
+            });
+            return View("~/Views/Shared/Rename.cshtml", model);
+        }
+
+        return Redirect($"/{Uri.EscapeDataString(address.NamespaceSlug)}/{Uri.EscapeDataString(result.CanonicalSlug!)}");
     }
 
     [HttpPost]
@@ -334,11 +420,11 @@ public sealed class RepositoryController(
         try
         {
             var tree = _repositoryBrowserService.ReadTree(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 revision,
                 path,
                 cancellationToken);
-            if (tree is null && !IsEmptyRepository(name))
+            if (tree is null && !IsEmptyRepository(GetResolvedRepository().StorageName))
             {
                 return NotFound();
             }
@@ -369,7 +455,7 @@ public sealed class RepositoryController(
         try
         {
             var blob = _repositoryBrowserService.ReadBlob(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 revision,
                 path,
                 cancellationToken);
@@ -400,7 +486,7 @@ public sealed class RepositoryController(
 
         try
         {
-            var context = _gitServiceFactory.Create(name);
+            var context = _gitServiceFactory.Create(GetResolvedRepository().StorageName);
             var blob = _repositoryBrowserService.ReadBlob(context, revision, path, cancellationToken);
             if (blob is null)
             {
@@ -449,7 +535,7 @@ public sealed class RepositoryController(
         try
         {
             var commits = _repositoryBrowserService.ReadCommits(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 revision,
                 page,
                 _applicationOptions.NumberOfCommitsPerPage,
@@ -481,7 +567,7 @@ public sealed class RepositoryController(
         try
         {
             var commit = _repositoryBrowserService.ReadCommit(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 path,
                 cancellationToken);
             return commit is null
@@ -512,7 +598,7 @@ public sealed class RepositoryController(
         try
         {
             var blame = _repositoryBrowserService.ReadBlame(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 revision,
                 path,
                 cancellationToken);
@@ -549,7 +635,7 @@ public sealed class RepositoryController(
         try
         {
             var compare = _repositoryBrowserService.Compare(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 baseRevision,
                 headRevision,
                 cancellationToken);
@@ -583,7 +669,7 @@ public sealed class RepositoryController(
         try
         {
             var result = await _repositoryBrowserService.WriteArchiveAsync(
-                _gitServiceFactory.Create(name),
+                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
                 revision,
                 Response.Body,
                 cancellationToken);
@@ -649,9 +735,38 @@ public sealed class RepositoryController(
             return NotFound();
         }
 
+        var address = await _addressResolver.ResolveLegacyAsync(name, _currentUser.RequestAborted);
+        if (address is null)
+        {
+            return NotFound();
+        }
+
         var result = await _authorizationService.AuthorizeAsync(
             User,
-            new RepositoryAuthorizationResource(name),
+            new RepositoryAuthorizationResource(address.RepositoryId),
+            policy);
+        if (result.Succeeded)
+        {
+            HttpContext.Items[ResolvedRepositoryItemKey] = address;
+            return null;
+        }
+
+        return _currentUser.IsAuthenticated ? Forbid() : Challenge();
+    }
+
+    private RepositoryAddressResolution GetResolvedRepository()
+    {
+        return HttpContext.Items.TryGetValue(ResolvedRepositoryItemKey, out var value)
+            && value is RepositoryAddressResolution address
+                ? address
+                : throw new InvalidOperationException("The repository address was not resolved before use.");
+    }
+
+    private async Task<IActionResult?> RequireRepositoryAsync(long repositoryId, string policy)
+    {
+        var result = await _authorizationService.AuthorizeAsync(
+            User,
+            new RepositoryAuthorizationResource(repositoryId),
             policy);
         if (result.Succeeded)
         {

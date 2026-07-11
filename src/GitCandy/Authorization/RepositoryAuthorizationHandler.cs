@@ -26,20 +26,31 @@ public sealed class RepositoryAuthorizationHandler(
         var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var isAdministrator = context.User.IsInRole(RoleNames.Administrator);
 
-        var authorized = requirement.Permission switch
+        var authorized = resource.RepositoryId is long repositoryId
+            ? requirement.Permission switch
+            {
+                RepositoryPermission.Read => await _repositoryService.CanReadRepositoryAsync(
+                    repositoryId, userId, isAdministrator, _currentUser.RequestAborted),
+                RepositoryPermission.Write => await _repositoryService.CanWriteRepositoryAsync(
+                    repositoryId, userId, isAdministrator, _currentUser.RequestAborted),
+                RepositoryPermission.Owner => await _repositoryService.IsRepositoryOwnerAsync(
+                    repositoryId, userId, isAdministrator, _currentUser.RequestAborted),
+                _ => false
+            }
+            : requirement.Permission switch
         {
             RepositoryPermission.Read => await _repositoryService.CanReadRepositoryAsync(
-                resource.RepositoryName,
+                resource.RepositoryName!,
                 userId,
                 isAdministrator,
                 _currentUser.RequestAborted),
             RepositoryPermission.Write => await _repositoryService.CanWriteRepositoryAsync(
-                resource.RepositoryName,
+                resource.RepositoryName!,
                 userId,
                 isAdministrator,
                 _currentUser.RequestAborted),
             RepositoryPermission.Owner => await _repositoryService.IsRepositoryOwnerAsync(
-                resource.RepositoryName,
+                resource.RepositoryName!,
                 userId,
                 isAdministrator,
                 _currentUser.RequestAborted),

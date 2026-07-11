@@ -4,6 +4,10 @@
 }
 <form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-name="@(isEdit ? Model.Name : null)" method="post" class="account-form">
     <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+    @if (!isEdit)
+    {
+        <div class="form-field"><label asp-for="NamespaceSlug"></label><input asp-for="NamespaceSlug" autocomplete="off" /><span asp-validation-for="NamespaceSlug"></span></div>
+    }
     <div class="form-field">
         <label asp-for="Name"></label>
         @if (isEdit)
@@ -60,6 +64,7 @@
         <a asp-action="@(isEdit ? "Detail" : "Index")" asp-route-name="@(isEdit ? Model.Name : null)" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a>
         @if (isEdit)
         {
+            <a asp-action="Rename" asp-route-name="@Model.Name" class="btn"><i data-lucide="pencil"></i> Rename URL</a>
             <a asp-action="Delete" asp-route-name="@Model.Name" class="btn btn-danger"><i data-lucide="trash-2"></i> @Text["Shared_Delete"]</a>
         }
     </div>

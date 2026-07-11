@@ -18,12 +18,17 @@ public interface ITeamService
     /// <summary>创建团队，并将创建者设为团队管理员。</summary>
     Task<bool> CreateTeamAsync(
         string name,
+        string displayName,
         string description,
         string creatorUserId,
         CancellationToken cancellationToken = default);
 
     /// <summary>更新团队资料。</summary>
-    Task<bool> UpdateTeamAsync(string name, string description, CancellationToken cancellationToken = default);
+    Task<bool> UpdateTeamAsync(
+        string name,
+        string displayName,
+        string description,
+        CancellationToken cancellationToken = default);
 
     /// <summary>删除团队及其级联关系。</summary>
     Task<bool> DeleteTeamAsync(string name, CancellationToken cancellationToken = default);
@@ -46,7 +51,7 @@ public enum TeamMemberAction
 }
 
 /// <summary>团队列表摘要。</summary>
-public sealed record TeamSummary(string Name, string Description, int MemberCount);
+public sealed record TeamSummary(string Name, string DisplayName, string Description, int MemberCount);
 
 /// <summary>团队成员摘要。</summary>
 public sealed record TeamMemberSummary(string UserName, string DisplayName, bool IsAdministrator);
@@ -54,6 +59,7 @@ public sealed record TeamMemberSummary(string UserName, string DisplayName, bool
 /// <summary>团队详情。</summary>
 public sealed record TeamDetails(
     string Name,
+    string DisplayName,
     string Description,
     IReadOnlyList<TeamMemberSummary> Members,
     IReadOnlyList<string> Repositories);

@@ -3,6 +3,7 @@ using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Data.Identity;
+using GitCandy.Models;
 using GitCandy.Models.Account;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -16,6 +17,8 @@ public sealed class AccountController(
     UserManager<GitCandyUser> userManager,
     SignInManager<GitCandyUser> signInManager,
     IMembershipService membershipService,
+    INamespaceProvisioningService namespaceProvisioningService,
+    INameManagementService nameManagementService,
     IUserAdministrationService userAdministrationService,
     IAuthorizationService authorizationService,
     ICurrentUser currentUser,
@@ -25,6 +28,8 @@ public sealed class AccountController(
     private readonly UserManager<GitCandyUser> _userManager = userManager;
     private readonly SignInManager<GitCandyUser> _signInManager = signInManager;
     private readonly IMembershipService _membershipService = membershipService;
+    private readonly INamespaceProvisioningService _namespaceProvisioningService = namespaceProvisioningService;
+    private readonly INameManagementService _nameManagementService = nameManagementService;
     private readonly IUserAdministrationService _userAdministrationService = userAdministrationService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
@@ -187,6 +192,13 @@ public sealed class AccountController(
             return View(model);
         }
 
+        if (await _namespaceProvisioningService.EnsureUserNamespaceAsync(user.Id, cancellationToken) is null)
+        {
+            await _userManager.DeleteAsync(user);
+            ModelState.AddModelError(nameof(model.UserName), "The user name is reserved or already occupied by a user or team namespace.");
+            return View(model);
+        }
+
         if (!_currentUser.IsAuthenticated)
         {
             await _signInManager.SignInAsync(user, isPersistent: false);
@@ -346,6 +358,76 @@ public sealed class AccountController(
             : View(new SshKeysViewModel { UserName = effectiveName, Keys = keys });
     }
 
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Rename(string? name, CancellationToken cancellationToken)
+    {
+        var effectiveName = string.IsNullOrWhiteSpace(name) ? _currentUser.UserName : name;
+        var denied = await RequireCurrentUserAsync(effectiveName);
+        if (denied is not null || string.IsNullOrWhiteSpace(effectiveName))
+        {
+            return denied ?? NotFound();
+        }
+
+        var snapshot = await _nameManagementService.GetNamespaceSnapshotAsync(effectiveName, cancellationToken);
+        return snapshot is null
+            ? NotFound()
+            : View("~/Views/Shared/Rename.cshtml", new NameChangeViewModel
+            {
+                CurrentSlug = snapshot.CurrentSlug,
+                NewSlug = snapshot.CurrentSlug,
+                SubjectType = NameSubjectType.Namespace,
+                Snapshot = snapshot
+            });
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> Rename(NameChangeViewModel model, CancellationToken cancellationToken)
+    {
+        var denied = await RequireCurrentUserAsync(model.CurrentSlug);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var snapshot = await _nameManagementService.GetNamespaceSnapshotAsync(model.CurrentSlug, cancellationToken);
+        if (snapshot is null)
+        {
+            return NotFound();
+        }
+
+        model.Snapshot = snapshot;
+        model.SubjectType = NameSubjectType.Namespace;
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return View("~/Views/Shared/Rename.cshtml", model);
+        }
+
+        var changeOverride = _currentUser.IsAdministrator && model.UseOverride
+            ? new NameChangeOverride(model.OverrideReason ?? string.Empty, model.ConfirmOverride)
+            : null;
+        var result = await _nameManagementService.RenameNamespaceAsync(
+            snapshot.SubjectId,
+            model.NewSlug,
+            _currentUser.UserId,
+            changeOverride,
+            cancellationToken);
+        if (result.Status != NameChangeStatus.Succeeded)
+        {
+            ModelState.AddModelError(nameof(model.NewSlug), GetNameChangeError(result.Status));
+            return View("~/Views/Shared/Rename.cshtml", model);
+        }
+
+        var renamedUser = await _userManager.FindByNameAsync(result.CanonicalSlug!);
+        if (renamedUser is not null && renamedUser.Id == _currentUser.UserId)
+        {
+            await _signInManager.RefreshSignInAsync(renamedUser);
+        }
+
+        return RedirectToAction(nameof(Detail), new { name = result.CanonicalSlug });
+    }
+
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> ChooseSsh(
@@ -456,6 +538,20 @@ public sealed class AccountController(
         {
             ModelState.AddModelError(string.Empty, error.Description);
         }
+    }
+
+    private static string GetNameChangeError(NameChangeStatus status)
+    {
+        return status switch
+        {
+            NameChangeStatus.InvalidSlug => "The URL slug is invalid.",
+            NameChangeStatus.Reserved => "The URL slug is reserved by the application.",
+            NameChangeStatus.Occupied => "The URL slug is already occupied by a current name or retained alias.",
+            NameChangeStatus.RateLimited => "The rolling rename limit has been reached.",
+            NameChangeStatus.ConfirmationRequired => "An override requires a reason and explicit confirmation.",
+            NameChangeStatus.Conflict => "Another rename completed concurrently. Reload and try again.",
+            _ => "The name could not be changed."
+        };
     }
 
     private async Task<IReadOnlyList<ExternalLoginProviderViewModel>> GetExternalLoginProvidersAsync()

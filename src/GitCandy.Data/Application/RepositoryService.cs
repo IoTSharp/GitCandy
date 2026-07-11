@@ -17,16 +17,48 @@ internal sealed class RepositoryService(
     private readonly IGitCandyRepositoryPermissionQuery _permissionQuery = permissionQuery;
 
     /// <inheritdoc />
-    public Task<RepositorySummary?> FindRepositoryAsync(
+    public async Task<RepositorySummary?> FindRepositoryAsync(
         string repositoryName,
         CancellationToken cancellationToken = default)
     {
         var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName);
 
-        return SelectSummary(_dbContext.Repositories
-                .AsNoTracking()
+        var mapped = await SelectSummary(
+            from repository in _dbContext.Repositories.AsNoTracking()
+            join route in _dbContext.LegacyRepositoryRoutes.AsNoTracking()
+                on repository.Id equals route.RepositoryId
+            where route.NormalizedProject == normalizedName
+            select repository).SingleOrDefaultAsync(cancellationToken);
+        if (mapped is not null)
+        {
+            return mapped;
+        }
+
+        var fallback = await SelectSummary(_dbContext.Repositories.AsNoTracking()
                 .Where(repository => repository.NormalizedName == normalizedName))
+            .Take(2)
+            .ToArrayAsync(cancellationToken);
+        return fallback.Length == 1 ? fallback[0] : null;
+    }
+
+    /// <inheritdoc />
+    public Task<RepositorySummary?> FindRepositoryAsync(
+        long repositoryId,
+        CancellationToken cancellationToken = default)
+    {
+        return SelectSummary(_dbContext.Repositories.AsNoTracking()
+                .Where(repository => repository.Id == repositoryId))
             .SingleOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> CanReadRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        return _permissionQuery.CanReadRepositoryAsync(repositoryId, userId, isAdministrator, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -97,6 +129,16 @@ internal sealed class RepositoryService(
     }
 
     /// <inheritdoc />
+    public Task<bool> CanWriteRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        return _permissionQuery.CanWriteRepositoryAsync(repositoryId, userId, isAdministrator, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public Task<bool> IsRepositoryOwnerAsync(
         string repositoryName,
         string? userId,
@@ -110,11 +152,25 @@ internal sealed class RepositoryService(
             cancellationToken);
     }
 
+    /// <inheritdoc />
+    public Task<bool> IsRepositoryOwnerAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        return _permissionQuery.IsRepositoryOwnerAsync(repositoryId, userId, isAdministrator, cancellationToken);
+    }
+
     private static IQueryable<RepositorySummary> SelectSummary(IQueryable<GitCandyRepository> repositories)
     {
         return repositories.Select(repository => new RepositorySummary(
+            repository.Id,
+            repository.NamespaceId,
+            repository.Namespace!.Slug,
             repository.Name,
             repository.NormalizedName,
+            repository.StorageName,
             repository.Description,
             repository.IsPrivate,
             repository.AllowAnonymousRead,

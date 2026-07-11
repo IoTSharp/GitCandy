@@ -18,16 +18,6 @@ public static class GitCandyEndpointRouteBuilderExtensions
         ArgumentNullException.ThrowIfNull(endpoints);
 
         endpoints.MapControllerRoute(
-            name: "git-dotgit",
-            pattern: "git/{project}.git/{**verb}",
-            defaults: new { controller = "Git", action = "Smart" });
-
-        endpoints.MapControllerRoute(
-            name: "git",
-            pattern: "git/{project}/{**verb}",
-            defaults: new { controller = "Git", action = "Smart" });
-
-        endpoints.MapControllerRoute(
             name: "account",
             pattern: "Account/{action}/{name?}",
             defaults: new { controller = "Account" });
@@ -51,6 +41,46 @@ public static class GitCandyEndpointRouteBuilderExtensions
             name: "default",
             pattern: "{controller=Home}/{action=Index}/{id?}")
             .WithStaticAssets();
+
+        endpoints.MapControllerRoute(
+            name: "legacy-repository-dotgit",
+            pattern: "git/{project}.git",
+            defaults: new { controller = "NamespaceRepository", action = "Legacy" });
+
+        endpoints.MapControllerRoute(
+            name: "legacy-repository",
+            pattern: "git/{project}",
+            defaults: new { controller = "NamespaceRepository", action = "Legacy" });
+
+        endpoints.MapControllerRoute(
+            name: "namespace-repository-dotgit",
+            pattern: "{namespaceSlug}/{project}.git",
+            defaults: new { controller = "NamespaceRepository", action = "GitCompatibility" });
+
+        endpoints.MapControllerRoute(
+            name: "namespace-repository",
+            pattern: "{namespaceSlug}/{project}",
+            defaults: new { controller = "NamespaceRepository", action = "Index" });
+
+        endpoints.MapControllerRoute(
+            name: "git-dotgit",
+            pattern: "git/{project}.git/{**verb}",
+            defaults: new { controller = "Git", action = "Smart" });
+
+        endpoints.MapControllerRoute(
+            name: "git",
+            pattern: "git/{project}/{**verb}",
+            defaults: new { controller = "Git", action = "Smart" });
+
+        endpoints.MapControllerRoute(
+            name: "namespace-git-dotgit",
+            pattern: "{namespaceSlug}/{project}.git/{**verb}",
+            defaults: new { controller = "Git", action = "Smart" });
+
+        endpoints.MapControllerRoute(
+            name: "namespace-git",
+            pattern: "{namespaceSlug}/{project}/{**verb}",
+            defaults: new { controller = "Git", action = "Smart" });
 
         return endpoints;
     }

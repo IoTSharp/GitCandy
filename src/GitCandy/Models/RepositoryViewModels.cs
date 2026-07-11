@@ -13,6 +13,11 @@ public sealed class RepositoryIndexViewModel
 
 public sealed class RepositoryFormViewModel
 {
+    [StringLength(50, MinimumLength = 2)]
+    [RegularExpression("^[A-Za-z][A-Za-z0-9._-]+$")]
+    [Display(Name = "Namespace")]
+    public string? NamespaceSlug { get; set; }
+
     [Required]
     [StringLength(50, MinimumLength = 2)]
     [RegularExpression("(?i)^[a-z][a-z0-9._-]+(?<!\\.git)$")]
@@ -49,7 +54,8 @@ public sealed class RepositoryFormViewModel
             Description,
             IsPrivate,
             AllowAnonymousRead,
-            AllowAnonymousWrite);
+            AllowAnonymousWrite,
+            NamespaceSlug: NamespaceSlug);
     }
 }
 

@@ -1,5 +1,7 @@
 namespace GitCandy.Ssh;
 
+using GitCandy.Application;
+
 /// <summary>
 /// SSH public key 认证和仓库授权边界。
 /// </summary>
@@ -35,12 +37,19 @@ public interface ISshAccessService
     /// 判断已认证 SSH 用户能否执行指定仓库操作。
     /// </summary>
     /// <param name="principal">已认证用户。</param>
-    /// <param name="repositoryName">仓库名称。</param>
+    /// <param name="repositoryId">稳定仓库 ID。</param>
     /// <param name="requiresWrite">是否要求写权限。</param>
     /// <param name="cancellationToken">取消令牌。</param>
     Task<bool> CanAccessRepositoryAsync(
         SshPrincipal principal,
-        string repositoryName,
+        long repositoryId,
         bool requiresWrite,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>按 canonical 或 legacy SSH 路径解析稳定仓库。</summary>
+    Task<RepositoryAddressResolution?> ResolveRepositoryAsync(
+        string? namespaceSlug,
+        string repositorySlug,
+        bool legacy,
         CancellationToken cancellationToken = default);
 }

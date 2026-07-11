@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using System.Text;
 using GitCandy.Git;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
+using SshBuffer = Microsoft.DevTunnels.Ssh.Buffer;
 
 namespace GitCandy.Ssh;
 
@@ -12,6 +14,7 @@ internal sealed class GitSshSession : IDisposable
     private readonly ISshAccessService _accessService;
     private readonly IGitRepositoryPathResolver _pathResolver;
     private readonly IGitTransportBackend _transportBackend;
+    private readonly GitSshExtendedDataSender _extendedDataSender;
     private readonly ILogger<GitSshSession> _logger;
     private readonly CancellationTokenSource _sessionCancellation;
     private readonly object _syncRoot = new();
@@ -34,6 +37,7 @@ internal sealed class GitSshSession : IDisposable
         _accessService = accessService;
         _pathResolver = pathResolver;
         _transportBackend = transportBackend;
+        _extendedDataSender = new GitSshExtendedDataSender(session);
         _logger = logger;
         _sessionCancellation = CancellationTokenSource.CreateLinkedTokenSource(serverStoppingToken);
         _session.Authenticating += HandleAuthenticating;
@@ -255,23 +259,34 @@ internal sealed class GitSshSession : IDisposable
             }
 
             var requiresWrite = parsedCommand.Service == GitTransportService.ReceivePack;
+            var address = await _accessService.ResolveRepositoryAsync(
+                parsedCommand.NamespaceSlug,
+                parsedCommand.RepositorySlug,
+                parsedCommand.IsLegacy,
+                linkedCancellation.Token);
+            if (address is null)
+            {
+                return null;
+            }
+
             if (!await _accessService.CanAccessRepositoryAsync(
                     principal,
-                    parsedCommand.RepositoryName,
+                    address.RepositoryId,
                     requiresWrite,
                     linkedCancellation.Token))
             {
                 return null;
             }
 
-            var repositoryPath = _pathResolver.ResolveRepositoryPath(parsedCommand.RepositoryName);
-            var repository = new GitRepositoryContext(parsedCommand.RepositoryName, repositoryPath);
+            var repositoryPath = _pathResolver.ResolveRepositoryPath(address.StorageName);
+            var repository = new GitRepositoryContext(address.StorageName, repositoryPath);
             _transportBackend.EnsureRepositoryExists(repository);
             return new AuthorizedGitCommand(
                 repository,
                 parsedCommand.Service,
                 principal.UserName,
-                _gitProtocolVersion);
+                _gitProtocolVersion,
+                address.UsedAlias ? address.CanonicalPath : null);
         }
         catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
         {
@@ -287,7 +302,7 @@ internal sealed class GitSshSession : IDisposable
                 exception,
                 "SSH Git {Service} authorization for repository {RepositoryName} failed unexpectedly.",
                 parsedCommand.Service,
-                parsedCommand.RepositoryName);
+                parsedCommand.RepositorySlug);
             return null;
         }
     }
@@ -319,6 +334,10 @@ internal sealed class GitSshSession : IDisposable
                 input,
                 output,
                 _sessionCancellation.Token);
+            if (command.CanonicalPath is not null)
+            {
+                await SendCanonicalAddressWarningAsync(channel, command.CanonicalPath);
+            }
         }
         catch (OperationCanceledException) when (_sessionCancellation.IsCancellationRequested)
         {
@@ -363,9 +382,25 @@ internal sealed class GitSshSession : IDisposable
         _sessionCancellation.Cancel();
     }
 
+    private async Task SendCanonicalAddressWarningAsync(SshChannel channel, string canonicalPath)
+    {
+        var warning = $"Repository address changed; update the remote to {canonicalPath}.git.\n";
+        var message = new GitSshExtendedDataMessage
+        {
+            RecipientChannel = channel.RemoteChannelId,
+            DataTypeCode = 1,
+            Data = SshBuffer.From(Encoding.UTF8.GetBytes(warning))
+        };
+        await _extendedDataSender.SendAsync(message, _sessionCancellation.Token);
+        _logger.LogInformation(
+            "SSH repository address changed; sent the canonical remote {CanonicalPath}.git to the client.",
+            canonicalPath);
+    }
+
     private sealed record AuthorizedGitCommand(
         GitRepositoryContext Repository,
         GitTransportService Service,
         string ActorName,
-        string? ProtocolVersion);
+        string? ProtocolVersion,
+        string? CanonicalPath);
 }

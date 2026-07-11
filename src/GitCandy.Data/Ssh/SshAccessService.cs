@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using GitCandy.Application;
 using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Permissions;
@@ -9,10 +10,13 @@ namespace GitCandy.Ssh;
 /// <summary>
 /// 通过短生命周期 DbContext 执行 SSH key 认证和仓库权限查询。
 /// </summary>
-internal sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbContextFactory)
+internal sealed class SshAccessService(
+    IDbContextFactory<GitCandyDbContext> dbContextFactory,
+    TimeProvider timeProvider)
     : ISshAccessService
 {
     private readonly IDbContextFactory<GitCandyDbContext> _dbContextFactory = dbContextFactory;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     public async Task<SshPrincipal?> AuthenticateAsync(
@@ -105,26 +109,38 @@ internal sealed class SshAccessService(IDbContextFactory<GitCandyDbContext> dbCo
     /// <inheritdoc />
     public async Task<bool> CanAccessRepositoryAsync(
         SshPrincipal principal,
-        string repositoryName,
+        long repositoryId,
         bool requiresWrite,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(principal);
-        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryName);
-
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var permissionQuery = new GitCandyRepositoryPermissionQuery(dbContext);
         return requiresWrite
             ? await permissionQuery.CanWriteRepositoryAsync(
-                repositoryName,
+                repositoryId,
                 principal.UserId,
                 principal.IsAdministrator,
                 cancellationToken)
             : await permissionQuery.CanReadRepositoryAsync(
-                repositoryName,
+                repositoryId,
                 principal.UserId,
                 principal.IsAdministrator,
                 cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<RepositoryAddressResolution?> ResolveRepositoryAsync(
+        string? namespaceSlug,
+        string repositorySlug,
+        bool legacy,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var resolver = new RepositoryAddressResolver(dbContext, _timeProvider);
+        return legacy
+            ? await resolver.ResolveLegacyAsync(repositorySlug, cancellationToken)
+            : await resolver.ResolveAsync(namespaceSlug!, repositorySlug, cancellationToken);
     }
 
     private static bool MatchesStoredKey(string storedPublicKey, byte[] publicKey)

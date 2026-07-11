@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
+using GitCandy.Application;
 using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
@@ -25,9 +26,15 @@ public sealed class SshGitIntegrationTests
     {
         await using var fixture = await SshGitFixture.CreateAsync();
         var clonePath = Path.Combine(fixture.TempRoot, "clone");
+        var currentClonePath = Path.Combine(fixture.TempRoot, "clone-current");
 
-        await fixture.RunGitAsync(["clone", fixture.RemoteUrl, clonePath]);
+        await fixture.RunGitAsync(["clone", fixture.CurrentRemoteUrl, currentClonePath]);
+        Assert.IsTrue(File.Exists(Path.Combine(currentClonePath, "README.md")));
+        var aliasClone = await fixture.RunGitAsync(["clone", fixture.RemoteUrl, clonePath]);
         Assert.IsTrue(File.Exists(Path.Combine(clonePath, "README.md")));
+        StringAssert.Contains(
+            aliasClone.StandardError,
+            "Repository address changed; update the remote to /m7-owner/private-demo.git.");
 
         File.AppendAllText(
             Path.Combine(fixture.SeedWorkTree, "README.md"),
@@ -76,6 +83,7 @@ public sealed class SshGitIntegrationTests
             string bareRepositoryPath,
             string seedWorkTree,
             string remoteUrl,
+            string currentRemoteUrl,
             string sshCommand,
             string privateKeyPath,
             int sshPort)
@@ -85,6 +93,7 @@ public sealed class SshGitIntegrationTests
             BareRepositoryPath = bareRepositoryPath;
             SeedWorkTree = seedWorkTree;
             RemoteUrl = remoteUrl;
+            CurrentRemoteUrl = currentRemoteUrl;
             SshCommand = sshCommand;
             PrivateKeyPath = privateKeyPath;
             SshPort = sshPort;
@@ -105,6 +114,8 @@ public sealed class SshGitIntegrationTests
         public string SeedWorkTree { get; }
 
         public string RemoteUrl { get; }
+
+        public string CurrentRemoteUrl { get; }
 
         public static async Task<SshGitFixture> CreateAsync()
         {
@@ -189,6 +200,9 @@ public sealed class SshGitIntegrationTests
                     };
                     var createResult = await userManager.CreateAsync(owner);
                     Assert.IsTrue(createResult.Succeeded);
+                    var namespaceService = scope.ServiceProvider.GetRequiredService<INamespaceProvisioningService>();
+                    var namespaceId = await namespaceService.EnsureUserNamespaceAsync(owner.Id);
+                    Assert.IsNotNull(namespaceId);
 
                     dbContext.SshKeys.Add(new GitCandySshKey
                     {
@@ -200,7 +214,9 @@ public sealed class SshGitIntegrationTests
                     });
                     var repository = new GitCandyRepository
                     {
+                        NamespaceId = namespaceId.Value,
                         Name = "private-demo",
+                        StorageName = "private-demo",
                         Description = "M7 real Git SSH fixture",
                         IsPrivate = true,
                         CreatedAtUtc = DateTime.UtcNow
@@ -213,6 +229,55 @@ public sealed class SshGitIntegrationTests
                         IsOwner = true
                     });
                     dbContext.Repositories.Add(repository);
+                    await dbContext.SaveChangesAsync();
+                    var utcNow = DateTime.UtcNow;
+                    var namespaceAlias = new GitCandyNamespaceAlias
+                    {
+                        NamespaceId = namespaceId.Value,
+                        Slug = "m7-previous",
+                        CreatedAtUtc = utcNow,
+                        ExpiresAtUtc = utcNow.AddDays(365)
+                    };
+                    var repositoryAlias = new GitCandyRepositoryAlias
+                    {
+                        NamespaceId = namespaceId.Value,
+                        RepositoryId = repository.Id,
+                        Slug = "private-old",
+                        CreatedAtUtc = utcNow,
+                        ExpiresAtUtc = utcNow.AddDays(365)
+                    };
+                    dbContext.NamespaceAliases.Add(namespaceAlias);
+                    dbContext.RepositoryAliases.Add(repositoryAlias);
+                    await dbContext.SaveChangesAsync();
+                    dbContext.NamespaceClaims.Add(new GitCandyNamespaceClaim
+                    {
+                        NormalizedSlug = "M7-PREVIOUS",
+                        Slug = namespaceAlias.Slug,
+                        ClaimType = NameClaimType.Alias,
+                        NamespaceAliasId = namespaceAlias.Id
+                    });
+                    dbContext.RepositoryClaims.AddRange(new GitCandyRepositoryClaim
+                    {
+                        NamespaceId = namespaceId.Value,
+                        NormalizedSlug = "PRIVATE-DEMO",
+                        Slug = repository.Name,
+                        ClaimType = NameClaimType.Current,
+                        RepositoryId = repository.Id
+                    }, new GitCandyRepositoryClaim
+                    {
+                        NamespaceId = namespaceId.Value,
+                        NormalizedSlug = "PRIVATE-OLD",
+                        Slug = repositoryAlias.Slug,
+                        ClaimType = NameClaimType.Alias,
+                        RepositoryAliasId = repositoryAlias.Id
+                    });
+                    dbContext.LegacyRepositoryRoutes.Add(new GitCandyLegacyRepositoryRoute
+                    {
+                        Project = repository.Name,
+                        NormalizedProject = repository.NormalizedName,
+                        RepositoryId = repository.Id,
+                        CreatedAtUtc = DateTime.UtcNow
+                    });
                     await dbContext.SaveChangesAsync();
                 }
 
@@ -230,7 +295,8 @@ public sealed class SshGitIntegrationTests
                     "-o StrictHostKeyChecking=no",
                     $"-o UserKnownHostsFile={knownHostsPath}",
                     "-o LogLevel=ERROR");
-                var remoteUrl = $"ssh://git@127.0.0.1:{sshPort}/git/private-demo.git";
+                var remoteUrl = $"ssh://git@127.0.0.1:{sshPort}/m7-previous/private-old.git";
+                var currentRemoteUrl = $"ssh://git@127.0.0.1:{sshPort}/m7-owner/private-demo.git";
 
                 return new SshGitFixture(
                     app,
@@ -238,6 +304,7 @@ public sealed class SshGitIntegrationTests
                     bareRepositoryPath,
                     seedWorkTree,
                     remoteUrl,
+                    currentRemoteUrl,
                     sshCommand,
                     privateKeyPath,
                     sshPort);
@@ -254,7 +321,7 @@ public sealed class SshGitIntegrationTests
             }
         }
 
-        public Task RunGitAsync(IReadOnlyList<string> arguments, bool useSsh = true)
+        public Task<ProcessResult> RunGitAsync(IReadOnlyList<string> arguments, bool useSsh = true)
         {
             return RunGitProcessAsync(
                 WithProtocolVersion(arguments, useSsh),

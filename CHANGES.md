@@ -3,6 +3,11 @@
 ---
 ### Unreleased
 #### Added
+ - Added M10 stable user/team namespaces, namespace and repository aliases, global name claims, rename audit events, explicit legacy repository mappings, and immutable physical repository storage names.
+ - Added canonical `/{namespace}/{repository}[.git]` Web and Git Smart HTTP routes plus matching SSH paths, all resolved to stable repository IDs before authorization and transport execution.
+ - Added configurable 365-day alias retention, rolling three-per-seven-day namespace rename limits, idempotent background expiry cleanup, administrator extension/override controls, and rename/alias management pages.
+ - Added canonical-address warnings for historical SSH remotes through OpenSSH stderr and built-in SSH RFC 4254 extended data without modifying Git transport stdout.
+ - Added SQLite concurrency and alias lifecycle tests, SQL Server migration SQL coverage, and real Git HTTP/SSH canonical, alias, legacy clone/fetch/push coverage.
  - Added the ASP.NET Core migration data-layer baseline with provider-neutral `GitCandyDbContext` and `GitCandyUser`.
  - Added EF Core provider registration projects for SQLite, PostgreSQL/pgsql, and SonnetDB, with separate migration assembly boundaries.
  - Added SQLite data-layer smoke tests for database creation and Identity user read/write.
@@ -79,6 +84,8 @@
  - Added real `git lfs` push/fetch/clone integration coverage and repository browser/lifecycle boundary tests.
 
 #### Changed
+ - User and team display names are now independent from URL slugs; changing display text does not change repository URLs.
+ - Repository deletion retains current and historical names as reserved tombstone claims while removing the physical Git/LFS data and legacy route target.
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
  - Moved source-image build settings from the release Compose definition into the automatically loaded `docker-compose.override.yml`.
  - GitCandy now detects and applies pending EF Core migrations before Web, SSH, Quartz, and other hosted services start; `--migrate` remains available as a migration-only compatibility command.
@@ -111,6 +118,8 @@
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
+ - The M10 SQLite and SQL Server migrations create stable namespaces for existing users/teams, assign each existing repository to its first owner namespace (or the reserved `legacy` namespace when no owner exists), preserve the existing physical directory as `StorageName`, and create explicit `/git/{project}` mappings.
+ - Upgrades now fail on user/team/reserved-slug collisions instead of silently rewriting public URLs. Resolve those conflicts before applying the migration. Rollback requires restoring the pre-M10 database backup together with the previous application version; repository directories are not renamed by this migration.
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
  - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP now uses the independent M6 endpoint and authentication scheme.
  - Migrated the M5 account/team/repository public URL shapes to real ASP.NET Core controllers and replaced the Git HTTP compatibility placeholder in M6.

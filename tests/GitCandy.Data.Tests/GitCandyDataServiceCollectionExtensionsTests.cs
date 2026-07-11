@@ -70,7 +70,14 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                     "UserRepositoryRoles",
                     "TeamRepositoryRoles",
                     "UserTeamRoles",
-                    "SshKeys"
+                    "SshKeys",
+                    "Namespaces",
+                    "NamespaceAliases",
+                    "RepositoryAliases",
+                    "NamespaceClaims",
+                    "RepositoryClaims",
+                    "RenameEvents",
+                    "LegacyRepositoryRoutes"
                 },
                 tables.ToList());
 
@@ -91,7 +98,10 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                     "EmailIndex",
                     "UserNameIndex",
                     "RoleNameIndex",
-                    "IX_Repositories_NormalizedName",
+                    "IX_Repositories_NamespaceId_NormalizedName",
+                    "IX_Repositories_StorageName",
+                    "IX_Namespaces_NormalizedSlug",
+                    "IX_LegacyRepositoryRoutes_NormalizedProject",
                     "IX_Teams_NormalizedName",
                     "IX_SshKeys_Fingerprint",
                     "IX_SshKeys_UserId",
@@ -198,7 +208,14 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                 nameof(GitCandyUserTeamRole.UserId),
                 nameof(GitCandyUserTeamRole.TeamId));
 
-            AssertUniqueIndex(model, typeof(GitCandyRepository), "IX_Repositories_NormalizedName", nameof(GitCandyRepository.NormalizedName));
+            AssertUniqueIndex(
+                model,
+                typeof(GitCandyRepository),
+                "IX_Repositories_NamespaceId_NormalizedName",
+                nameof(GitCandyRepository.NamespaceId),
+                nameof(GitCandyRepository.NormalizedName));
+            AssertUniqueIndex(model, typeof(GitCandyRepository), "IX_Repositories_StorageName", nameof(GitCandyRepository.StorageName));
+            AssertUniqueIndex(model, typeof(GitCandyNamespace), "IX_Namespaces_NormalizedSlug", nameof(GitCandyNamespace.NormalizedSlug));
             AssertUniqueIndex(model, typeof(GitCandyTeam), "IX_Teams_NormalizedName", nameof(GitCandyTeam.NormalizedName));
             AssertUniqueIndex(model, typeof(GitCandySshKey), "IX_SshKeys_Fingerprint", nameof(GitCandySshKey.Fingerprint));
             AssertUniqueIndex(model, typeof(GitCandyUser), "UserNameIndex", nameof(GitCandyUser.NormalizedUserName));

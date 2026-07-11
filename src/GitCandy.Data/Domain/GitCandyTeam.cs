@@ -10,6 +10,9 @@ public sealed class GitCandyTeam
     /// </summary>
     public long Id { get; set; }
 
+    /// <summary>团队显示名称；修改它不改变 URL。</summary>
+    public string DisplayName { get; set; } = string.Empty;
+
     /// <summary>
     /// 团队名称。
     /// </summary>
@@ -29,6 +32,9 @@ public sealed class GitCandyTeam
     /// 团队创建时间。
     /// </summary>
     public DateTime CreatedAtUtc { get; set; }
+
+    /// <summary>团队拥有的稳定 namespace。</summary>
+    public GitCandyNamespace? Namespace { get; set; }
 
     /// <summary>
     /// 团队成员角色。

@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-
 namespace GitCandy.Data.Sqlite.Migrations
 {
     [DbContext(typeof(GitCandyDbContext))]
@@ -15,6 +14,302 @@ namespace GitCandy.Data.Sqlite.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyLegacyRepositoryRoute", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedProject")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Project")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedProject")
+                        .IsUnique()
+                        .HasDatabaseName("IX_LegacyRepositoryRoutes_NormalizedProject");
+
+                    b.HasIndex("RepositoryId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_LegacyRepositoryRoutes_RepositoryId");
+
+                    b.ToTable("LegacyRepositoryRoutes", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespace", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NormalizedSlug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OwnerType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedSlug")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Namespaces_NormalizedSlug");
+
+                    b.HasIndex("TeamId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Namespaces_TeamId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Namespaces_UserId");
+
+                    b.ToTable("Namespaces", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1L,
+                            CreatedAtUtc = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            NormalizedSlug = "LEGACY",
+                            OwnerType = 0,
+                            Slug = "legacy",
+                            Version = 0
+                        });
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespaceAlias", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("NamespaceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NormalizedSlug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReleasedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasDatabaseName("IX_NamespaceAliases_ExpiresAtUtc");
+
+                    b.HasIndex("NamespaceId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_NamespaceAliases_NamespaceId_CreatedAtUtc");
+
+                    b.ToTable("NamespaceAliases", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespaceClaim", b =>
+                {
+                    b.Property<string>("NormalizedSlug")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ClaimType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("NamespaceAliasId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("NamespaceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NormalizedSlug");
+
+                    b.HasIndex("NamespaceAliasId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_NamespaceClaims_NamespaceAliasId");
+
+                    b.HasIndex("NamespaceId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_NamespaceClaims_NamespaceId");
+
+                    b.ToTable("NamespaceClaims", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            NormalizedSlug = "ACCOUNT",
+                            ClaimType = 3,
+                            Slug = "account"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "API",
+                            ClaimType = 3,
+                            Slug = "api"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "ASSETS",
+                            ClaimType = 3,
+                            Slug = "assets"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "GIT",
+                            ClaimType = 3,
+                            Slug = "git"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "HEALTH",
+                            ClaimType = 3,
+                            Slug = "health"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "HOME",
+                            ClaimType = 3,
+                            Slug = "home"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "IDENTITY",
+                            ClaimType = 3,
+                            Slug = "identity"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "LEGACY",
+                            ClaimType = 1,
+                            NamespaceId = 1L,
+                            Slug = "legacy"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "REPOSITORY",
+                            ClaimType = 3,
+                            Slug = "repository"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "SETTING",
+                            ClaimType = 3,
+                            Slug = "setting"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "SIGNIN-OIDC",
+                            ClaimType = 3,
+                            Slug = "signin-oidc"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "SIGNOUT-CALLBACK-OIDC",
+                            ClaimType = 3,
+                            Slug = "signout-callback-oidc"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "TEAM",
+                            ClaimType = 3,
+                            Slug = "team"
+                        });
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRenameEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("EventType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsOverride")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NewSlug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OldSlug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("SubjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SubjectType")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubjectType", "SubjectId", "EventType", "OccurredAtUtc")
+                        .HasDatabaseName("IX_RenameEvents_Subject_Window");
+
+                    b.ToTable("RenameEvents", (string)null);
+                });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
                 {
@@ -52,18 +347,110 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<long>("NamespaceId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StorageName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StorageName")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Repositories_StorageName");
+
+                    b.HasIndex("NamespaceId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Repositories_NamespaceId_NormalizedName");
+
+                    b.ToTable("Repositories", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryAlias", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("NamespaceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NormalizedSlug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReleasedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Repositories_NormalizedName");
+                    b.HasIndex("ExpiresAtUtc")
+                        .HasDatabaseName("IX_RepositoryAliases_ExpiresAtUtc");
 
-                    b.ToTable("Repositories", (string)null);
+                    b.HasIndex("NamespaceId");
+
+                    b.HasIndex("RepositoryId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_RepositoryAliases_RepositoryId_CreatedAtUtc");
+
+                    b.ToTable("RepositoryAliases", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryClaim", b =>
+                {
+                    b.Property<long>("NamespaceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NormalizedSlug")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ClaimType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("RepositoryAliasId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("NamespaceId", "NormalizedSlug");
+
+                    b.HasIndex("RepositoryAliasId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RepositoryClaims_RepositoryAliasId");
+
+                    b.HasIndex("RepositoryId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RepositoryClaims_RepositoryId");
+
+                    b.ToTable("RepositoryClaims", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandySshKey", b =>
@@ -123,6 +510,11 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
@@ -424,6 +816,117 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyLegacyRepositoryRoute", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "Repository")
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Repository");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespace", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyTeam", "Team")
+                        .WithOne("Namespace")
+                        .HasForeignKey("GitCandy.Data.Domain.GitCandyNamespace", "TeamId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "User")
+                        .WithOne("Namespace")
+                        .HasForeignKey("GitCandy.Data.Domain.GitCandyNamespace", "UserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Team");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespaceAlias", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
+                        .WithMany("Aliases")
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Namespace");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespaceClaim", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyNamespaceAlias", "NamespaceAlias")
+                        .WithOne()
+                        .HasForeignKey("GitCandy.Data.Domain.GitCandyNamespaceClaim", "NamespaceAliasId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
+                        .WithMany()
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Namespace");
+
+                    b.Navigation("NamespaceAlias");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
+                        .WithMany("Repositories")
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Namespace");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryAlias", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
+                        .WithMany()
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "Repository")
+                        .WithMany("Aliases")
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Namespace");
+
+                    b.Navigation("Repository");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryClaim", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
+                        .WithMany()
+                        .HasForeignKey("NamespaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepositoryAlias", "RepositoryAlias")
+                        .WithOne()
+                        .HasForeignKey("GitCandy.Data.Domain.GitCandyRepositoryClaim", "RepositoryAliasId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "Repository")
+                        .WithOne()
+                        .HasForeignKey("GitCandy.Data.Domain.GitCandyRepositoryClaim", "RepositoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Namespace");
+
+                    b.Navigation("Repository");
+
+                    b.Navigation("RepositoryAlias");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandySshKey", b =>
                 {
                     b.HasOne("GitCandy.Data.Identity.GitCandyUser", "User")
@@ -543,8 +1046,17 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNamespace", b =>
+                {
+                    b.Navigation("Aliases");
+
+                    b.Navigation("Repositories");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
                 {
+                    b.Navigation("Aliases");
+
                     b.Navigation("TeamRoles");
 
                     b.Navigation("UserRoles");
@@ -552,6 +1064,8 @@ namespace GitCandy.Data.Sqlite.Migrations
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyTeam", b =>
                 {
+                    b.Navigation("Namespace");
+
                     b.Navigation("RepositoryRoles");
 
                     b.Navigation("UserRoles");
@@ -559,6 +1073,8 @@ namespace GitCandy.Data.Sqlite.Migrations
 
             modelBuilder.Entity("GitCandy.Data.Identity.GitCandyUser", b =>
                 {
+                    b.Navigation("Namespace");
+
                     b.Navigation("RepositoryRoles");
 
                     b.Navigation("SshKeys");

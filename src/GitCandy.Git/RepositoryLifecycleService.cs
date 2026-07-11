@@ -22,21 +22,22 @@ public sealed class RepositoryLifecycleService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (await _repositoryManagementService.GetRepositoryAsync(
-            request.Repository.Name,
-            cancellationToken) is not null)
-        {
-            return new RepositoryLifecycleResult(false, "A repository with this name already exists.");
-        }
-
         GitRepositoryContext? repository = null;
         try
         {
-            var metadata = request.Repository;
+            var storageName = string.IsNullOrWhiteSpace(request.Repository.StorageName)
+                ? request.Repository.Name.Trim()
+                : request.Repository.StorageName.Trim();
+            if (Directory.Exists(_pathResolver.ResolveRepositoryPath(storageName))
+                || Directory.Exists(_pathResolver.ResolveRepositoryPath($"{storageName}.git")))
+            {
+                storageName = $"r-{Guid.NewGuid():N}";
+            }
+            var metadata = request.Repository with { StorageName = storageName };
             switch (request.Mode)
             {
                 case RepositoryCreationMode.Empty:
-                    repository = _managedRepositoryService.InitializeBare(metadata.Name);
+                    repository = _managedRepositoryService.InitializeBare(storageName);
                     break;
                 case RepositoryCreationMode.Import:
                     if (!TryValidateRemoteSource(request.Source, out var remoteSource))
@@ -46,7 +47,7 @@ public sealed class RepositoryLifecycleService(
 
                     repository = _managedRepositoryService.CloneBare(
                         remoteSource,
-                        metadata.Name,
+                        storageName,
                         cancellationToken);
                     break;
                 case RepositoryCreationMode.Fork:
@@ -61,12 +62,12 @@ public sealed class RepositoryLifecycleService(
                     }
 
                     var sourceContext = new GitRepositoryContext(
-                        sourceDetails.Name,
-                        _pathResolver.ResolveRepositoryPath(sourceDetails.Name));
+                        sourceDetails.StorageName,
+                        _pathResolver.ResolveRepositoryPath(sourceDetails.StorageName));
                     var sourcePath = _managedRepositoryService.ResolveExistingPath(sourceContext);
                     repository = _managedRepositoryService.CloneBare(
                         sourcePath,
-                        metadata.Name,
+                        storageName,
                         cancellationToken);
                     metadata = metadata with
                     {
@@ -115,16 +116,22 @@ public sealed class RepositoryLifecycleService(
     }
 
     /// <inheritdoc />
-    public Task<bool> SetDefaultBranchAsync(
+    public async Task<bool> SetDefaultBranchAsync(
         string repositoryName,
         string branchName,
         CancellationToken cancellationToken = default)
     {
-        var context = CreateContext(repositoryName);
-        return Task.FromResult(_managedRepositoryService.SetDefaultBranch(
+        var details = await _repositoryManagementService.GetRepositoryAsync(repositoryName, cancellationToken);
+        if (details is null)
+        {
+            return false;
+        }
+
+        var context = CreateContext(details.StorageName);
+        return _managedRepositoryService.SetDefaultBranch(
             context,
             branchName,
-            cancellationToken));
+            cancellationToken);
     }
 
     /// <inheritdoc />
@@ -144,7 +151,7 @@ public sealed class RepositoryLifecycleService(
         string? quarantinePath = null;
         try
         {
-            originalPath = _managedRepositoryService.ResolveExistingPath(CreateContext(details.Name));
+            originalPath = _managedRepositoryService.ResolveExistingPath(CreateContext(details.StorageName));
             quarantinePath = _pathResolver.ResolveRepositoryPath(
                 $".deleting-{Guid.NewGuid():N}.git");
             Directory.Move(originalPath, quarantinePath);
@@ -169,7 +176,7 @@ public sealed class RepositoryLifecycleService(
                 SafeDirectoryDeletion.Delete(quarantinePath);
             }
 
-            await _lfsObjectStore.DeleteRepositoryAsync(details.Name, cancellationToken);
+            await _lfsObjectStore.DeleteRepositoryAsync(details.StorageName, cancellationToken);
 
             return true;
         }

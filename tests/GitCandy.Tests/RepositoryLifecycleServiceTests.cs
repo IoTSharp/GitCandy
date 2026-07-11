@@ -21,6 +21,10 @@ public sealed class RepositoryLifecycleServiceTests
             CreateSourceRepository(Path.Combine(repositoryRoot, "upstream.git"));
             var management = new InMemoryRepositoryManagementService();
             management.AddExisting(new RepositoryDetails(
+                1,
+                1,
+                "legacy",
+                "upstream",
                 "upstream",
                 "source",
                 false,
@@ -44,7 +48,7 @@ public sealed class RepositoryLifecycleServiceTests
             Assert.IsNotNull(details);
             Assert.AreEqual("upstream", details.ForkedFromRepository);
             Assert.AreEqual("upstream", details.ForkNetworkRoot);
-            var forkPath = Path.Combine(repositoryRoot, "forked.git");
+            var forkPath = Path.Combine(repositoryRoot, $"{details.StorageName}.git");
             Assert.IsTrue(Repository.IsValid(forkPath));
             using (var fork = new Repository(forkPath))
             {
@@ -136,6 +140,13 @@ public sealed class RepositoryLifecycleServiceTests
             return Task.FromResult(details);
         }
 
+        public Task<RepositoryDetails?> GetRepositoryAsync(
+            long repositoryId,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(_repositories.Values.SingleOrDefault(item => item.Id == repositoryId));
+        }
+
         public Task<bool> CreateRepositoryAsync(
             RepositoryEdit command,
             string creatorUserId,
@@ -147,7 +158,11 @@ public sealed class RepositoryLifecycleServiceTests
             }
 
             _repositories.Add(command.Name, new RepositoryDetails(
+                _repositories.Count + 1,
+                1,
+                command.NamespaceSlug ?? "legacy",
                 command.Name,
+                command.StorageName ?? command.Name,
                 command.Description,
                 command.IsPrivate,
                 command.AllowAnonymousRead,

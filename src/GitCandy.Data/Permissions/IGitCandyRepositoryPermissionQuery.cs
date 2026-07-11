@@ -5,6 +5,13 @@ namespace GitCandy.Data.Permissions;
 /// </summary>
 public interface IGitCandyRepositoryPermissionQuery
 {
+    /// <summary>按稳定仓库 ID 判断读取权限。</summary>
+    Task<bool> CanReadRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 判断用户是否可以读取仓库。
     /// </summary>
@@ -33,6 +40,13 @@ public interface IGitCandyRepositoryPermissionQuery
         bool isAdministrator,
         CancellationToken cancellationToken = default);
 
+    /// <summary>按稳定仓库 ID 判断写入权限。</summary>
+    Task<bool> CanWriteRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 判断用户是否为仓库 owner；系统管理员对存在的仓库也视为 owner 级权限。
     /// </summary>
@@ -43,6 +57,13 @@ public interface IGitCandyRepositoryPermissionQuery
     /// <returns>若具有 owner 级权限则为 <see langword="true" />。</returns>
     Task<bool> IsRepositoryOwnerAsync(
         string repositoryName,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>按稳定仓库 ID 判断 owner 权限。</summary>
+    Task<bool> IsRepositoryOwnerAsync(
+        long repositoryId,
         string? userId,
         bool isAdministrator,
         CancellationToken cancellationToken = default);

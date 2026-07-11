@@ -1,0 +1,131 @@
+using GitCandy.Application;
+using GitCandy.Authentication;
+using GitCandy.Authorization;
+using GitCandy.Configuration;
+using GitCandy.Git;
+using GitCandy.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace GitCandy.Controllers;
+
+/// <summary>规范 namespace/repository Web 地址和历史 Web 地址兼容入口。</summary>
+[AllowAnonymous]
+public sealed class NamespaceRepositoryController(
+    IRepositoryAddressResolver addressResolver,
+    IRepositoryBrowserService repositoryBrowserService,
+    IManagedGitRepositoryService managedGitRepositoryService,
+    IGitServiceFactory gitServiceFactory,
+    IAuthorizationService authorizationService,
+    ICurrentUser currentUser) : CandyControllerBase
+{
+    private const string AddressChangedMessage = "This repository address changed. Update your bookmark and Git remote to the canonical URL.";
+    private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
+    private readonly IRepositoryBrowserService _repositoryBrowserService = repositoryBrowserService;
+    private readonly IManagedGitRepositoryService _managedGitRepositoryService = managedGitRepositoryService;
+    private readonly IGitServiceFactory _gitServiceFactory = gitServiceFactory;
+    private readonly IAuthorizationService _authorizationService = authorizationService;
+    private readonly ICurrentUser _currentUser = currentUser;
+
+    /// <summary>显示规范仓库主页，alias 命中时使用 308 跳转。</summary>
+    [HttpGet]
+    public async Task<IActionResult> Index(
+        string namespaceSlug,
+        string project,
+        CancellationToken cancellationToken)
+    {
+        var address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
+        return address is null
+            ? NotFound()
+            : await RenderOrRedirectAsync(address, cancellationToken);
+    }
+
+    /// <summary>将带 .git 的 Web 页面地址规范化为无后缀地址。</summary>
+    [HttpGet]
+    public async Task<IActionResult> GitCompatibility(
+        string namespaceSlug,
+        string project,
+        CancellationToken cancellationToken)
+    {
+        var address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
+        if (address is null)
+        {
+            return NotFound();
+        }
+
+        var denied = await RequireReadAsync(address.RepositoryId);
+        return denied ?? RedirectCanonical(address.CanonicalPath);
+    }
+
+    /// <summary>将旧 /git/{project}[.git] Web 地址迁移到规范地址。</summary>
+    [HttpGet]
+    public async Task<IActionResult> Legacy(string project, CancellationToken cancellationToken)
+    {
+        var address = await _addressResolver.ResolveLegacyAsync(project, cancellationToken);
+        if (address is null)
+        {
+            return NotFound();
+        }
+
+        var denied = await RequireReadAsync(address.RepositoryId);
+        return denied ?? RedirectCanonical(address.CanonicalPath);
+    }
+
+    private async Task<IActionResult> RenderOrRedirectAsync(
+        RepositoryAddressResolution address,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireReadAsync(address.RepositoryId);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        if (address.UsedAlias)
+        {
+            return RedirectCanonical(address.CanonicalPath);
+        }
+
+        var context = _gitServiceFactory.Create(address.StorageName);
+        try
+        {
+            var tree = _repositoryBrowserService.ReadTree(context, revision: null, path: null, cancellationToken);
+            if (tree is null && _managedGitRepositoryService.ReadSnapshot(context).HeadCommitId is not null)
+            {
+                return NotFound();
+            }
+
+            ViewData["CanonicalUrl"] = address.CanonicalPath;
+            return View(
+                "~/Views/Repository/Tree.cshtml",
+                new RepositoryTreeViewModel { RepositoryName = address.RepositorySlug, Tree = tree });
+        }
+        catch (Exception exception) when (exception is ArgumentException
+            or InvalidOperationException
+            or GitRepositoryNotFoundException
+            or LibGit2Sharp.LibGit2SharpException)
+        {
+            return NotFound();
+        }
+    }
+
+    private async Task<IActionResult?> RequireReadAsync(long repositoryId)
+    {
+        var result = await _authorizationService.AuthorizeAsync(
+            User,
+            new RepositoryAuthorizationResource(repositoryId),
+            AuthorizationPolicies.RepositoryRead);
+        if (result.Succeeded)
+        {
+            return null;
+        }
+
+        return _currentUser.IsAuthenticated ? Forbid() : Challenge();
+    }
+
+    private IActionResult RedirectCanonical(string path)
+    {
+        TempData["CanonicalAddressChanged"] = AddressChangedMessage;
+        return new RedirectResult(path + Request.QueryString, permanent: true, preserveMethod: true);
+    }
+}

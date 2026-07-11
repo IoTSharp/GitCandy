@@ -15,6 +15,18 @@ public interface IRepositoryService
         string repositoryName,
         CancellationToken cancellationToken = default);
 
+    /// <summary>按稳定 ID 查找仓库摘要。</summary>
+    Task<RepositorySummary?> FindRepositoryAsync(
+        long repositoryId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>按稳定 ID 判断用户是否可以读取仓库。</summary>
+    Task<bool> CanReadRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 列出当前用户可读取的仓库。
     /// </summary>
@@ -55,6 +67,13 @@ public interface IRepositoryService
         bool isAdministrator,
         CancellationToken cancellationToken = default);
 
+    /// <summary>按稳定 ID 判断用户是否可以写入仓库。</summary>
+    Task<bool> CanWriteRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default);
+
     /// <summary>
     /// 判断用户是否具有仓库 owner 级权限。
     /// </summary>
@@ -65,6 +84,13 @@ public interface IRepositoryService
     /// <returns>若具有 owner 级权限则为 <see langword="true" />。</returns>
     Task<bool> IsRepositoryOwnerAsync(
         string repositoryName,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>按稳定 ID 判断用户是否具有 owner 级权限。</summary>
+    Task<bool> IsRepositoryOwnerAsync(
+        long repositoryId,
         string? userId,
         bool isAdministrator,
         CancellationToken cancellationToken = default);

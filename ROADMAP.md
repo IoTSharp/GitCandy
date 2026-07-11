@@ -620,7 +620,7 @@ ASP.NET Core 中间件和后台能力：
 - UI 变更不得改变公开路由、表单字段、antiforgery、Identity cookie、Git HTTP/SSH 或服务端权限判断。
 - `#101` 只有在 `#106-#108` 提供真实 tree/commit/diff 服务、页面与权限/大文件验证后才能关闭；不能以静态空页面或重定向代替代码工作区。`#109` 是独立 Git LFS 协议切片，不混入 UI 收尾。
 
-### ⬜ Milestone 10：稳定命名空间、改名限频与历史地址兼容
+### ✅ Milestone 10：稳定命名空间、改名限频与历史地址兼容
 
 目标：把用户、团队和仓库从可变名称迁移到稳定 ID，提供 `/{namespace}/{repository}[.git]` 规范 URL；用户或团队改名后，旧地址在可配置保留期内继续支持 Web、Git HTTP 和 SSH 访问，并给出更新地址提示。
 
@@ -633,20 +633,20 @@ ASP.NET Core 中间件和后台能力：
 - 历史 alias 直接指向稳定 namespace/repository ID，不建立字符串跳转链。
 - Web、Git HTTP、SSH 必须复用同一 resolver、权限、路径边界、审计、hook 和 transport backend。
 
-#### ⬜ M10 拆分
+#### ✅ M10 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #110 | Namespace 与 URL 契约冻结 | 冻结 `/{namespace}/{repository}[.git]` Web/Git HTTP/SSH 形态、保留系统 slug、大小写规则、`.git` 规则和 legacy `/git/{project}` 映射策略 |
-| ⬜ #111 | 稳定 namespace/alias schema | 新增稳定 namespace、namespace alias、repository alias、rename event 模型；SQLite migration 可运行，SQL Server migration SQL 可审阅，唯一索引覆盖大小写和有效占用 |
-| ⬜ #112 | 统一 namespace/repository resolver | 所有 Web、Git HTTP、SSH、archive/cache/path 操作先解析稳定 ID，再做权限和根目录边界检查；禁止 controller 按字符串各自查询 |
-| ⬜ #113 | 原子改名与限频服务 | 用户/团队 slug 在滚动 7 天最多成功改 3 次；并发改名、大小写变体、系统保留名和 alias 抢占在事务/唯一约束下失败并审计 |
-| ⬜ #114 | Alias 生命周期与配置 | 默认 `AliasRetentionDays=365`，后台任务幂等处理到期、延长、释放和删除主体保留策略，管理页显示有效期和占用原因 |
-| ⬜ #115 | Web 重定向与提示 | 旧 Web URL 使用 `308` 到规范 URL，保留安全 query，规范页输出 canonical link 并显示一次更新书签提示；私有资源不泄漏存在性 |
-| ⬜ #116 | Git HTTP alias 兼容 | 带/不带 `.git` 的当前/旧 namespace/旧 repository 路径都能 clone/fetch/push；客户端看到更新 remote 提示，streaming、headers、401/403/404 和大 pack 行为不回归 |
-| ⬜ #117 | SSH alias 兼容 | 当前/旧路径都经统一 resolver 和 `IGitTransportBackend` 工作，通过 stderr 提示规范 remote；验证 clone/fetch/push 和权限失败 |
-| ⬜ #118 | 改名管理与审计 UI | 用户/团队/仓库改名预览冲突、剩余次数、alias 到期时间和受影响 URL；灾难恢复 override 独立授权、要求理由和二次确认 |
-| ⬜ #119 | 兼容与并发验证报告 | 覆盖 SQLite/SQL Server、Web/Git/SSH、连续改名、alias 到期释放、并发抢名、大小写、保留路由、legacy URL 和真实 Git 客户端矩阵 |
+| ✅ #110 | Namespace 与 URL 契约冻结 | 冻结 `/{namespace}/{repository}[.git]` Web/Git HTTP/SSH 形态、保留系统 slug、大小写规则、`.git` 规则和 legacy `/git/{project}` 映射策略 |
+| ✅ #111 | 稳定 namespace/alias schema | 新增稳定 namespace、namespace alias、repository alias、rename event 模型；SQLite migration 可运行，SQL Server migration SQL 可审阅，唯一索引覆盖大小写和有效占用 |
+| ✅ #112 | 统一 namespace/repository resolver | 所有 Web、Git HTTP、SSH、archive/cache/path 操作先解析稳定 ID，再做权限和根目录边界检查；禁止 controller 按字符串各自查询 |
+| ✅ #113 | 原子改名与限频服务 | 用户/团队 slug 在滚动 7 天最多成功改 3 次；并发改名、大小写变体、系统保留名和 alias 抢占在事务/唯一约束下失败并审计 |
+| ✅ #114 | Alias 生命周期与配置 | 默认 `AliasRetentionDays=365`，后台任务幂等处理到期、延长、释放和删除主体保留策略，管理页显示有效期和占用原因 |
+| ✅ #115 | Web 重定向与提示 | 旧 Web URL 使用 `308` 到规范 URL，保留安全 query，规范页输出 canonical link 并显示一次更新书签提示；私有资源不泄漏存在性 |
+| ✅ #116 | Git HTTP alias 兼容 | 带/不带 `.git` 的当前/旧 namespace/旧 repository 路径都能 clone/fetch/push；客户端看到更新 remote 提示，streaming、headers、401/403/404 和大 pack 行为不回归 |
+| ✅ #117 | SSH alias 兼容 | 当前/旧路径复用 resolver、权限与 `IGitTransportBackend` 并通过真实 clone/fetch/push；OpenSSH adapter 与内置 listener 都通过 stderr 提示规范 remote，transport stdout 不受影响 |
+| ✅ #118 | 改名管理与审计 UI | 用户/团队/仓库改名预览冲突、剩余次数、alias 到期时间和受影响 URL；灾难恢复 override 独立授权、要求理由和二次确认 |
+| ✅ #119 | 兼容与并发验证报告 | SQLite/SQL Server、Web/Git/SSH、连续/并发改名、alias 到期、保留路由、legacy 与真实 Git 客户端矩阵均已覆盖，内置 SSH stderr 提示由真实客户端断言保护 |
 
 验收：
 
@@ -905,7 +905,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ M7 | SSH 与后台任务 | SSH 和 scheduler 完成 |
 | ✅ M8 | 发布闭环 | 部署文档、迁移脚本、回滚方案完成 |
 | ✅ M9 | 迁移后改进池 | 仓库工作区、生命周期、代码浏览与 Git LFS 均已完成可验证闭环 |
-| ⬜ M10 | 稳定命名空间 | `/{namespace}/{repository}[.git]`、改名限频、历史 alias、Web/Git HTTP/SSH 兼容与提示闭环 |
+| ✅ M10 | 稳定命名空间 | `/{namespace}/{repository}[.git]`、改名限频、历史 alias、Web/Git HTTP/SSH 兼容与提示闭环 |
 | ⬜ M11 | Issues | Issue、评论、代码块、labels、milestones、assignees、references、notifications 和权限闭环 |
 | ⬜ M12 | Pull Request 与 Review | draft、commits、files changed、行内 review、approval、merge/squash 和并发/权限闭环 |
 | ⬜ M13 | 合并治理与集成 | PAT、webhook、status/check、branch protection、CODEOWNERS、审计、release 和外部 CI 闭环 |
@@ -941,7 +941,7 @@ ASP.NET Core 中间件和后台能力：
 6. ✅ M7 已完成：内置 SSH、统一 Git backend、SSH clone/fetch/push 和 graceful shutdown 已闭环。
 7. ✅ M8 已完成：部署、migration SQL、备份/恢复、回滚和发布文档已闭环。
 8. ✅ M9 已完成：`#106-#108` 仓库生命周期/代码工作区与独立 `#109` Git LFS 均已有真实客户端和边界测试。
-9. 随后推进 M10 `#110/#111` 稳定 namespace/alias，再按 M11 Issue -> M12 PR/Review -> M13 合并治理与外部 CI 形成研发协作主链；M11 schema/service 可在不依赖 URL 的前提下与 M10 后半段并行。
+9. ✅ M10 已完成：稳定 namespace/alias、改名限频、历史地址和 Web/Git HTTP/SSH 提示均已闭环；随后按 M11 Issue -> M12 PR/Review -> M13 合并治理与外部 CI 形成研发协作主链。
 10. 企业身份、远程 mirror 和 Code Intelligence 顺延到 M14-M16，复用前面形成的稳定 repository ID、PAT、通知、审计、Issue/PR/review/check 数据。
 
 ⬜ M16 的代码智能能力从 ⬜ #170 schema 和 ⬜ #171 ingest 垂直切片开始推进；其 repository/team/owner 外键、代码片段权限和 review 数据必须直接复用 M10-M15 的稳定 ID、权限与连接边界。

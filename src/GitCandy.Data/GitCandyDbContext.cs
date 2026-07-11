@@ -1,4 +1,5 @@
 using GitCandy.Data.Domain;
+using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -51,6 +52,27 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     /// </summary>
     public DbSet<GitCandySshKey> SshKeys => Set<GitCandySshKey>();
 
+    /// <summary>稳定用户/团队 namespace。</summary>
+    public DbSet<GitCandyNamespace> Namespaces => Set<GitCandyNamespace>();
+
+    /// <summary>namespace 历史 alias。</summary>
+    public DbSet<GitCandyNamespaceAlias> NamespaceAliases => Set<GitCandyNamespaceAlias>();
+
+    /// <summary>仓库历史 alias。</summary>
+    public DbSet<GitCandyRepositoryAlias> RepositoryAliases => Set<GitCandyRepositoryAlias>();
+
+    /// <summary>全局 namespace 名称占用。</summary>
+    public DbSet<GitCandyNamespaceClaim> NamespaceClaims => Set<GitCandyNamespaceClaim>();
+
+    /// <summary>namespace 内仓库名称占用。</summary>
+    public DbSet<GitCandyRepositoryClaim> RepositoryClaims => Set<GitCandyRepositoryClaim>();
+
+    /// <summary>名称生命周期审计事件。</summary>
+    public DbSet<GitCandyRenameEvent> RenameEvents => Set<GitCandyRenameEvent>();
+
+    /// <summary>旧 Git 项目地址映射。</summary>
+    public DbSet<GitCandyLegacyRepositoryRoute> LegacyRepositoryRoutes => Set<GitCandyLegacyRepositoryRoute>();
+
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -75,6 +97,8 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         ArgumentNullException.ThrowIfNull(builder);
 
         base.OnModelCreating(builder);
+
+        builder.ConfigureNamespaceModel();
 
         builder.Entity<GitCandyUser>(entity =>
         {
@@ -160,6 +184,10 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.Property(repository => repository.Id)
                 .ValueGeneratedOnAdd();
 
+            entity.Property(repository => repository.StorageName)
+                .IsRequired()
+                .HasMaxLength(SchemaLimits.RepositoryStorageName);
+
             entity.Property(repository => repository.Name)
                 .IsRequired()
                 .HasMaxLength(SchemaLimits.RepositoryName);
@@ -190,8 +218,18 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.Property(repository => repository.ForkNetworkRoot)
                 .HasMaxLength(SchemaLimits.RepositoryName);
 
-            entity.HasIndex(repository => repository.NormalizedName)
-                .HasDatabaseName("IX_Repositories_NormalizedName")
+            entity.HasOne(repository => repository.Namespace)
+                .WithMany(item => item.Repositories)
+                .HasForeignKey(repository => repository.NamespaceId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(repository => new { repository.NamespaceId, repository.NormalizedName })
+                .HasDatabaseName("IX_Repositories_NamespaceId_NormalizedName")
+                .IsUnique();
+
+            entity.HasIndex(repository => repository.StorageName)
+                .HasDatabaseName("IX_Repositories_StorageName")
                 .IsUnique();
         });
 
@@ -207,6 +245,10 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.Property(team => team.Name)
                 .IsRequired()
                 .HasMaxLength(SchemaLimits.TeamName);
+
+            entity.Property(team => team.DisplayName)
+                .IsRequired()
+                .HasMaxLength(SchemaLimits.UserDisplayName);
 
             entity.Property(team => team.NormalizedName)
                 .IsRequired()
@@ -381,6 +423,10 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             if (entry.State is EntityState.Added or EntityState.Modified)
             {
                 entry.Entity.NormalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(entry.Entity.Name);
+                if (string.IsNullOrWhiteSpace(entry.Entity.StorageName))
+                {
+                    entry.Entity.StorageName = entry.Entity.Name.Trim();
+                }
             }
         }
 
@@ -389,6 +435,34 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             if (entry.State is EntityState.Added or EntityState.Modified)
             {
                 entry.Entity.NormalizedName = GitCandyNameNormalizer.NormalizeTeamName(entry.Entity.Name);
+                if (string.IsNullOrWhiteSpace(entry.Entity.DisplayName))
+                {
+                    entry.Entity.DisplayName = entry.Entity.Name.Trim();
+                }
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<GitCandyNamespace>())
+        {
+            if (entry.State is EntityState.Added or EntityState.Modified)
+            {
+                entry.Entity.NormalizedSlug = GitCandy.Application.NamespaceSlugRules.Normalize(entry.Entity.Slug);
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<GitCandyNamespaceAlias>())
+        {
+            if (entry.State is EntityState.Added or EntityState.Modified)
+            {
+                entry.Entity.NormalizedSlug = GitCandy.Application.NamespaceSlugRules.Normalize(entry.Entity.Slug);
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<GitCandyRepositoryAlias>())
+        {
+            if (entry.State is EntityState.Added or EntityState.Modified)
+            {
+                entry.Entity.NormalizedSlug = GitCandy.Application.NamespaceSlugRules.Normalize(entry.Entity.Slug);
             }
         }
     }

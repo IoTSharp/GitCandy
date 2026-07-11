@@ -7,10 +7,15 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 EF Core 领域表的仓库元数据管理服务。
 /// </summary>
-internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
+internal sealed class RepositoryManagementService(
+    GitCandyDbContext dbContext,
+    INamespaceProvisioningService namespaceProvisioningService,
+    TimeProvider timeProvider)
     : IRepositoryManagementService
 {
     private readonly GitCandyDbContext _dbContext = dbContext;
+    private readonly INamespaceProvisioningService _namespaceProvisioningService = namespaceProvisioningService;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <inheritdoc />
     public async Task<RepositoryDetails?> GetRepositoryAsync(
@@ -18,9 +23,35 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         CancellationToken cancellationToken = default)
     {
         var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName);
+        var repositoryId = await _dbContext.LegacyRepositoryRoutes
+            .AsNoTracking()
+            .Where(item => item.NormalizedProject == normalizedName)
+            .Select(item => (long?)item.RepositoryId)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (repositoryId is not null)
+        {
+            return await GetRepositoryAsync(repositoryId.Value, cancellationToken);
+        }
+
+        var fallbackIds = await _dbContext.Repositories.AsNoTracking()
+            .Where(item => item.NormalizedName == normalizedName)
+            .Select(item => item.Id)
+            .Take(2)
+            .ToArrayAsync(cancellationToken);
+        return fallbackIds.Length == 1
+            ? await GetRepositoryAsync(fallbackIds[0], cancellationToken)
+            : null;
+    }
+
+    /// <inheritdoc />
+    public async Task<RepositoryDetails?> GetRepositoryAsync(
+        long repositoryId,
+        CancellationToken cancellationToken = default)
+    {
         var repository = await _dbContext.Repositories
             .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.NormalizedName == normalizedName, cancellationToken);
+            .Include(item => item.Namespace)
+            .SingleOrDefaultAsync(item => item.Id == repositoryId, cancellationToken);
         if (repository is null)
         {
             return null;
@@ -46,7 +77,11 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
             .ToArrayAsync(cancellationToken);
 
         return new RepositoryDetails(
+            repository.Id,
+            repository.NamespaceId,
+            repository.Namespace!.Slug,
             repository.Name,
+            repository.StorageName,
             repository.Description,
             repository.IsPrivate,
             repository.AllowAnonymousRead,
@@ -64,15 +99,22 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         string creatorUserId,
         CancellationToken cancellationToken = default)
     {
+        var namespaceId = await ResolveCreationNamespaceAsync(command.NamespaceSlug, creatorUserId, cancellationToken);
+        if (namespaceId is null)
+        {
+            return false;
+        }
+
         var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(command.Name);
-        if (await _dbContext.Repositories.AnyAsync(
-            repository => repository.NormalizedName == normalizedName,
+        if (await _dbContext.RepositoryClaims.AnyAsync(
+            claim => claim.NamespaceId == namespaceId.Value && claim.NormalizedSlug == normalizedName,
             cancellationToken))
         {
             return false;
         }
 
         var repository = CreateEntity(command);
+        repository.NamespaceId = namespaceId.Value;
         repository.UserRoles.Add(new GitCandyUserRepositoryRole
         {
             UserId = creatorUserId,
@@ -81,6 +123,28 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
             IsOwner = true
         });
         _dbContext.Repositories.Add(repository);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        _dbContext.RepositoryClaims.Add(new GitCandyRepositoryClaim
+        {
+            NamespaceId = repository.NamespaceId,
+            NormalizedSlug = normalizedName,
+            Slug = repository.Name,
+            ClaimType = NameClaimType.Current,
+            RepositoryId = repository.Id
+        });
+        if (!await _dbContext.LegacyRepositoryRoutes.AnyAsync(
+            route => route.NormalizedProject == normalizedName,
+            cancellationToken))
+        {
+            _dbContext.LegacyRepositoryRoutes.Add(new GitCandyLegacyRepositoryRoute
+            {
+                Project = repository.Name,
+                NormalizedProject = normalizedName,
+                RepositoryId = repository.Id,
+                CreatedAtUtc = _timeProvider.GetUtcNow().UtcDateTime
+            });
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
@@ -120,6 +184,27 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
             return false;
         }
 
+        var claims = await _dbContext.RepositoryClaims
+            .Include(claim => claim.RepositoryAlias)
+            .Where(claim => claim.RepositoryId == repository.Id
+                || (claim.RepositoryAlias != null && claim.RepositoryAlias.RepositoryId == repository.Id))
+            .ToArrayAsync(cancellationToken);
+        foreach (var claim in claims)
+        {
+            claim.ClaimType = NameClaimType.Reserved;
+            claim.RepositoryId = null;
+            claim.RepositoryAliasId = null;
+            claim.RepositoryAlias = null;
+        }
+
+        var aliases = await _dbContext.RepositoryAliases
+            .Where(alias => alias.RepositoryId == repository.Id)
+            .ToArrayAsync(cancellationToken);
+        var legacyRoutes = await _dbContext.LegacyRepositoryRoutes
+            .Where(route => route.RepositoryId == repository.Id)
+            .ToArrayAsync(cancellationToken);
+        _dbContext.RepositoryAliases.RemoveRange(aliases);
+        _dbContext.LegacyRepositoryRoutes.RemoveRange(legacyRoutes);
         _dbContext.Repositories.Remove(repository);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
@@ -243,9 +328,13 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         CancellationToken cancellationToken)
     {
         var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName);
-        return _dbContext.Repositories
-            .Where(repository => repository.NormalizedName == normalizedName)
-            .Select(repository => (long?)repository.Id)
+        return (
+            from repository in _dbContext.Repositories
+            where (_dbContext.LegacyRepositoryRoutes.Any(route =>
+                    route.RepositoryId == repository.Id && route.NormalizedProject == normalizedName))
+                || (!_dbContext.LegacyRepositoryRoutes.Any(route => route.NormalizedProject == normalizedName)
+                    && repository.NormalizedName == normalizedName)
+            select (long?)repository.Id)
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -254,6 +343,9 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         var repository = new GitCandyRepository
         {
             Name = command.Name.Trim(),
+            StorageName = string.IsNullOrWhiteSpace(command.StorageName)
+                ? command.Name.Trim()
+                : command.StorageName.Trim(),
             Description = command.Description.Trim(),
             CreatedAtUtc = DateTime.UtcNow,
             ForkedFromRepository = NormalizeOptionalName(command.ForkedFromRepository),
@@ -261,6 +353,28 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         };
         ApplyVisibility(repository, command);
         return repository;
+    }
+
+    private async Task<long?> ResolveCreationNamespaceAsync(
+        string? namespaceSlug,
+        string creatorUserId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(namespaceSlug))
+        {
+            return await _namespaceProvisioningService.EnsureUserNamespaceAsync(
+                creatorUserId,
+                cancellationToken);
+        }
+
+        var normalizedSlug = NamespaceSlugRules.Normalize(namespaceSlug);
+        return await _dbContext.Namespaces
+            .Where(item => item.NormalizedSlug == normalizedSlug
+                && (item.UserId == creatorUserId
+                    || (item.TeamId != null && _dbContext.UserTeamRoles.Any(role =>
+                        role.TeamId == item.TeamId && role.UserId == creatorUserId && role.IsAdministrator))))
+            .Select(item => (long?)item.Id)
+            .SingleOrDefaultAsync(cancellationToken);
     }
 
     private static void ApplyVisibility(GitCandyRepository repository, RepositoryEdit command)

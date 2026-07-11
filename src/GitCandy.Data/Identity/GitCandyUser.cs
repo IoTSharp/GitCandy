@@ -18,6 +18,9 @@ public sealed class GitCandyUser : IdentityUser
     /// </summary>
     public string? Description { get; set; }
 
+    /// <summary>用户拥有的稳定 namespace。</summary>
+    public GitCandyNamespace? Namespace { get; set; }
+
     /// <summary>
     /// 用户直接拥有的仓库角色。
     /// </summary>

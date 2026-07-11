@@ -10,6 +10,11 @@ public interface IRepositoryManagementService
         string repositoryName,
         CancellationToken cancellationToken = default);
 
+    /// <summary>按稳定 ID 读取仓库元数据和授权关系。</summary>
+    Task<RepositoryDetails?> GetRepositoryAsync(
+        long repositoryId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>创建仓库元数据，并将创建者设为 owner。</summary>
     Task<bool> CreateRepositoryAsync(
         RepositoryEdit command,
@@ -52,7 +57,9 @@ public sealed record RepositoryEdit(
     bool AllowAnonymousRead,
     bool AllowAnonymousWrite,
     string? ForkedFromRepository = null,
-    string? ForkNetworkRoot = null);
+    string? ForkNetworkRoot = null,
+    string? NamespaceSlug = null,
+    string? StorageName = null);
 
 /// <summary>用户仓库角色摘要。</summary>
 public sealed record RepositoryUserRoleSummary(
@@ -66,7 +73,11 @@ public sealed record RepositoryTeamRoleSummary(string TeamName, bool AllowRead, 
 
 /// <summary>仓库元数据和授权关系。</summary>
 public sealed record RepositoryDetails(
+    long Id,
+    long NamespaceId,
+    string NamespaceSlug,
     string Name,
+    string StorageName,
     string Description,
     bool IsPrivate,
     bool AllowAnonymousRead,

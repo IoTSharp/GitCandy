@@ -24,6 +24,10 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<ITeamService, TeamService>();
         services.TryAddScoped<IRepositoryService, RepositoryService>();
         services.TryAddScoped<IRepositoryManagementService, RepositoryManagementService>();
+        services.TryAddScoped<IRepositoryAddressResolver, RepositoryAddressResolver>();
+        services.TryAddScoped<INamespaceProvisioningService, NamespaceProvisioningService>();
+        services.TryAddScoped<INameManagementService, NameManagementService>();
+        services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ISshAccessService, SshAccessService>();
 
         return services;

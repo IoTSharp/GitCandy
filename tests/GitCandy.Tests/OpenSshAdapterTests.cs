@@ -1,4 +1,5 @@
 using System.Text;
+using GitCandy.Application;
 using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Ssh;
@@ -55,7 +56,7 @@ public sealed class OpenSshAdapterTests
         Assert.AreEqual(GitTransportService.UploadPack, backend.Request.Service);
         Assert.AreEqual("version=2", backend.Request.ProtocolVersion);
         Assert.AreEqual("request", Encoding.ASCII.GetString(output.ToArray()));
-        Assert.AreEqual(string.Empty, error.ToString());
+        StringAssert.Contains(error.ToString(), "Repository address changed");
     }
 
     [TestMethod]
@@ -194,12 +195,30 @@ public sealed class OpenSshAdapterTests
 
         public Task<bool> CanAccessRepositoryAsync(
             SshPrincipal principal,
-            string repositoryName,
+            long repositoryId,
             bool requiresWrite,
             CancellationToken cancellationToken = default)
         {
             LastRequiresWrite = requiresWrite;
             return Task.FromResult(CanAccess);
+        }
+
+        public Task<RepositoryAddressResolution?> ResolveRepositoryAsync(
+            string? namespaceSlug,
+            string repositorySlug,
+            bool legacy,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<RepositoryAddressResolution?>(new RepositoryAddressResolution(
+                1,
+                1,
+                namespaceSlug ?? "legacy",
+                repositorySlug,
+                repositorySlug,
+                IsPrivate: true,
+                UsedNamespaceAlias: false,
+                UsedRepositoryAlias: false,
+                UsedLegacyRoute: legacy));
         }
     }
 

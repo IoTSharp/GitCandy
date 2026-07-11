@@ -17,6 +17,7 @@
     <div class="form-actions">
         <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> @Text["Shared_Save"]</button>
         <a asp-action="Detail" asp-route-name="@Model.UserName" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a>
+        <a asp-action="Rename" asp-route-name="@Model.UserName" class="btn"><i data-lucide="pencil"></i> Rename URL</a>
         @if (User.IsInRole(RoleNames.Administrator)) { <a asp-action="Delete" asp-route-name="@Model.UserName" class="btn btn-danger"><i data-lucide="trash-2"></i> @Text["Shared_Delete"]</a> }
     </div>
 </form>

@@ -17,6 +17,10 @@ public sealed class TeamFormViewModel
     [RegularExpression("^[A-Za-z][A-Za-z0-9_-]+$")]
     public string Name { get; set; } = string.Empty;
 
+    [StringLength(128)]
+    [Display(Name = "Display name")]
+    public string DisplayName { get; set; } = string.Empty;
+
     [StringLength(500)]
     [DataType(DataType.MultilineText)]
     public string Description { get; set; } = string.Empty;

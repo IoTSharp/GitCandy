@@ -10,6 +10,12 @@ public sealed class GitCandyRepository
     /// </summary>
     public long Id { get; set; }
 
+    /// <summary>稳定 namespace 主键。</summary>
+    public long NamespaceId { get; set; } = GitCandyNamespace.LegacyNamespaceId;
+
+    /// <summary>与可变 URL slug 分离的物理仓库存储键。</summary>
+    public string StorageName { get; set; } = string.Empty;
+
     /// <summary>
     /// 仓库名称。
     /// </summary>
@@ -54,6 +60,12 @@ public sealed class GitCandyRepository
     /// fork network 根仓库名称；非 fork 仓库为空。
     /// </summary>
     public string? ForkNetworkRoot { get; set; }
+
+    /// <summary>仓库所属稳定 namespace。</summary>
+    public GitCandyNamespace? Namespace { get; set; }
+
+    /// <summary>仓库历史名称。</summary>
+    public ICollection<GitCandyRepositoryAlias> Aliases { get; } = [];
 
     /// <summary>
     /// 用户仓库角色。

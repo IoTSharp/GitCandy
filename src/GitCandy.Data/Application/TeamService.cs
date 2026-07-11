@@ -7,9 +7,12 @@ namespace GitCandy.Application;
 /// <summary>
 /// 基于 EF Core 领域表的团队管理服务。
 /// </summary>
-internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
+internal sealed class TeamService(
+    GitCandyDbContext dbContext,
+    INamespaceProvisioningService namespaceProvisioningService) : ITeamService
 {
     private readonly GitCandyDbContext _dbContext = dbContext;
+    private readonly INamespaceProvisioningService _namespaceProvisioningService = namespaceProvisioningService;
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<TeamSummary>> GetTeamsAsync(
@@ -31,6 +34,7 @@ internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
             .OrderBy(team => team.NormalizedName)
             .Select(team => new TeamSummary(
                 team.Name,
+                team.DisplayName,
                 team.Description,
                 _dbContext.UserTeamRoles.Count(role => role.TeamId == team.Id)))
             .ToArrayAsync(cancellationToken);
@@ -84,12 +88,13 @@ internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
                 select repository.Name)
             .ToArrayAsync(cancellationToken);
 
-        return new TeamDetails(team.Name, team.Description, members, repositories);
+        return new TeamDetails(team.Name, team.DisplayName, team.Description, members, repositories);
     }
 
     /// <inheritdoc />
     public async Task<bool> CreateTeamAsync(
         string name,
+        string displayName,
         string description,
         string creatorUserId,
         CancellationToken cancellationToken = default)
@@ -103,6 +108,7 @@ internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
         var team = new GitCandyTeam
         {
             Name = name.Trim(),
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? name.Trim() : displayName.Trim(),
             Description = description.Trim(),
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -113,12 +119,13 @@ internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
         });
         _dbContext.Teams.Add(team);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        return await _namespaceProvisioningService.EnsureTeamNamespaceAsync(team.Id, cancellationToken) is not null;
     }
 
     /// <inheritdoc />
     public async Task<bool> UpdateTeamAsync(
         string name,
+        string displayName,
         string description,
         CancellationToken cancellationToken = default)
     {
@@ -131,6 +138,7 @@ internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
             return false;
         }
 
+        team.DisplayName = string.IsNullOrWhiteSpace(displayName) ? team.Name : displayName.Trim();
         team.Description = description.Trim();
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
@@ -146,6 +154,15 @@ internal sealed class TeamService(GitCandyDbContext dbContext) : ITeamService
         if (team is null)
         {
             return false;
+        }
+
+        var namespaceItem = await _dbContext.Namespaces.SingleOrDefaultAsync(
+            item => item.TeamId == team.Id,
+            cancellationToken);
+        if (namespaceItem is not null)
+        {
+            namespaceItem.OwnerType = NamespaceOwnerType.System;
+            namespaceItem.TeamId = null;
         }
 
         _dbContext.Teams.Remove(team);

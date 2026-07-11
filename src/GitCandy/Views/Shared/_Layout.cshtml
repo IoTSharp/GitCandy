@@ -17,6 +17,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>@pageTitle - GitCandy</title>
+    @if (ViewData["CanonicalUrl"] is string canonicalUrl)
+    {
+        <link rel="canonical" href="@canonicalUrl" />
+    }
     <link rel="stylesheet" href="~/assets/app.css" asp-append-version="true" />
 </head>
 <body>
@@ -132,6 +136,10 @@
 
         <div class="app-main">
             <main id="main-content" class="content-shell" tabindex="-1">
+                @if (TempData["CanonicalAddressChanged"] is string canonicalAddressChanged)
+                {
+                    <div class="alert alert-info" role="status">@canonicalAddressChanged</div>
+                }
                 @RenderBody()
             </main>
             <footer class="app-footer" title="@Context.GetGitCandyRequestProfiler()?.Elapsed">

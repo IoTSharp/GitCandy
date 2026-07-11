@@ -158,9 +158,22 @@ internal sealed class UserAdministrationService(
         cancellationToken.ThrowIfCancellationRequested();
 
         var user = await _userManager.FindByNameAsync(userName);
-        return user is null
-            ? IdentityResult.Failed(new IdentityError { Description = "User was not found." })
-            : await _userManager.DeleteAsync(user);
+        if (user is null)
+        {
+            return IdentityResult.Failed(new IdentityError { Description = "User was not found." });
+        }
+
+        var namespaceItem = await _dbContext.Namespaces.SingleOrDefaultAsync(
+            item => item.UserId == user.Id,
+            cancellationToken);
+        if (namespaceItem is not null)
+        {
+            namespaceItem.OwnerType = NamespaceOwnerType.System;
+            namespaceItem.UserId = null;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return await _userManager.DeleteAsync(user);
     }
 
     /// <inheritdoc />

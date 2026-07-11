@@ -4,6 +4,7 @@
 <form asp-action="Create" method="post" class="account-form">
     <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
     <div class="form-field"><label asp-for="Name"></label><input asp-for="Name" autocomplete="off" /><span asp-validation-for="Name"></span></div>
+    <div class="form-field"><label asp-for="DisplayName"></label><input asp-for="DisplayName" autocomplete="organization" /><span asp-validation-for="DisplayName"></span></div>
     <div class="form-field"><label asp-for="Description"></label><textarea asp-for="Description" rows="4"></textarea><span asp-validation-for="Description"></span></div>
     <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> @Text["Shared_Create"]</button><a asp-action="Index" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div>
 </form>

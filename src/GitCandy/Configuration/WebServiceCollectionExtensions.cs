@@ -60,6 +60,7 @@ public static class WebServiceCollectionExtensions
             .AddViewLocalization();
         services.AddHttpContextAccessor();
         services.AddGitCandyApplicationOptions(configuration);
+        services.AddGitCandyNamespaceOptions(configuration);
         services.AddGitCandyOpenSshOptions(configuration);
         services.AddDataProtection()
             .SetApplicationName("GitCandy")
@@ -70,6 +71,8 @@ public static class WebServiceCollectionExtensions
         var identitySettings = AddGitCandyIdentityOptions(services, configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, NamespaceAliasCleanupHostedService>());
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyApplicationPathValidationHostedService>());
@@ -209,6 +212,7 @@ public static class WebServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         services.AddGitCandyApplicationOptions(configuration);
+        services.AddGitCandyNamespaceOptions(configuration);
         services.AddGitCandyOpenSshOptions(configuration);
         services.AddGitSmartHttpOptions(configuration);
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
@@ -279,6 +283,22 @@ public static class WebServiceCollectionExtensions
                 "Enabled OpenSSH adaptation requires an absolute GitCandy executable path without line breaks.")
             .ValidateOnStart();
 
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyNamespaceOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<GitCandyNamespaceOptions>()
+            .Bind(configuration.GetSection(GitCandyNamespaceOptions.SectionName))
+            .Validate(options => options.AliasRetentionDays is >= 1 and <= 3650,
+                "AliasRetentionDays must be between 1 and 3650.")
+            .Validate(options => options.RenameLimit is >= 1 and <= 20,
+                "RenameLimit must be between 1 and 20.")
+            .Validate(options => options.RenameWindowDays is >= 1 and <= 365,
+                "RenameWindowDays must be between 1 and 365.")
+            .ValidateOnStart();
         return services;
     }
 

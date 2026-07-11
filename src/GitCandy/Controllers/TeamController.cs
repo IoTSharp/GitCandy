@@ -12,11 +12,13 @@ namespace GitCandy.Controllers;
 [AutoValidateAntiforgeryToken]
 public sealed class TeamController(
     ITeamService teamService,
+    INameManagementService nameManagementService,
     IAuthorizationService authorizationService,
     ICurrentUser currentUser,
     IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
 {
     private readonly ITeamService _teamService = teamService;
+    private readonly INameManagementService _nameManagementService = nameManagementService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
@@ -59,6 +61,7 @@ public sealed class TeamController(
         if (string.IsNullOrWhiteSpace(_currentUser.UserId)
             || !await _teamService.CreateTeamAsync(
                 model.Name,
+                model.DisplayName,
                 model.Description,
                 _currentUser.UserId,
                 cancellationToken))
@@ -105,7 +108,12 @@ public sealed class TeamController(
         var team = await GetTeamAsync(name, cancellationToken);
         return team is null
             ? NotFound()
-            : View(new TeamFormViewModel { Name = team.Name, Description = team.Description });
+            : View(new TeamFormViewModel
+            {
+                Name = team.Name,
+                DisplayName = team.DisplayName,
+                Description = team.Description
+            });
     }
 
     [HttpPost]
@@ -128,7 +136,7 @@ public sealed class TeamController(
             return View(model);
         }
 
-        return await _teamService.UpdateTeamAsync(name, model.Description, cancellationToken)
+        return await _teamService.UpdateTeamAsync(name, model.DisplayName, model.Description, cancellationToken)
             ? RedirectToAction(nameof(Detail), new { name })
             : NotFound();
     }
@@ -147,6 +155,76 @@ public sealed class TeamController(
         return team is null
             ? NotFound()
             : View(new TeamDetailsViewModel { Team = team, CanManage = true });
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Rename(string name, CancellationToken cancellationToken)
+    {
+        var denied = await RequireTeamAdministratorAsync(name);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var snapshot = await _nameManagementService.GetNamespaceSnapshotAsync(name, cancellationToken);
+        return snapshot is null
+            ? NotFound()
+            : View("~/Views/Shared/Rename.cshtml", new NameChangeViewModel
+            {
+                CurrentSlug = snapshot.CurrentSlug,
+                NewSlug = snapshot.CurrentSlug,
+                SubjectType = NameSubjectType.Namespace,
+                Snapshot = snapshot
+            });
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> Rename(NameChangeViewModel model, CancellationToken cancellationToken)
+    {
+        var denied = await RequireTeamAdministratorAsync(model.CurrentSlug);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var snapshot = await _nameManagementService.GetNamespaceSnapshotAsync(model.CurrentSlug, cancellationToken);
+        if (snapshot is null)
+        {
+            return NotFound();
+        }
+
+        model.Snapshot = snapshot;
+        model.SubjectType = NameSubjectType.Namespace;
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return View("~/Views/Shared/Rename.cshtml", model);
+        }
+
+        var changeOverride = _currentUser.IsAdministrator && model.UseOverride
+            ? new NameChangeOverride(model.OverrideReason ?? string.Empty, model.ConfirmOverride)
+            : null;
+        var result = await _nameManagementService.RenameNamespaceAsync(
+            snapshot.SubjectId,
+            model.NewSlug,
+            _currentUser.UserId,
+            changeOverride,
+            cancellationToken);
+        if (result.Status != NameChangeStatus.Succeeded)
+        {
+            ModelState.AddModelError(nameof(model.NewSlug), result.Status switch
+            {
+                NameChangeStatus.RateLimited => "The rolling rename limit has been reached.",
+                NameChangeStatus.Reserved => "The URL slug is reserved by the application.",
+                NameChangeStatus.Occupied => "The URL slug is already occupied by a current name or retained alias.",
+                NameChangeStatus.ConfirmationRequired => "An override requires a reason and explicit confirmation.",
+                _ => "The team URL could not be changed."
+            });
+            return View("~/Views/Shared/Rename.cshtml", model);
+        }
+
+        return RedirectToAction(nameof(Detail), new { name = result.CanonicalSlug });
     }
 
     [HttpPost]

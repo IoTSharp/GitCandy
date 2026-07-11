@@ -99,9 +99,20 @@ public sealed class OpenSshAdapter(
             }
 
             var requiresWrite = parsedCommand.Service == GitTransportService.ReceivePack;
+            var address = await _accessService.ResolveRepositoryAsync(
+                parsedCommand.NamespaceSlug,
+                parsedCommand.RepositorySlug,
+                parsedCommand.IsLegacy,
+                cancellationToken);
+            if (address is null)
+            {
+                await error.WriteLineAsync("Repository not found.");
+                return 1;
+            }
+
             if (!await _accessService.CanAccessRepositoryAsync(
                     key.Principal,
-                    parsedCommand.RepositoryName,
+                    address.RepositoryId,
                     requiresWrite,
                     cancellationToken))
             {
@@ -109,7 +120,12 @@ public sealed class OpenSshAdapter(
                 return 1;
             }
 
-            var repository = _gitServiceFactory.Create(parsedCommand.RepositoryName);
+            if (address.UsedAlias)
+            {
+                await error.WriteLineAsync($"Repository address changed; update the remote to {address.CanonicalPath}.git.");
+            }
+
+            var repository = _gitServiceFactory.Create(address.StorageName);
             _transportBackend.EnsureRepositoryExists(repository);
             var request = new GitTransportRequest(
                 repository,

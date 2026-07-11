@@ -1,0 +1,64 @@
+@model NameChangeViewModel
+@{
+    ViewData["Title"] = $"Rename {Model.CurrentSlug}";
+    var snapshot = Model.Snapshot;
+}
+<header class="page-heading">
+    <div>
+        <h1>Rename @Model.CurrentSlug</h1>
+        @if (snapshot?.RemainingRenames is int remaining)
+        {
+            <p>@remaining successful namespace rename(s) remain in the rolling window.</p>
+        }
+        else
+        {
+            <p>The previous repository address will remain available as an alias.</p>
+        }
+    </div>
+</header>
+<form method="post" class="account-form">
+    <input asp-for="CurrentSlug" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+    <div class="form-field"><label asp-for="NewSlug"></label><input asp-for="NewSlug" autocomplete="off" /><span asp-validation-for="NewSlug"></span></div>
+    @if (User.IsInRole(RoleNames.Administrator))
+    {
+        <div class="form-field checkbox-field"><input asp-for="UseOverride" /><label asp-for="UseOverride"></label></div>
+        <div class="form-field"><label asp-for="OverrideReason"></label><textarea asp-for="OverrideReason" rows="3"></textarea><span asp-validation-for="OverrideReason"></span></div>
+        <div class="form-field checkbox-field"><input asp-for="ConfirmOverride" /><label asp-for="ConfirmOverride"></label></div>
+    }
+    <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Rename</button><a href="javascript:history.back()" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div>
+</form>
+@if (snapshot is not null)
+{
+    <section aria-labelledby="alias-heading">
+        <h2 id="alias-heading">Historical addresses</h2>
+        @if (snapshot.Aliases.Count == 0)
+        {
+            <p class="entity-meta">No historical names.</p>
+        }
+        else
+        {
+            <div class="table-wrap"><table><thead><tr><th>Alias</th><th>Created</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody>
+            @foreach (var alias in snapshot.Aliases)
+            {
+                <tr>
+                    <td><code>@alias.Slug</code></td><td>@alias.CreatedAtUtc.ToString("u")</td><td>@alias.ExpiresAtUtc.ToString("u")</td><td>@(alias.ReleasedAtUtc is null ? "Reserved" : "Released")</td>
+                    <td>
+                        @if (alias.ReleasedAtUtc is null && User.IsInRole(RoleNames.Administrator))
+                        {
+                            <form asp-controller="NameManagement" asp-action="ExtendAlias" method="post" class="toolbar">
+                                <input type="hidden" name="subjectType" value="@Model.SubjectType" />
+                                <input type="hidden" name="aliasId" value="@alias.Id" />
+                                <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
+                                <input type="datetime-local" name="expiresAtUtc" required value="@alias.ExpiresAtUtc.AddDays(30).ToString("yyyy-MM-ddTHH:mm")" aria-label="New UTC expiry" />
+                                <input type="text" name="reason" required maxlength="500" placeholder="Audit reason" aria-label="Audit reason" />
+                                <button type="submit" class="icon-button" title="Extend alias"><i data-lucide="calendar-plus"></i></button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody></table></div>
+        }
+    </section>
+}

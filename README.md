@@ -32,6 +32,24 @@ docker pull iotsharp/gitcandy:latest
 
 Tagged GitHub Releases also contain Linux and Windows service packages, migration SQL, Compose files, and a loadable image archive.
 
+## Repository URLs
+
+The canonical repository address is `/{namespace}/{repository}`. Git Smart HTTP accepts both `/{namespace}/{repository}.git` and the no-suffix form; SSH uses `ssh://git@host:port/{namespace}/{repository}.git`. A namespace belongs to an Identity user or team and is case-insensitively unique across both owner types.
+
+The legacy `/git/{project}[.git]` Smart HTTP and SSH paths remain available through explicit database mappings. Renaming a user, team, or repository keeps the old address as a direct alias to the stable ID. Web and Git HTTP discovery requests use `308 Permanent Redirect` to advertise the canonical remote; SSH alias requests continue through the same authorization and transport backend.
+
+Name history defaults are configured under `GitCandy:Namespaces`:
+
+```json
+{
+  "AliasRetentionDays": 365,
+  "RenameLimit": 3,
+  "RenameWindowDays": 7
+}
+```
+
+The rename limit applies to successful user/team namespace slug changes in a rolling window. Display-name changes do not create aliases or consume the limit. See [the M10 migration record](docs/migration/m10-stable-namespaces.md) before upgrading an existing database.
+
 ## Operations
 
 - Liveness: `/health/live`

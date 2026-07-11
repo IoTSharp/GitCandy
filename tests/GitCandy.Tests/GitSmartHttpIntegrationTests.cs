@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using GitCandy.Application;
 using GitCandy.Configuration;
 using GitCandy.Controllers;
 using GitCandy.Data;
@@ -30,14 +31,19 @@ public sealed class GitSmartHttpIntegrationTests
         await using var fixture = await GitHttpFixture.CreateAsync();
         var clonePath = Path.Combine(fixture.TempRoot, "clones", "public-dotgit");
         var noSuffixClonePath = Path.Combine(fixture.TempRoot, "clones", "public-no-suffix");
+        var aliasClonePath = Path.Combine(fixture.TempRoot, "clones", "public-alias");
 
         await fixture.RunGitAsync(
             ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}git/public-demo.git", clonePath]);
         Assert.IsTrue(File.Exists(Path.Combine(clonePath, "README.md")));
 
         await fixture.RunGitAsync(
-            ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}git/public-demo", noSuffixClonePath]);
+            ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}m6-owner/public-demo", noSuffixClonePath]);
         Assert.IsTrue(File.Exists(Path.Combine(noSuffixClonePath, "README.md")));
+
+        await fixture.RunGitAsync(
+            ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}m6-previous/public-old.git", aliasClonePath]);
+        Assert.IsTrue(File.Exists(Path.Combine(aliasClonePath, "README.md")));
 
         File.AppendAllText(
             Path.Combine(fixture.SeedWorkTree, "README.md"),
@@ -47,12 +53,26 @@ public sealed class GitSmartHttpIntegrationTests
         await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "commit", "-m", "M6 fetch verification"]);
         await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "push", "origin", "main"]);
         await fixture.RunGitAsync(["-C", clonePath, "fetch", "--all", "--tags"]);
+        await fixture.RunGitAsync(["-C", aliasClonePath, "fetch", "--all", "--tags"]);
 
         var remoteHead = await fixture.RunGitForOutputAsync(
             ["-C", clonePath, "rev-parse", "origin/main"]);
         var bareHead = await fixture.RunGitForOutputAsync(
             ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]);
         Assert.AreEqual(bareHead, remoteHead);
+
+        File.AppendAllText(Path.Combine(aliasClonePath, "README.md"), "alias push verification\n", Encoding.UTF8);
+        await fixture.RunGitAsync(["-C", aliasClonePath, "config", "user.name", "GitCandy M10 Bot"]);
+        await fixture.RunGitAsync(["-C", aliasClonePath, "config", "user.email", "m10@gitcandy.local"]);
+        await fixture.RunGitAsync(["-C", aliasClonePath, "add", "README.md"]);
+        await fixture.RunGitAsync(["-C", aliasClonePath, "commit", "-m", "M10 alias push verification"]);
+        await fixture.RunGitAsync(
+            ["-C", aliasClonePath, "push", "origin", "HEAD:refs/heads/m10-alias"],
+            useOwnerCredentials: true);
+        var aliasPushedHead = await fixture.RunGitForOutputAsync(
+            ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/m10-alias"]);
+        var aliasLocalHead = await fixture.RunGitForOutputAsync(["-C", aliasClonePath, "rev-parse", "HEAD"]);
+        Assert.AreEqual(aliasLocalHead, aliasPushedHead);
 
         var largeFilePath = Path.Combine(clonePath, "large-pack.bin");
         await WriteRandomFileAsync(largeFilePath, LargeFileSize);
@@ -196,9 +216,15 @@ public sealed class GitSmartHttpIntegrationTests
                         createResult.Succeeded,
                         string.Join(", ", createResult.Errors.Select(error => error.Description)));
 
+                    var namespaceService = scope.ServiceProvider.GetRequiredService<INamespaceProvisioningService>();
+                    var namespaceId = await namespaceService.EnsureUserNamespaceAsync(owner.Id);
+                    Assert.IsNotNull(namespaceId);
+
                     var repository = new GitCandyRepository
                     {
+                        NamespaceId = namespaceId.Value,
                         Name = "public-demo",
+                        StorageName = "public-demo",
                         Description = "M6 real Git HTTP fixture",
                         CreatedAtUtc = DateTime.UtcNow,
                         AllowAnonymousRead = true
@@ -211,6 +237,57 @@ public sealed class GitSmartHttpIntegrationTests
                         IsOwner = true
                     });
                     dbContext.Repositories.Add(repository);
+                    await dbContext.SaveChangesAsync();
+                    var utcNow = DateTime.UtcNow;
+                    var namespaceAlias = new GitCandyNamespaceAlias
+                    {
+                        NamespaceId = namespaceId.Value,
+                        Slug = "m6-previous",
+                        CreatedAtUtc = utcNow,
+                        ExpiresAtUtc = utcNow.AddDays(365)
+                    };
+                    var repositoryAlias = new GitCandyRepositoryAlias
+                    {
+                        NamespaceId = namespaceId.Value,
+                        RepositoryId = repository.Id,
+                        Slug = "public-old",
+                        CreatedAtUtc = utcNow,
+                        ExpiresAtUtc = utcNow.AddDays(365)
+                    };
+                    dbContext.NamespaceAliases.Add(namespaceAlias);
+                    dbContext.RepositoryAliases.Add(repositoryAlias);
+                    await dbContext.SaveChangesAsync();
+                    dbContext.NamespaceClaims.Add(new GitCandyNamespaceClaim
+                    {
+                        NormalizedSlug = "M6-PREVIOUS",
+                        Slug = namespaceAlias.Slug,
+                        ClaimType = NameClaimType.Alias,
+                        NamespaceAliasId = namespaceAlias.Id
+                    });
+                    dbContext.RepositoryClaims.AddRange(
+                        new GitCandyRepositoryClaim
+                        {
+                            NamespaceId = namespaceId.Value,
+                            NormalizedSlug = "PUBLIC-DEMO",
+                            Slug = repository.Name,
+                            ClaimType = NameClaimType.Current,
+                            RepositoryId = repository.Id
+                        },
+                        new GitCandyRepositoryClaim
+                        {
+                            NamespaceId = namespaceId.Value,
+                            NormalizedSlug = "PUBLIC-OLD",
+                            Slug = repositoryAlias.Slug,
+                            ClaimType = NameClaimType.Alias,
+                            RepositoryAliasId = repositoryAlias.Id
+                        });
+                    dbContext.LegacyRepositoryRoutes.Add(new GitCandyLegacyRepositoryRoute
+                    {
+                        Project = repository.Name,
+                        NormalizedProject = repository.NormalizedName,
+                        RepositoryId = repository.Id,
+                        CreatedAtUtc = utcNow
+                    });
                     await dbContext.SaveChangesAsync();
                 }
 

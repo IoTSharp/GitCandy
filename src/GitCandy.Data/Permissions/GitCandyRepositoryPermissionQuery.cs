@@ -18,7 +18,17 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
         bool isAdministrator,
         CancellationToken cancellationToken = default)
     {
-        return CanAccessRepositoryAsync(repositoryName, userId, isAdministrator, requiresWrite: false, cancellationToken);
+        return CanAccessRepositoryAsync(repositoryName, null, userId, isAdministrator, requiresWrite: false, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> CanReadRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        return CanAccessRepositoryAsync(null, repositoryId, userId, isAdministrator, requiresWrite: false, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -28,7 +38,17 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
         bool isAdministrator,
         CancellationToken cancellationToken = default)
     {
-        return CanAccessRepositoryAsync(repositoryName, userId, isAdministrator, requiresWrite: true, cancellationToken);
+        return CanAccessRepositoryAsync(repositoryName, null, userId, isAdministrator, requiresWrite: true, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> CanWriteRepositoryAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        return CanAccessRepositoryAsync(null, repositoryId, userId, isAdministrator, requiresWrite: true, cancellationToken);
     }
 
     /// <inheritdoc />
@@ -38,8 +58,6 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
         bool isAdministrator,
         CancellationToken cancellationToken = default)
     {
-        var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName);
-
         if (string.IsNullOrWhiteSpace(userId))
         {
             return false;
@@ -47,33 +65,51 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
 
         if (isAdministrator)
         {
-            return await _dbContext.Repositories
-                .AsNoTracking()
-                .AnyAsync(repository => repository.NormalizedName == normalizedName, cancellationToken);
+            return await SelectRepositories(repositoryName, null).AnyAsync(cancellationToken);
         }
 
         return await (
             from role in _dbContext.UserRepositoryRoles.AsNoTracking()
-            join repository in _dbContext.Repositories.AsNoTracking()
+            join repository in SelectRepositories(repositoryName, null)
                 on role.RepositoryId equals repository.Id
-            where repository.NormalizedName == normalizedName
-                && role.UserId == userId
+            where role.UserId == userId
                 && role.IsOwner
             select role)
             .AnyAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
+    public async Task<bool> IsRepositoryOwnerAsync(
+        long repositoryId,
+        string? userId,
+        bool isAdministrator,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return false;
+        }
+
+        if (isAdministrator)
+        {
+            return await _dbContext.Repositories.AsNoTracking()
+                .AnyAsync(repository => repository.Id == repositoryId, cancellationToken);
+        }
+
+        return await _dbContext.UserRepositoryRoles.AsNoTracking().AnyAsync(
+            role => role.RepositoryId == repositoryId && role.UserId == userId && role.IsOwner,
+            cancellationToken);
+    }
+
     private async Task<bool> CanAccessRepositoryAsync(
-        string repositoryName,
+        string? repositoryName,
+        long? repositoryId,
         string? userId,
         bool isAdministrator,
         bool requiresWrite,
         CancellationToken cancellationToken)
     {
-        var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName);
-        var repositories = _dbContext.Repositories
-            .AsNoTracking()
-            .Where(repository => repository.NormalizedName == normalizedName);
+        var repositories = SelectRepositories(repositoryName, repositoryId);
 
         if (isAdministrator && !string.IsNullOrWhiteSpace(userId))
         {
@@ -105,10 +141,9 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
 
         var directRoleExists = await (
             from role in _dbContext.UserRepositoryRoles.AsNoTracking()
-            join repository in _dbContext.Repositories.AsNoTracking()
+            join repository in repositories
                 on role.RepositoryId equals repository.Id
-            where repository.NormalizedName == normalizedName
-                && role.UserId == userId
+            where role.UserId == userId
                 && role.AllowRead
                 && (!requiresWrite || role.AllowWrite)
             select role)
@@ -121,15 +156,31 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
 
         return await (
             from teamRole in _dbContext.TeamRepositoryRoles.AsNoTracking()
-            join repository in _dbContext.Repositories.AsNoTracking()
+            join repository in repositories
                 on teamRole.RepositoryId equals repository.Id
             join userTeamRole in _dbContext.UserTeamRoles.AsNoTracking()
                 on teamRole.TeamId equals userTeamRole.TeamId
-            where repository.NormalizedName == normalizedName
-                && userTeamRole.UserId == userId
+            where userTeamRole.UserId == userId
                 && teamRole.AllowRead
                 && (!requiresWrite || teamRole.AllowWrite)
             select teamRole)
             .AnyAsync(cancellationToken);
+    }
+
+    private IQueryable<GitCandyRepository> SelectRepositories(string? repositoryName, long? repositoryId)
+    {
+        if (repositoryId is not null)
+        {
+            return _dbContext.Repositories.AsNoTracking()
+                .Where(repository => repository.Id == repositoryId.Value);
+        }
+
+        var normalizedName = GitCandyNameNormalizer.NormalizeRepositoryName(repositoryName!);
+        return from repository in _dbContext.Repositories.AsNoTracking()
+            where _dbContext.LegacyRepositoryRoutes.Any(route =>
+                    route.RepositoryId == repository.Id && route.NormalizedProject == normalizedName)
+                || (!_dbContext.LegacyRepositoryRoutes.Any(route => route.NormalizedProject == normalizedName)
+                    && repository.NormalizedName == normalizedName)
+            select repository;
     }
 }

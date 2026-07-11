@@ -190,11 +190,11 @@ public sealed class SshRuntimeTests
             Assert.AreEqual("ssh-reader", principal.UserName);
             Assert.IsTrue(await accessService.CanAccessRepositoryAsync(
                 principal,
-                "PRIVATE-DEMO",
+                1L,
                 requiresWrite: false));
             Assert.IsFalse(await accessService.CanAccessRepositoryAsync(
                 principal,
-                "private-demo",
+                1L,
                 requiresWrite: true));
 
             await using var verificationScope = app.Services.CreateAsyncScope();

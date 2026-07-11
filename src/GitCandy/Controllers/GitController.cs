@@ -21,6 +21,7 @@ namespace GitCandy.Controllers;
 [ApiExplorerSettings(IgnoreApi = true)]
 public sealed class GitController(
     IRepositoryService repositoryService,
+    IRepositoryAddressResolver addressResolver,
     IGitServiceFactory gitServiceFactory,
     IGitTransportBackend transportBackend,
     IAuthenticationService authenticationService,
@@ -32,6 +33,7 @@ public sealed class GitController(
     private const string GitProtocolHeaderName = "Git-Protocol";
     private static readonly ClaimsPrincipal AnonymousPrincipal = new(new ClaimsIdentity());
     private readonly IRepositoryService _repositoryService = repositoryService;
+    private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
     private readonly IGitServiceFactory _gitServiceFactory = gitServiceFactory;
     private readonly IGitTransportBackend _transportBackend = transportBackend;
     private readonly IAuthenticationService _authenticationService = authenticationService;
@@ -48,14 +50,10 @@ public sealed class GitController(
     /// <returns>流式 Git Smart HTTP 响应。</returns>
     public async Task<IActionResult> Smart(
         string project,
+        string? namespaceSlug = null,
         string? verb = null,
         [FromQuery] string? service = null)
     {
-        if (IsBrowserFallback(verb, service))
-        {
-            return RedirectToAction("Tree", "Repository", new { name = project });
-        }
-
         SetNoCacheHeaders();
 
         var operationResult = ResolveOperation(verb, service);
@@ -89,21 +87,26 @@ public sealed class GitController(
         }
 
         var principal = authenticationResult.Principal ?? AnonymousPrincipal;
-        RepositorySummary? repository;
+        RepositoryAddressResolution? address;
         try
         {
-            repository = await _repositoryService.FindRepositoryAsync(
-                project,
-                HttpContext.RequestAborted);
+            address = string.IsNullOrWhiteSpace(namespaceSlug)
+                ? await _addressResolver.ResolveLegacyAsync(project, HttpContext.RequestAborted)
+                : await _addressResolver.ResolveAsync(namespaceSlug, project, HttpContext.RequestAborted);
         }
         catch (ArgumentException)
         {
             return NotFound();
         }
 
-        if (repository is null)
+        if (address is null)
         {
             return NotFound();
+        }
+
+        if (IsBrowserFallback(verb, service))
+        {
+            return RedirectPreservingQuery(address.CanonicalPath);
         }
 
         var policy = operation.Service == GitTransportService.ReceivePack
@@ -111,7 +114,7 @@ public sealed class GitController(
             : AuthorizationPolicies.RepositoryRead;
         var authorizationResult = await _authorizationService.AuthorizeAsync(
             principal,
-            new RepositoryAuthorizationResource(repository.Name),
+            new RepositoryAuthorizationResource(address.RepositoryId),
             policy);
         if (!authorizationResult.Succeeded)
         {
@@ -120,17 +123,32 @@ public sealed class GitController(
                 : await ChallengeGitClientAsync();
         }
 
+        if (operation.AdvertiseRefs && address.UsedAlias)
+        {
+            var canonicalAddress = await _addressResolver.ResolveAsync(
+                address.NamespaceSlug,
+                address.RepositorySlug,
+                HttpContext.RequestAborted);
+            if (canonicalAddress is not null)
+            {
+                return RedirectPreservingQuery(
+                    $"{address.CanonicalPath}.git/{verb}",
+                    permanent: true,
+                    preserveMethod: true);
+            }
+        }
+
         GitRepositoryContext repositoryContext;
         try
         {
-            repositoryContext = _gitServiceFactory.Create(repository.Name);
+            repositoryContext = _gitServiceFactory.Create(address.StorageName);
             _transportBackend.EnsureRepositoryExists(repositoryContext);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or GitRepositoryNotFoundException)
         {
             _logger.LogWarning(
                 "Git repository {RepositoryName} has no safe physical repository path.",
-                repository.Name);
+                address.RepositorySlug);
             return NotFound();
         }
 
@@ -205,7 +223,7 @@ public sealed class GitController(
             _logger.LogWarning(
                 "Git {Service} timed out for repository {RepositoryName}.",
                 operation.Service,
-                repository.Name);
+                address.RepositorySlug);
             return HandleTransportFailure(StatusCodes.Status504GatewayTimeout);
         }
         catch (OperationCanceledException)
@@ -222,7 +240,7 @@ public sealed class GitController(
                 exception,
                 "Git {Service} failed for repository {RepositoryName}.",
                 operation.Service,
-                repository.Name);
+                address.RepositorySlug);
             return HandleTransportFailure(StatusCodes.Status500InternalServerError);
         }
         finally
@@ -240,6 +258,15 @@ public sealed class GitController(
             && !string.Equals(verb, "git-upload-pack", StringComparison.Ordinal)
             && !string.Equals(verb, "git-receive-pack", StringComparison.Ordinal)
             && string.IsNullOrWhiteSpace(service);
+    }
+
+    private IActionResult RedirectPreservingQuery(
+        string path,
+        bool permanent = false,
+        bool preserveMethod = false)
+    {
+        var location = path + Request.QueryString;
+        return new RedirectResult(location, permanent, preserveMethod);
     }
 
     private static OperationResolution ResolveOperation(string? verb, string? service)
