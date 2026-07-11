@@ -80,6 +80,12 @@ public sealed class GitCandyApplicationOptions
     /// </summary>
     public int NumberOfRepositoryContributors { get; set; } = 50;
 
+    /// <summary>是否允许 Pull Request 作者批准本人提交的变更。</summary>
+    public bool AllowAuthorApproval { get; set; }
+
+    /// <summary>source branch 更新后是否令旧 head 上的批准失效。</summary>
+    public bool DismissStalePullRequestApprovals { get; set; } = true;
+
     /// <summary>
     /// 内置 SSH 服务监听端口。
     /// </summary>

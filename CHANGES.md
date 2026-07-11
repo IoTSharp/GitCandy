@@ -3,6 +3,8 @@
 ---
 ### Unreleased
 #### Added
+ - Added M12 #134 separate Pull Request assignee and reviewer roles, request/re-request review, comment/approve/request-changes decisions, owner dismissal with audit history, and head-SHA-based stale review status.
+ - Added explicit `AllowAuthorApproval` and `DismissStalePullRequestApprovals` policy settings plus SQLite and SQL Server review-status migrations and service/MVC lifecycle coverage.
  - Added M12 #133 inline Pull Request review threads with server-validated old/new line ranges, replies, resolve/reopen, immutable original anchors, and unique hunk-context remapping that explicitly marks missing or ambiguous matches as outdated.
  - Added SQLite and SQL Server review-thread migrations plus real bare-repository anchor tests and migration-backed thread lifecycle coverage.
  - Added M12 #132 Pull Request Conversation, paged Commits, and collapsible Files changed views backed by immutable SHA snapshots and merge-base diffs, including rename detection, binary/large-diff degradation, and fixed-SHA commit links.
@@ -132,6 +134,7 @@
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
+ - The M12 #134 migrations add nullable Pull Request assignees plus reviewer-request and immutable review-history tables. Existing Pull Requests remain unassigned with no requested reviewers; back up the database before upgrade and restore that backup with the previous application version to roll back. See [the M12 #134 migration record](docs/migration/m12-134-pull-request-review-status.md).
  - The M11 SQLite and SQL Server migrations add Issue collaboration tables and backfill one `WorkItemSequences` row per existing repository without changing Identity, repository storage, Git URLs, or Git wire behavior. Back up the database before upgrade; rollback requires restoring that backup with the previous application version. See [the M11 migration record](docs/migration/m11-issues.md).
  - The M10 SQLite and SQL Server migrations create stable namespaces for existing users/teams, assign each existing repository to its first owner namespace (or the reserved `legacy` namespace when no owner exists), preserve the existing physical directory as `StorageName`, and create explicit `/git/{project}` mappings.
  - Upgrades now fail on user/team/reserved-slug collisions instead of silently rewriting public URLs. Resolve those conflicts before applying the migration. Rollback requires restoring the pre-M10 database backup together with the previous application version; repository directories are not renamed by this migration.

@@ -17,7 +17,12 @@ public enum PullRequestEventType
     MarkedReady,
     Closed,
     Reopened,
-    Merged
+    Merged,
+    AssigneeChanged,
+    ReviewRequested,
+    ReviewRerequested,
+    ReviewSubmitted,
+    ReviewDismissed
 }
 
 /// <summary>Pull Request 分页筛选条件。</summary>

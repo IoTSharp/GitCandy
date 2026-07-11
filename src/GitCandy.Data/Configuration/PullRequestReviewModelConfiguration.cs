@@ -7,6 +7,51 @@ internal static class PullRequestReviewModelConfiguration
 {
     public static void ConfigurePullRequestReviewModel(this ModelBuilder builder)
     {
+        builder.Entity<GitCandyPullRequestReviewer>(entity =>
+        {
+            entity.ToTable("PullRequestReviewers");
+            entity.HasKey(item => new { item.PullRequestId, item.ReviewerUserId });
+            entity.Property(item => item.ReviewerUserId).IsRequired().HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.RequestedByUserId).IsRequired().HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.Version).IsConcurrencyToken().IsRequired();
+            entity.HasOne(item => item.PullRequest).WithMany(item => item.Reviewers)
+                .HasForeignKey(item => item.PullRequestId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.Reviewer).WithMany()
+                .HasForeignKey(item => item.ReviewerUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.RequestedBy).WithMany()
+                .HasForeignKey(item => item.RequestedByUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(item => new { item.PullRequestId, item.RequestedAtUtc })
+                .HasDatabaseName("IX_PullRequestReviewers_PullRequestId_RequestedAtUtc");
+            entity.HasIndex(item => item.RequestedByUserId)
+                .HasDatabaseName("IX_PullRequestReviewers_RequestedByUserId");
+        });
+
+        builder.Entity<GitCandyPullRequestReview>(entity =>
+        {
+            entity.ToTable("PullRequestReviews");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).ValueGeneratedOnAdd();
+            entity.Property(item => item.ReviewerUserId).IsRequired().HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.State).HasConversion<string>().HasMaxLength(24).IsRequired();
+            entity.Property(item => item.BodyMarkdown).IsRequired().HasMaxLength(SchemaLimits.IssueBody);
+            entity.Property(item => item.BodyHtml).IsRequired().HasMaxLength(SchemaLimits.IssueBody * 2);
+            entity.Property(item => item.HeadSha).IsRequired().HasMaxLength(SchemaLimits.CommitSha);
+            entity.Property(item => item.ReviewerRequestVersion).IsRequired();
+            entity.Property(item => item.DismissedByUserId).HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.DismissalReason).HasMaxLength(SchemaLimits.IssueDetail);
+            entity.Property(item => item.Version).IsConcurrencyToken().IsRequired();
+            entity.HasOne(item => item.PullRequest).WithMany(item => item.Reviews)
+                .HasForeignKey(item => item.PullRequestId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(item => item.Reviewer).WithMany()
+                .HasForeignKey(item => item.ReviewerUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.DismissedBy).WithMany()
+                .HasForeignKey(item => item.DismissedByUserId).OnDelete(DeleteBehavior.NoAction);
+            entity.HasIndex(item => new { item.PullRequestId, item.ReviewerUserId, item.SubmittedAtUtc, item.Id })
+                .HasDatabaseName("IX_PullRequestReviews_PullRequestId_ReviewerUserId_SubmittedAtUtc_Id");
+            entity.HasIndex(item => item.DismissedByUserId)
+                .HasDatabaseName("IX_PullRequestReviews_DismissedByUserId");
+        });
+
         builder.Entity<GitCandyPullRequestReviewThread>(entity =>
         {
             entity.ToTable("PullRequestReviewThreads");

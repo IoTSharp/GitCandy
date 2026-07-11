@@ -4,6 +4,7 @@ using GitCandy.Issues;
 using GitCandy.PullRequests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using GitCandy.Configuration;
 
 namespace GitCandy.Data.Configuration;
 
@@ -20,6 +21,8 @@ public static class GitCandyApplicationServiceCollectionExtensions
     public static IServiceCollection AddGitCandyApplicationServices(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        services.AddOptions<GitCandyApplicationOptions>();
 
         services.TryAddScoped<IMembershipService, MembershipService>();
         services.TryAddScoped<IUserAdministrationService, UserAdministrationService>();

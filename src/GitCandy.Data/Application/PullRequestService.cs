@@ -2,25 +2,29 @@ using System.Data;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Permissions;
+using GitCandy.Configuration;
 using GitCandy.Issues;
 using GitCandy.PullRequests;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace GitCandy.Application;
 
 /// <summary>基于 EF Core 和受控 Git ref 能力的 Pull Request 应用服务。</summary>
-internal sealed class PullRequestService(
+internal sealed partial class PullRequestService(
     GitCandyDbContext dbContext,
     IIssueMarkdownRenderer markdownRenderer,
     IGitCandyRepositoryPermissionQuery permissionQuery,
     IPullRequestGitRepository gitRepository,
-    TimeProvider timeProvider) : IPullRequestService
+    TimeProvider timeProvider,
+    IOptions<GitCandyApplicationOptions> applicationOptions) : IPullRequestService
 {
     private readonly GitCandyDbContext _dbContext = dbContext;
     private readonly IIssueMarkdownRenderer _markdownRenderer = markdownRenderer;
     private readonly IGitCandyRepositoryPermissionQuery _permissionQuery = permissionQuery;
     private readonly IPullRequestGitRepository _gitRepository = gitRepository;
     private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
 
     public async Task<PullRequestPage> GetPullRequestsAsync(
         long repositoryId,

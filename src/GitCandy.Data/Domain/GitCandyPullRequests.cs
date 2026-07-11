@@ -12,6 +12,7 @@ public sealed class GitCandyPullRequest
     public string BodyMarkdown { get; set; } = string.Empty;
     public string BodyHtml { get; set; } = string.Empty;
     public string AuthorUserId { get; set; } = string.Empty;
+    public string? AssigneeUserId { get; set; }
     public string SourceBranch { get; set; } = string.Empty;
     public string TargetBranch { get; set; } = string.Empty;
     public string OriginalBaseSha { get; set; } = string.Empty;
@@ -30,9 +31,12 @@ public sealed class GitCandyPullRequest
     public long Version { get; set; }
     public GitCandyRepository? Repository { get; set; }
     public GitCandyUser? Author { get; set; }
+    public GitCandyUser? Assignee { get; set; }
     public GitCandyUser? MergedBy { get; set; }
     public ICollection<GitCandyPullRequestTimelineEvent> Timeline { get; } = [];
     public ICollection<GitCandyPullRequestReviewThread> ReviewThreads { get; } = [];
+    public ICollection<GitCandyPullRequestReviewer> Reviewers { get; } = [];
+    public ICollection<GitCandyPullRequestReview> Reviews { get; } = [];
 }
 
 public sealed class GitCandyPullRequestTimelineEvent

@@ -182,6 +182,150 @@ public sealed class PullRequestServiceTests
         Assert.AreEqual(FakePullRequestGitRepository.UpdatedFeatureSha, fixture.Git.HeadReferences[pullRequest.Number]);
     }
 
+    [TestMethod]
+    public async Task ReviewStatus_WithSeparateAssigneeAndReviewer_PersistsLifecycleAndStaleApproval()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync();
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+        var pullRequest = await service.CreatePullRequestAsync(
+            fixture.RepositoryId,
+            NewCommand(fixture.AuthorId, "feature"));
+
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await service.SetAssigneeAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                fixture.AuthorId,
+                isOwner: false,
+                fixture.ReviewerId));
+        Assert.AreEqual(
+            PullRequestMutationResult.Forbidden,
+            await service.SubmitReviewAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                fixture.ReviewerId,
+                new SubmitPullRequestReviewCommand(PullRequestReviewState.Commented, "Not requested yet.")));
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await service.RequestReviewAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                fixture.AuthorId,
+                isOwner: false,
+                fixture.ReviewerId));
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await service.SubmitReviewAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                fixture.ReviewerId,
+                new SubmitPullRequestReviewCommand(PullRequestReviewState.Approved, "Looks good. <script>alert(1)</script>")));
+
+        var overview = await service.GetReviewOverviewAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.IsNotNull(overview);
+        Assert.AreEqual(fixture.ReviewerId, overview.AssigneeUserId);
+        Assert.AreEqual(fixture.ReviewerId, overview.Reviewers.Single().UserId);
+        Assert.IsFalse(overview.Reviewers.Single().IsReviewRequested);
+        Assert.IsTrue(overview.Reviews.Single().IsEffectiveApproval);
+        Assert.IsFalse(overview.Reviews.Single().BodyHtml.Contains("<script", StringComparison.OrdinalIgnoreCase));
+
+        fixture.Git.FeatureHeadSha = FakePullRequestGitRepository.UpdatedFeatureSha;
+        await service.RefreshPullRequestAsync(fixture.RepositoryId, pullRequest.Number);
+        overview = await service.GetReviewOverviewAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.IsNotNull(overview);
+        Assert.IsTrue(overview.Reviews.Single().IsStale);
+        Assert.IsFalse(overview.Reviews.Single().IsEffectiveApproval);
+
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await service.RequestReviewAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                fixture.AuthorId,
+                isOwner: true,
+                fixture.ReviewerId));
+        overview = await service.GetReviewOverviewAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.IsTrue(overview!.Reviewers.Single().IsReviewRequested);
+
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await service.SubmitReviewAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                fixture.ReviewerId,
+                new SubmitPullRequestReviewCommand(PullRequestReviewState.ChangesRequested, "Please update the tests.")));
+        overview = await service.GetReviewOverviewAsync(fixture.RepositoryId, pullRequest.Number);
+        var latestReview = overview!.Reviews.Last();
+        Assert.AreEqual(PullRequestReviewState.ChangesRequested, latestReview.State);
+        Assert.IsFalse(overview.Reviewers.Single().IsReviewRequested);
+
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await service.DismissReviewAsync(
+                fixture.RepositoryId,
+                pullRequest.Number,
+                latestReview.Id,
+                fixture.AuthorId,
+                isOwner: true,
+                "Superseded by a later review."));
+        overview = await service.GetReviewOverviewAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.AreEqual(PullRequestReviewState.Dismissed, overview!.Reviews.Last().State);
+    }
+
+    [TestMethod]
+    public async Task ReviewPolicy_WithAuthorApprovalAndRetainedStaleApproval_AppliesExplicitConfiguration()
+    {
+        await using var defaultFixture = await PullRequestFixture.CreateAsync();
+        var defaultService = defaultFixture.Services.GetRequiredService<IPullRequestService>();
+        var defaultPullRequest = await defaultService.CreatePullRequestAsync(
+            defaultFixture.RepositoryId,
+            NewCommand(defaultFixture.AuthorId, "feature"));
+        await defaultService.RequestReviewAsync(
+            defaultFixture.RepositoryId,
+            defaultPullRequest.Number,
+            defaultFixture.AuthorId,
+            isOwner: true,
+            defaultFixture.AuthorId);
+        Assert.AreEqual(
+            PullRequestMutationResult.Forbidden,
+            await defaultService.SubmitReviewAsync(
+                defaultFixture.RepositoryId,
+                defaultPullRequest.Number,
+                defaultFixture.AuthorId,
+                new SubmitPullRequestReviewCommand(PullRequestReviewState.Approved, string.Empty)));
+
+        await using var configuredFixture = await PullRequestFixture.CreateAsync(
+            allowAuthorApproval: true,
+            dismissStaleApprovals: false);
+        var configuredService = configuredFixture.Services.GetRequiredService<IPullRequestService>();
+        var configuredPullRequest = await configuredService.CreatePullRequestAsync(
+            configuredFixture.RepositoryId,
+            NewCommand(configuredFixture.AuthorId, "feature"));
+        await configuredService.RequestReviewAsync(
+            configuredFixture.RepositoryId,
+            configuredPullRequest.Number,
+            configuredFixture.AuthorId,
+            isOwner: true,
+            configuredFixture.AuthorId);
+        Assert.AreEqual(
+            PullRequestMutationResult.Succeeded,
+            await configuredService.SubmitReviewAsync(
+                configuredFixture.RepositoryId,
+                configuredPullRequest.Number,
+                configuredFixture.AuthorId,
+                new SubmitPullRequestReviewCommand(PullRequestReviewState.Approved, string.Empty)));
+        configuredFixture.Git.FeatureHeadSha = FakePullRequestGitRepository.UpdatedFeatureSha;
+        await configuredService.RefreshPullRequestAsync(configuredFixture.RepositoryId, configuredPullRequest.Number);
+        var overview = await configuredService.GetReviewOverviewAsync(
+            configuredFixture.RepositoryId,
+            configuredPullRequest.Number);
+        Assert.IsTrue(overview!.Policy.AllowAuthorApproval);
+        Assert.IsFalse(overview.Policy.DismissStaleApprovals);
+        Assert.IsTrue(overview.Reviews.Single().IsStale);
+        Assert.IsTrue(overview.Reviews.Single().IsEffectiveApproval);
+    }
+
     private static CreatePullRequestCommand NewCommand(string authorId, string sourceBranch) =>
         new("PR title", "PR body", authorId, sourceBranch, "main", IsDraft: true);
 
@@ -193,6 +337,7 @@ public sealed class PullRequestServiceTests
             string databasePath,
             long repositoryId,
             string authorId,
+            string reviewerId,
             FakePullRequestGitRepository git)
         {
             RootProvider = rootProvider;
@@ -200,6 +345,7 @@ public sealed class PullRequestServiceTests
             DatabasePath = databasePath;
             RepositoryId = repositoryId;
             AuthorId = authorId;
+            ReviewerId = reviewerId;
             Git = git;
         }
 
@@ -209,9 +355,12 @@ public sealed class PullRequestServiceTests
         private string DatabasePath { get; }
         public long RepositoryId { get; }
         public string AuthorId { get; }
+        public string ReviewerId { get; }
         public FakePullRequestGitRepository Git { get; }
 
-        public static async Task<PullRequestFixture> CreateAsync()
+        public static async Task<PullRequestFixture> CreateAsync(
+            bool allowAuthorApproval = false,
+            bool dismissStaleApprovals = true)
         {
             var databasePath = Path.Combine(
                 Path.GetTempPath(),
@@ -229,13 +378,19 @@ public sealed class PullRequestServiceTests
             services.AddLogging();
             services.AddGitCandyData(configuration, builder => builder.AddSqlite());
             services.AddGitCandyApplicationServices();
+            services.Configure<GitCandy.Configuration.GitCandyApplicationOptions>(options =>
+            {
+                options.AllowAuthorApproval = allowAuthorApproval;
+                options.DismissStalePullRequestApprovals = dismissStaleApprovals;
+            });
             services.AddSingleton<IPullRequestGitRepository>(git);
             var provider = services.BuildServiceProvider(validateScopes: true);
             var scope = provider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
             await dbContext.Database.MigrateAsync();
             var author = NewUser("author");
-            dbContext.Users.Add(author);
+            var reviewer = NewUser("reviewer");
+            dbContext.Users.AddRange(author, reviewer);
             var repository = new GitCandyRepository
             {
                 NamespaceId = GitCandyNamespace.LegacyNamespaceId,
@@ -252,6 +407,13 @@ public sealed class PullRequestServiceTests
                 AllowWrite = true,
                 IsOwner = true
             });
+            repository.UserRoles.Add(new GitCandyUserRepositoryRole
+            {
+                UserId = reviewer.Id,
+                AllowRead = true,
+                AllowWrite = false,
+                IsOwner = false
+            });
             dbContext.Repositories.Add(repository);
             await dbContext.SaveChangesAsync();
             return new PullRequestFixture(
@@ -260,6 +422,7 @@ public sealed class PullRequestServiceTests
                 databasePath,
                 repository.Id,
                 author.Id,
+                reviewer.Id,
                 git);
         }
 

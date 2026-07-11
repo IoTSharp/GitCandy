@@ -87,6 +87,8 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyIssueReference> IssueReferences => Set<GitCandyIssueReference>();
     public DbSet<GitCandyPullRequest> PullRequests => Set<GitCandyPullRequest>();
     public DbSet<GitCandyPullRequestTimelineEvent> PullRequestTimelineEvents => Set<GitCandyPullRequestTimelineEvent>();
+    public DbSet<GitCandyPullRequestReviewer> PullRequestReviewers => Set<GitCandyPullRequestReviewer>();
+    public DbSet<GitCandyPullRequestReview> PullRequestReviews => Set<GitCandyPullRequestReview>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

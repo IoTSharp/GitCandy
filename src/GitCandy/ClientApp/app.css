@@ -1258,6 +1258,40 @@ table tbody tr:last-child td {
 .review-resolve-form { margin-top: 10px; }
 .outdated-review-threads { margin-top: 20px; }
 
+.pull-request-reviews,
+section.review-compose { margin-top: 20px; }
+.pull-request-reviews > h2,
+section.review-compose > h2 { font-size: 18px; }
+.pull-request-reviews .discussion-post > form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  padding: 0 14px 14px;
+}
+.pull-request-reviews .discussion-post > form input { width: 100%; }
+.reviewer-status {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.reviewer-status > strong,
+.reviewer-status > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.reviewer-status > span {
+  grid-column: 1;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.reviewer-status > form {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+}
+
 @media (max-width: 640px) {
   .review-anchor-fields { grid-template-columns: 1fr; }
 }

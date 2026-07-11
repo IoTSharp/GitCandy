@@ -728,6 +728,10 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasMaxLength(520)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AssigneeUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
@@ -818,6 +822,9 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssigneeUserId")
+                        .HasDatabaseName("IX_PullRequests_AssigneeUserId");
+
                     b.HasIndex("AuthorUserId");
 
                     b.HasIndex("MergedByUserId");
@@ -834,6 +841,74 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasDatabaseName("IX_PullRequests_RepositoryId_State_UpdatedAtUtc");
 
                     b.ToTable("PullRequests", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReview", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("BodyHtml")
+                        .IsRequired()
+                        .HasMaxLength(131072)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BodyMarkdown")
+                        .IsRequired()
+                        .HasMaxLength(65536)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DismissalReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DismissedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DismissedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("HeadSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PullRequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ReviewerRequestVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReviewerUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("SubmittedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DismissedByUserId")
+                        .HasDatabaseName("IX_PullRequestReviews_DismissedByUserId");
+
+                    b.HasIndex("ReviewerUserId");
+
+                    b.HasIndex("PullRequestId", "ReviewerUserId", "SubmittedAtUtc", "Id")
+                        .HasDatabaseName("IX_PullRequestReviews_PullRequestId_ReviewerUserId_SubmittedAtUtc_Id");
+
+                    b.ToTable("PullRequestReviews", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewComment", b =>
@@ -977,6 +1052,40 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasDatabaseName("IX_PullRequestReviewThreads_PullRequestId_Status");
 
                     b.ToTable("PullRequestReviewThreads", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewer", b =>
+                {
+                    b.Property<long>("PullRequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReviewerUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RequestedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RequestedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PullRequestId", "ReviewerUserId");
+
+                    b.HasIndex("RequestedByUserId")
+                        .HasDatabaseName("IX_PullRequestReviewers_RequestedByUserId");
+
+                    b.HasIndex("ReviewerUserId");
+
+                    b.HasIndex("PullRequestId", "RequestedAtUtc")
+                        .HasDatabaseName("IX_PullRequestReviewers_PullRequestId_RequestedAtUtc");
+
+                    b.ToTable("PullRequestReviewers", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestTimelineEvent", b =>
@@ -1853,6 +1962,11 @@ namespace GitCandy.Data.Sqlite.Migrations
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
                 {
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Author")
                         .WithMany("AuthoredPullRequests")
                         .HasForeignKey("AuthorUserId")
@@ -1870,11 +1984,39 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Assignee");
+
                     b.Navigation("Author");
 
                     b.Navigation("MergedBy");
 
                     b.Navigation("Repository");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReview", b =>
+                {
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "DismissedBy")
+                        .WithMany()
+                        .HasForeignKey("DismissedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyPullRequest", "PullRequest")
+                        .WithMany("Reviews")
+                        .HasForeignKey("PullRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DismissedBy");
+
+                    b.Navigation("PullRequest");
+
+                    b.Navigation("Reviewer");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewComment", b =>
@@ -1920,6 +2062,33 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("PullRequest");
 
                     b.Navigation("ResolvedBy");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewer", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyPullRequest", "PullRequest")
+                        .WithMany("Reviewers")
+                        .HasForeignKey("PullRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "RequestedBy")
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PullRequest");
+
+                    b.Navigation("RequestedBy");
+
+                    b.Navigation("Reviewer");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestTimelineEvent", b =>
@@ -2156,6 +2325,10 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
                 {
                     b.Navigation("ReviewThreads");
+
+                    b.Navigation("Reviewers");
+
+                    b.Navigation("Reviews");
 
                     b.Navigation("Timeline");
                 });

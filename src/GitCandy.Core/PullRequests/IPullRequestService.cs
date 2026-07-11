@@ -24,6 +24,21 @@ public interface IPullRequestService
         bool includeFiles,
         CancellationToken cancellationToken = default);
 
+    /// <summary>读取 assignee、reviewer 请求、review 历史和当前策略状态。</summary>
+    Task<PullRequestReviewOverview?> GetReviewOverviewAsync(long repositoryId, long number, CancellationToken cancellationToken = default);
+
+    /// <summary>设置独立于 author/reviewer 的 Pull Request assignee。</summary>
+    Task<PullRequestMutationResult> SetAssigneeAsync(long repositoryId, long number, string actorUserId, bool isOwner, string? assigneeUserId, CancellationToken cancellationToken = default);
+
+    /// <summary>请求或重新请求仓库成员 review。</summary>
+    Task<PullRequestMutationResult> RequestReviewAsync(long repositoryId, long number, string actorUserId, bool isOwner, string reviewerUserId, CancellationToken cancellationToken = default);
+
+    /// <summary>提交 comment、approve 或 request-changes review。</summary>
+    Task<PullRequestMutationResult> SubmitReviewAsync(long repositoryId, long number, string reviewerUserId, SubmitPullRequestReviewCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>由仓库 owner dismiss 一次 review，同时保留审计历史。</summary>
+    Task<PullRequestMutationResult> DismissReviewAsync(long repositoryId, long number, long reviewId, string actorUserId, bool isOwner, string reason, CancellationToken cancellationToken = default);
+
     /// <summary>读取 Pull Request 的行内评审 threads 与回复。</summary>
     Task<IReadOnlyList<PullRequestReviewThread>> GetReviewThreadsAsync(long repositoryId, long number, CancellationToken cancellationToken = default);
 

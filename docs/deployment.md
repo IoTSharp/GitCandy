@@ -116,6 +116,13 @@ Git LFS v2 由 `GitCandy:Lfs` 配置：`Enabled`、`MaxObjectBytes`、`Repositor
 
 新增的 `GitCandy:Application:DataProtectionKeysPath` 保存 Identity cookie 加密 key ring。它必须位于持久化、仅应用账户可写的目录；丢失后已有 cookie 全部失效。
 
+Pull Request review 策略也位于 `GitCandy:Application`：
+
+| 配置键 | 默认值 | 行为 |
+| --- | --- | --- |
+| `AllowAuthorApproval` | `false` | 是否允许 PR 作者提交对本人 PR 的 approve；comment 和 request changes 不受此项影响 |
+| `DismissStalePullRequestApprovals` | `true` | source head 更新后，旧 head 上的 approve 是否不再作为有效批准；历史 review 始终保留 |
+
 `CachePath/lfs` 虽位于 cache 根，但保存不可重建的 LFS 内容寻址对象，必须纳入持久卷、备份/恢复和容量告警；其他普通 cache 仍可重建。
 
 ### Identity 和 OpenID Connect

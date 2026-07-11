@@ -38,6 +38,25 @@ public sealed class PullRequestDetailViewModel
     public required PullRequestDetails PullRequest { get; init; }
     public bool CanEdit { get; init; }
     public bool CanChangeState { get; init; }
+    public required PullRequestReviewOverview ReviewOverview { get; init; }
+    public bool CanManageReviewers { get; init; }
+    public bool CanSubmitReview { get; init; }
+    public bool IsOwner { get; init; }
+    public string? CurrentUserId { get; init; }
+}
+
+public sealed class PullRequestReviewFormViewModel
+{
+    public PullRequestReviewState State { get; set; } = PullRequestReviewState.Commented;
+
+    [StringLength(65536)]
+    public string Body { get; set; } = string.Empty;
+}
+
+public sealed class PullRequestReviewDismissFormViewModel
+{
+    [Required, StringLength(1000)]
+    public string Reason { get; set; } = string.Empty;
 }
 
 public sealed class PullRequestChangesViewModel

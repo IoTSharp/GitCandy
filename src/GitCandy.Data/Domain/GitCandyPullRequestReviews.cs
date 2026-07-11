@@ -3,6 +3,38 @@ using GitCandy.PullRequests;
 
 namespace GitCandy.Data.Domain;
 
+public sealed class GitCandyPullRequestReviewer
+{
+    public long PullRequestId { get; set; }
+    public string ReviewerUserId { get; set; } = string.Empty;
+    public string RequestedByUserId { get; set; } = string.Empty;
+    public DateTime RequestedAtUtc { get; set; }
+    public long Version { get; set; }
+    public GitCandyPullRequest? PullRequest { get; set; }
+    public GitCandyUser? Reviewer { get; set; }
+    public GitCandyUser? RequestedBy { get; set; }
+}
+
+public sealed class GitCandyPullRequestReview
+{
+    public long Id { get; set; }
+    public long PullRequestId { get; set; }
+    public string ReviewerUserId { get; set; } = string.Empty;
+    public PullRequestReviewState State { get; set; }
+    public string BodyMarkdown { get; set; } = string.Empty;
+    public string BodyHtml { get; set; } = string.Empty;
+    public string HeadSha { get; set; } = string.Empty;
+    public long ReviewerRequestVersion { get; set; }
+    public DateTime SubmittedAtUtc { get; set; }
+    public string? DismissedByUserId { get; set; }
+    public DateTime? DismissedAtUtc { get; set; }
+    public string? DismissalReason { get; set; }
+    public long Version { get; set; }
+    public GitCandyPullRequest? PullRequest { get; set; }
+    public GitCandyUser? Reviewer { get; set; }
+    public GitCandyUser? DismissedBy { get; set; }
+}
+
 public sealed class GitCandyPullRequestReviewThread
 {
     public long Id { get; set; }

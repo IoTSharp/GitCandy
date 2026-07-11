@@ -90,6 +90,35 @@ public sealed partial class PullRequestMvcIntegrationTests
         StringAssert.Contains(reviewedFilesHtml, "Check feature line.");
         StringAssert.Contains(reviewedFilesHtml, "Resolve");
 
+        var detailToken = await fixture.GetAntiforgeryTokenAsync("/review-author/reviews/pulls/1");
+        using var requestReview = await fixture.Client.PostAsync(
+            "/review-author/reviews/pulls/1/reviewers",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = detailToken,
+                ["reviewerUserId"] = fixture.ReviewerId
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, requestReview.StatusCode);
+
+        using var reviewerClient = fixture.CreateClient();
+        await fixture.LoginAsync(reviewerClient, "reviewer");
+        var reviewerToken = await fixture.GetAntiforgeryTokenAsync(
+            reviewerClient,
+            "/review-author/reviews/pulls/1");
+        using var approve = await reviewerClient.PostAsync(
+            "/review-author/reviews/pulls/1/reviews",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = reviewerToken,
+                ["State"] = "Approved",
+                ["Body"] = "Reviewed through MVC."
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, approve.StatusCode);
+        using var approvedDetail = await reviewerClient.GetAsync("/review-author/reviews/pulls/1");
+        var approvedHtml = await approvedDetail.Content.ReadAsStringAsync();
+        StringAssert.Contains(approvedHtml, "Approved");
+        StringAssert.Contains(approvedHtml, "Reviewed through MVC.");
+
         await fixture.MakeRepositoryPrivateAsync();
         using var anonymousClient = fixture.CreateClient();
         using var denied = await anonymousClient.GetAsync("/review-author/reviews/pulls/1");
@@ -106,18 +135,21 @@ public sealed partial class PullRequestMvcIntegrationTests
             WebApplication app,
             HttpClient client,
             string tempRoot,
-            string repositoryPath)
+            string repositoryPath,
+            string reviewerId)
         {
             App = app;
             Client = client;
             TempRoot = tempRoot;
             RepositoryPath = repositoryPath;
+            ReviewerId = reviewerId;
         }
 
         private WebApplication App { get; }
         public HttpClient Client { get; }
         private string TempRoot { get; }
         private string RepositoryPath { get; }
+        public string ReviewerId { get; }
 
         public static async Task<PullRequestWebFixture> CreateAsync()
         {
@@ -157,9 +189,9 @@ public sealed partial class PullRequestMvcIntegrationTests
             app.MapGitCandyCompatibilityRoutes();
             try
             {
-                await SeedAsync(app);
+                var reviewerId = await SeedAsync(app);
                 await app.StartAsync();
-                return new PullRequestWebFixture(app, CreateClient(app), tempRoot, repositoryPath);
+                return new PullRequestWebFixture(app, CreateClient(app), tempRoot, repositoryPath, reviewerId);
             }
             catch
             {
@@ -173,13 +205,18 @@ public sealed partial class PullRequestMvcIntegrationTests
 
         public async Task LoginAsync()
         {
-            var token = await GetAntiforgeryTokenAsync("/Account/Login");
-            using var response = await Client.PostAsync(
+            await LoginAsync(Client, "review-author");
+        }
+
+        public async Task LoginAsync(HttpClient client, string userName)
+        {
+            var token = await GetAntiforgeryTokenAsync(client, "/Account/Login");
+            using var response = await client.PostAsync(
                 "/Account/Login",
                 new FormUrlEncodedContent(new Dictionary<string, string>
                 {
                     ["__RequestVerificationToken"] = token,
-                    ["UserNameOrEmail"] = "review-author",
+                    ["UserNameOrEmail"] = userName,
                     ["Password"] = Password,
                     ["RememberMe"] = "false"
                 }));
@@ -188,7 +225,12 @@ public sealed partial class PullRequestMvcIntegrationTests
 
         public async Task<string> GetAntiforgeryTokenAsync(string path)
         {
-            var html = await Client.GetStringAsync(path);
+            return await GetAntiforgeryTokenAsync(Client, path);
+        }
+
+        public async Task<string> GetAntiforgeryTokenAsync(HttpClient client, string path)
+        {
+            var html = await client.GetStringAsync(path);
             var match = AntiforgeryTokenRegex().Match(html);
             Assert.IsTrue(match.Success);
             return WebUtility.HtmlDecode(match.Groups[1].Value);
@@ -221,7 +263,7 @@ public sealed partial class PullRequestMvcIntegrationTests
             TestDirectory.Delete(TempRoot);
         }
 
-        private static async Task SeedAsync(WebApplication app)
+        private static async Task<string> SeedAsync(WebApplication app)
         {
             await using var scope = app.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
@@ -233,6 +275,15 @@ public sealed partial class PullRequestMvcIntegrationTests
                 Email = "review-author@example.com"
             };
             var result = await userManager.CreateAsync(user, Password);
+            Assert.IsTrue(
+                result.Succeeded,
+                string.Join(Environment.NewLine, result.Errors.Select(error => error.Description)));
+            var reviewer = new GitCandyUser
+            {
+                UserName = "reviewer",
+                Email = "reviewer@example.com"
+            };
+            result = await userManager.CreateAsync(reviewer, Password);
             Assert.IsTrue(
                 result.Succeeded,
                 string.Join(Environment.NewLine, result.Errors.Select(error => error.Description)));
@@ -260,6 +311,13 @@ public sealed partial class PullRequestMvcIntegrationTests
                 AllowWrite = true,
                 IsOwner = true
             });
+            repository.UserRoles.Add(new GitCandyUserRepositoryRole
+            {
+                UserId = reviewer.Id,
+                AllowRead = true,
+                AllowWrite = false,
+                IsOwner = false
+            });
             dbContext.Repositories.Add(repository);
             await dbContext.SaveChangesAsync();
             dbContext.NamespaceClaims.Add(new GitCandyNamespaceClaim
@@ -278,6 +336,7 @@ public sealed partial class PullRequestMvcIntegrationTests
                 RepositoryId = repository.Id
             });
             await dbContext.SaveChangesAsync();
+            return reviewer.Id;
         }
 
         private static string CreateBareRepository(string tempRoot, string repositoriesPath)

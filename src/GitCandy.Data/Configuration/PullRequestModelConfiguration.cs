@@ -17,6 +17,7 @@ internal static class PullRequestModelConfiguration
             entity.Property(item => item.BodyMarkdown).IsRequired().HasMaxLength(SchemaLimits.IssueBody);
             entity.Property(item => item.BodyHtml).IsRequired().HasMaxLength(SchemaLimits.IssueBody);
             entity.Property(item => item.AuthorUserId).IsRequired().HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.AssigneeUserId).HasMaxLength(SchemaLimits.IdentityKey);
             entity.Property(item => item.SourceBranch).IsRequired().HasMaxLength(SchemaLimits.GitRefName);
             entity.Property(item => item.TargetBranch).IsRequired().HasMaxLength(SchemaLimits.GitRefName);
             entity.Property(item => item.OriginalBaseSha).IsRequired().HasMaxLength(SchemaLimits.CommitSha);
@@ -32,6 +33,8 @@ internal static class PullRequestModelConfiguration
                 .HasForeignKey(item => item.RepositoryId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(item => item.Author).WithMany(item => item.AuthoredPullRequests)
                 .HasForeignKey(item => item.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(item => item.Assignee).WithMany()
+                .HasForeignKey(item => item.AssigneeUserId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(item => item.MergedBy).WithMany()
                 .HasForeignKey(item => item.MergedByUserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(item => new { item.RepositoryId, item.Number })
@@ -40,6 +43,8 @@ internal static class PullRequestModelConfiguration
                 .HasDatabaseName("IX_PullRequests_RepositoryId_ActivePairKey").IsUnique();
             entity.HasIndex(item => new { item.RepositoryId, item.State, item.UpdatedAtUtc })
                 .HasDatabaseName("IX_PullRequests_RepositoryId_State_UpdatedAtUtc");
+            entity.HasIndex(item => item.AssigneeUserId)
+                .HasDatabaseName("IX_PullRequests_AssigneeUserId");
         });
 
         builder.Entity<GitCandyPullRequestTimelineEvent>(entity =>

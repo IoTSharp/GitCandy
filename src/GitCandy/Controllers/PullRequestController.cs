@@ -169,11 +169,25 @@ public sealed class PullRequestController(
             return NotFound();
         }
 
+        await _pullRequestService.RefreshPullRequestAsync(
+            access.Value.Address.RepositoryId,
+            number,
+            cancellationToken);
+
         var pullRequest = await _pullRequestService.GetPullRequestAsync(
             access.Value.Address.RepositoryId,
             number,
             cancellationToken);
         if (pullRequest is null)
+        {
+            return NotFound();
+        }
+
+        var reviewOverview = await _pullRequestService.GetReviewOverviewAsync(
+            access.Value.Address.RepositoryId,
+            number,
+            cancellationToken);
+        if (reviewOverview is null)
         {
             return NotFound();
         }
@@ -187,7 +201,13 @@ public sealed class PullRequestController(
             Repository = access.Value.Address,
             PullRequest = pullRequest,
             CanEdit = access.Value.IsOwner || ownsPullRequest,
-            CanChangeState = access.Value.IsOwner || ownsPullRequest
+            CanChangeState = access.Value.IsOwner || ownsPullRequest,
+            ReviewOverview = reviewOverview,
+            CanManageReviewers = access.Value.IsOwner || ownsPullRequest,
+            CanSubmitReview = _currentUser.IsAuthenticated
+                && reviewOverview.Reviewers.Any(item => string.Equals(item.UserId, _currentUser.UserId, StringComparison.Ordinal)),
+            IsOwner = access.Value.IsOwner,
+            CurrentUserId = _currentUser.UserId
         });
     }
 
@@ -371,6 +391,113 @@ public sealed class PullRequestController(
                 state,
                 cancellationToken),
             cancellationToken);
+
+    [HttpPost("{number:long}/assignee")]
+    [Authorize]
+    public Task<IActionResult> Assignee(
+        string namespaceSlug,
+        string project,
+        long number,
+        string? assigneeUserId,
+        CancellationToken cancellationToken) =>
+        MutateAsync(
+            namespaceSlug,
+            project,
+            number,
+            (repositoryId, userId, isOwner) => _pullRequestService.SetAssigneeAsync(
+                repositoryId,
+                number,
+                userId,
+                isOwner,
+                assigneeUserId,
+                cancellationToken),
+            cancellationToken);
+
+    [HttpPost("{number:long}/reviewers")]
+    [Authorize]
+    public Task<IActionResult> RequestReview(
+        string namespaceSlug,
+        string project,
+        long number,
+        string reviewerUserId,
+        CancellationToken cancellationToken) =>
+        MutateAsync(
+            namespaceSlug,
+            project,
+            number,
+            (repositoryId, userId, isOwner) => _pullRequestService.RequestReviewAsync(
+                repositoryId,
+                number,
+                userId,
+                isOwner,
+                reviewerUserId,
+                cancellationToken),
+            cancellationToken);
+
+    [HttpPost("{number:long}/reviews")]
+    [Authorize]
+    public async Task<IActionResult> SubmitReview(
+        string namespaceSlug,
+        string project,
+        long number,
+        PullRequestReviewFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return NotFound();
+        }
+
+        var result = ModelState.IsValid
+            ? await _pullRequestService.SubmitReviewAsync(
+                access.Value.Address.RepositoryId,
+                number,
+                _currentUser.UserId,
+                new SubmitPullRequestReviewCommand(model.State, model.Body),
+                cancellationToken)
+            : PullRequestMutationResult.Invalid;
+        if (result != PullRequestMutationResult.Succeeded)
+        {
+            TempData["PullRequestError"] = MutationMessage(result);
+        }
+
+        return RedirectToAction(nameof(Detail), new { namespaceSlug, project, number });
+    }
+
+    [HttpPost("{number:long}/reviews/{reviewId:long}/dismiss")]
+    [Authorize]
+    public async Task<IActionResult> DismissReview(
+        string namespaceSlug,
+        string project,
+        long number,
+        long reviewId,
+        PullRequestReviewDismissFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return NotFound();
+        }
+
+        var result = ModelState.IsValid
+            ? await _pullRequestService.DismissReviewAsync(
+                access.Value.Address.RepositoryId,
+                number,
+                reviewId,
+                _currentUser.UserId,
+                access.Value.IsOwner,
+                model.Reason,
+                cancellationToken)
+            : PullRequestMutationResult.Invalid;
+        if (result != PullRequestMutationResult.Succeeded)
+        {
+            TempData["PullRequestError"] = MutationMessage(result);
+        }
+
+        return RedirectToAction(nameof(Detail), new { namespaceSlug, project, number });
+    }
 
     [HttpPost("{number:long}/review-threads")]
     [Authorize]
