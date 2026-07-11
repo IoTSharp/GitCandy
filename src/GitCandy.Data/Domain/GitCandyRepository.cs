@@ -82,4 +82,7 @@ public sealed class GitCandyRepository
 
     /// <summary>仓库 Issues。</summary>
     public ICollection<GitCandyIssue> Issues { get; } = [];
+
+    /// <summary>仓库 Pull Requests。</summary>
+    public ICollection<GitCandyPullRequest> PullRequests { get; } = [];
 }

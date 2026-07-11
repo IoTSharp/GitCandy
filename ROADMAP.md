@@ -692,7 +692,7 @@ ASP.NET Core 中间件和后台能力：
 - labels、milestones、assignees、relations 和 timeline 在并发编辑、元数据删除/归档后保持一致。
 - 私有仓库 Issue 不通过引用、通知、搜索、全局计数或 403/404 差异泄漏。
 
-### ⬜ Milestone 12：Pull Request、代码评审与合并
+### 🚧 Milestone 12：Pull Request、代码评审与合并
 
 目标：在 GitCandy 内完成从分支变更提议、diff 评审、修改迭代、批准到安全合并的日常协作闭环。
 
@@ -704,12 +704,12 @@ ASP.NET Core 中间件和后台能力：
 - 合并前必须重新读取 source/target tip、冲突、approval/check、draft 和权限，并用 repository 级锁或等价乐观并发避免合并过期 head。
 - 第一版提供 merge commit 和 squash；rebase merge、merge queue/train、批量 suggestion apply 和在线解决冲突延后。
 
-#### ⬜ M12 拆分
+#### 🚧 M12 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
-| ⬜ #130 | PR schema、编号与引用快照 | 建立 PullRequest、source/target ref、original/current base/head SHA、merge result 和并发字段，复用 M11 WorkItemNumber/timeline；维护服务端只读 `refs/pull/{number}/head` 等内部 refs，拒绝客户端写入，分支删除后历史仍可读 |
-| ⬜ #131 | 创建、Draft 与状态流转 | 同仓库 branch compare 后创建 PR，支持 draft/ready、edit、close/reopen；禁止 source=target、无差异、无读写权限和重复 open PR |
+| ✅ #130 | PR schema、编号与引用快照 | 建立 PullRequest、source/target ref、original/current base/head SHA、merge result 和并发字段，复用 M11 WorkItemNumber/timeline；维护服务端只读 `refs/pull/{number}/head` 等内部 refs，拒绝客户端写入，分支删除后历史仍可读 |
+| ✅ #131 | 创建、Draft 与状态流转 | 同仓库 branch compare 后创建 PR，支持 draft/ready、edit、close/reopen；禁止 source=target、无差异、无读写权限和重复 open PR |
 | ⬜ #132 | Conversation、Commits、Files changed | 展示 description/timeline、提交列表、merge-base diff、renames/binary/large diff 降级、分页/折叠和固定 commit 链接 |
 | ⬜ #133 | 行内 Review threads | 支持单行/范围评论、reply、resolve/unresolve 和 outdated；新 push 后基于 hunk context 重映射，不能把评论静默挂到错误代码 |
 | ⬜ #134 | Reviewer 与 Review 状态 | author/assignee/reviewer 分离，支持 request review、comment、approve、request changes、dismiss/re-request；本人批准和过期批准策略显式配置 |

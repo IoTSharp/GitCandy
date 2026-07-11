@@ -1,0 +1,18 @@
+@model PullRequestFormViewModel
+@{ ViewData["Title"] = "New pull request"; }
+<header class="page-heading"><div><h1>New pull request</h1><p>Compare two branches and propose their commits for review.</p></div></header>
+@if (Model.Branches.Count < 2)
+{
+    <div class="alert alert-warning" role="alert">At least two branches with commits are required to create a Pull Request.</div>
+}
+<form method="post" class="account-form">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <div class="form-grid">
+        <div class="form-field"><label asp-for="TargetBranch">Target branch</label><select asp-for="TargetBranch" required>@foreach (var branch in Model.Branches) { <option value="@branch.Name">@branch.Name</option> }</select><span asp-validation-for="TargetBranch"></span></div>
+        <div class="form-field"><label asp-for="SourceBranch">Source branch</label><select asp-for="SourceBranch" required>@foreach (var branch in Model.Branches) { <option value="@branch.Name">@branch.Name</option> }</select><span asp-validation-for="SourceBranch"></span></div>
+    </div>
+    <div class="form-field"><label asp-for="Title"></label><input asp-for="Title" autocomplete="off" /><span asp-validation-for="Title"></span></div>
+    <div class="form-field"><label asp-for="Body">Description</label><textarea asp-for="Body" rows="12"></textarea><span asp-validation-for="Body"></span></div>
+    <label class="checkbox-field"><input asp-for="IsDraft" /> Create as draft</label>
+    <div class="form-actions"><button class="btn btn-primary" type="submit" disabled="@(Model.Branches.Count < 2 ? "disabled" : null)"><i data-lucide="git-pull-request"></i> Create pull request</button></div>
+</form>

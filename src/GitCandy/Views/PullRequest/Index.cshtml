@@ -1,0 +1,49 @@
+@model PullRequestIndexViewModel
+@{ ViewData["Title"] = $"{Model.Repository.RepositorySlug} pull requests"; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><span>Pull requests</span></nav>
+<nav class="repository-navigation" aria-label="Repository navigation">
+    <a href="@Model.Repository.CanonicalPath"><i data-lucide="folder-tree"></i> Code</a>
+    <a asp-controller="Issue" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug"><i data-lucide="circle-dot"></i> Issues</a>
+    <a class="is-active" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug"><i data-lucide="git-pull-request"></i> Pull requests</a>
+</nav>
+<header class="page-heading">
+    <div><h1>Pull requests</h1><p>Propose and review changes between branches in this repository.</p></div>
+    @if (Model.CanCreate)
+    {
+        <div class="page-actions"><a asp-action="Create" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" class="btn btn-primary"><i data-lucide="plus"></i> New pull request</a></div>
+    }
+</header>
+<div class="issue-toolbar">
+    <div class="issue-state-tabs">
+        <a class="@(Model.Query.State == PullRequestState.Open ? "is-active" : null)" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="Open"><i data-lucide="git-pull-request"></i> Open</a>
+        <a class="@(Model.Query.State == PullRequestState.Closed ? "is-active" : null)" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="Closed"><i data-lucide="circle-x"></i> Closed</a>
+        <a class="@(Model.Query.State == PullRequestState.Merged ? "is-active" : null)" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="Merged"><i data-lucide="git-merge"></i> Merged</a>
+    </div>
+</div>
+@if (Model.PullRequests.Items.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="git-pull-request"></i><h2>No @Model.Query.State.ToString().ToLowerInvariant() pull requests</h2><p>This repository has no matching pull requests.</p></div></section>
+}
+else
+{
+    <div class="issue-list">
+    @foreach (var pullRequest in Model.PullRequests.Items)
+    {
+        <article class="issue-list-item">
+            <i data-lucide="@(pullRequest.State == PullRequestState.Merged ? "git-merge" : "git-pull-request")"></i>
+            <div>
+                <h2><a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@pullRequest.Number">@pullRequest.Title</a></h2>
+                <p>#@pullRequest.Number opened by @pullRequest.Author · @pullRequest.SourceBranch into @pullRequest.TargetBranch · updated @pullRequest.UpdatedAtUtc.ToString("u")</p>
+            </div>
+            @if (pullRequest.IsDraft) { <span class="status-badge status-private">Draft</span> }
+        </article>
+    }
+    </div>
+    @if (Model.PullRequests.TotalCount > Model.PullRequests.PageSize)
+    {
+        <nav class="pagination" aria-label="Pull Request pages">
+            @if (Model.PullRequests.Page > 1) { <a class="btn" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="@Model.Query.State" asp-route-page="@(Model.PullRequests.Page - 1)"><i data-lucide="arrow-left"></i> Previous</a> }
+            @if (Model.PullRequests.Page * Model.PullRequests.PageSize < Model.PullRequests.TotalCount) { <a class="btn" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-state="@Model.Query.State" asp-route-page="@(Model.PullRequests.Page + 1)">Next <i data-lucide="arrow-right"></i></a> }
+        </nav>
+    }
+}

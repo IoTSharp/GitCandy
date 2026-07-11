@@ -1,6 +1,7 @@
 using GitCandy.Application;
 using GitCandy.Ssh;
 using GitCandy.Issues;
+using GitCandy.PullRequests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -30,6 +31,7 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<INameManagementService, NameManagementService>();
         services.TryAddSingleton<IIssueMarkdownRenderer, IssueMarkdownRenderer>();
         services.TryAddScoped<IIssueService, IssueService>();
+        services.TryAddScoped<IPullRequestService, PullRequestService>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ISshAccessService, SshAccessService>();
 

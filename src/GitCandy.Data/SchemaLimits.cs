@@ -25,4 +25,6 @@ internal static class SchemaLimits
     public const int IssueMilestoneTitle = 100;
     public const int IssueMilestoneDescription = 2000;
     public const int CommitSha = 64;
+    public const int GitRefName = 255;
+    public const int PullRequestPairKey = 520;
 }

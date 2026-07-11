@@ -717,6 +717,160 @@ namespace GitCandy.Data.Sqlite.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActivePairKey")
+                        .IsRequired()
+                        .HasMaxLength(520)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BodyHtml")
+                        .IsRequired()
+                        .HasMaxLength(65536)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("BodyMarkdown")
+                        .IsRequired()
+                        .HasMaxLength(65536)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentBaseSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CurrentHeadSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDraft")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MergeCommitSha")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("MergedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MergedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("OriginalBaseSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OriginalHeadSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceBranch")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetBranch")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("MergedByUserId");
+
+                    b.HasIndex("RepositoryId", "ActivePairKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PullRequests_RepositoryId_ActivePairKey");
+
+                    b.HasIndex("RepositoryId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("IX_PullRequests_RepositoryId_Number");
+
+                    b.HasIndex("RepositoryId", "State", "UpdatedAtUtc")
+                        .HasDatabaseName("IX_PullRequests_RepositoryId_State_UpdatedAtUtc");
+
+                    b.ToTable("PullRequests", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestTimelineEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("PullRequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("PullRequestId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_PullRequestTimelineEvents_PullRequestId_CreatedAtUtc");
+
+                    b.ToTable("PullRequestTimelineEvents", (string)null);
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRenameEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -1554,6 +1708,50 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("NamespaceAlias");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
+                {
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Author")
+                        .WithMany("AuthoredPullRequests")
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "MergedBy")
+                        .WithMany()
+                        .HasForeignKey("MergedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "Repository")
+                        .WithMany("PullRequests")
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("MergedBy");
+
+                    b.Navigation("Repository");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestTimelineEvent", b =>
+                {
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyPullRequest", "PullRequest")
+                        .WithMany("Timeline")
+                        .HasForeignKey("PullRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("PullRequest");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
                 {
                     b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
@@ -1767,11 +1965,18 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("Repositories");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
+                {
+                    b.Navigation("Timeline");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
                 {
                     b.Navigation("Aliases");
 
                     b.Navigation("Issues");
+
+                    b.Navigation("PullRequests");
 
                     b.Navigation("TeamRoles");
 
@@ -1792,6 +1997,8 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("GitCandy.Data.Identity.GitCandyUser", b =>
                 {
                     b.Navigation("AuthoredIssues");
+
+                    b.Navigation("AuthoredPullRequests");
 
                     b.Navigation("Namespace");
 

@@ -38,4 +38,7 @@ public sealed class GitCandyUser : IdentityUser
 
     /// <summary>用户创建的 Issues。</summary>
     public ICollection<GitCandyIssue> AuthoredIssues { get; set; } = [];
+
+    /// <summary>用户创建的 Pull Requests。</summary>
+    public ICollection<GitCandyPullRequest> AuthoredPullRequests { get; set; } = [];
 }

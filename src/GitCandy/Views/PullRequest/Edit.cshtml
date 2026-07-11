@@ -1,0 +1,13 @@
+@model PullRequestFormViewModel
+@{ ViewData["Title"] = "Edit pull request"; }
+<header class="page-heading"><div><h1>Edit pull request</h1><p>@Model.SourceBranch into @Model.TargetBranch</p></div></header>
+<form method="post" class="account-form">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <input asp-for="SourceBranch" type="hidden" />
+    <input asp-for="TargetBranch" type="hidden" />
+    <input asp-for="IsDraft" type="hidden" />
+    <input asp-for="Version" type="hidden" />
+    <div class="form-field"><label asp-for="Title"></label><input asp-for="Title" autocomplete="off" /><span asp-validation-for="Title"></span></div>
+    <div class="form-field"><label asp-for="Body">Description</label><textarea asp-for="Body" rows="12"></textarea><span asp-validation-for="Body"></span></div>
+    <div class="form-actions"><button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save changes</button></div>
+</form>

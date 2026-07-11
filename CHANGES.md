@@ -3,6 +3,9 @@
 ---
 ### Unreleased
 #### Added
+ - Added the first M12 Pull Request vertical slice at `/{namespace}/{repository}/pulls`, including same-repository branch comparison, shared Issue/PR numbering, draft/ready, edit, close/reopen, timeline, and private-repository suppression.
+ - Added SQLite and SQL Server `PullRequests` and `PullRequestTimelineEvents` migrations with original/current base/head snapshots, merge-result placeholders, optimistic concurrency, and one-open-PR-per-branch-pair enforcement.
+ - Added server-maintained, fetchable `refs/pull/{number}/head` refs with additive `receive.hideRefs` protection, real bare-repository coverage, and Kestrel create/detail/private-denial integration coverage.
  - Added the M11 repository Issue workflow at `/{namespace}/{repository}/issues`, including create/edit/open/close/reopen, comments, timeline, labels, milestones, assignees, subscriptions, relations, discussion locking, and a persistent notification inbox.
  - Added repository-scoped shared work-item numbering, optimistic concurrency, edit history, references, notification, and metadata tables with SQLite and SQL Server migrations.
  - Added restricted CommonMark rendering with fenced code, task lists, mentions, work-item/commit links, disabled raw HTML, and final HTML allow-list sanitization through Markdig and HtmlSanitizer.
@@ -90,6 +93,7 @@
  - Added real `git lfs` push/fetch/clone integration coverage and repository browser/lifecycle boundary tests.
 
 #### Changed
+ - Repository navigation now exposes canonical Pull Request lists, while creation requires authenticated repository write permission and rechecks the same permission in the application service.
  - Private repository Issue routes and notification reads now recheck repository read permission and suppress inaccessible work-item existence with a not-found result.
  - User and team display names are now independent from URL slugs; changing display text does not change repository URLs.
  - Repository deletion retains current and historical names as reserved tombstone claims while removing the physical Git/LFS data and legacy route target.

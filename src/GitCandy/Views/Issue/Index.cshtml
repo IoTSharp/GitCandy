@@ -4,6 +4,7 @@
 <nav class="repository-navigation" aria-label="Repository navigation">
     <a href="@Model.Repository.CanonicalPath"><i data-lucide="folder-tree"></i> Code</a>
     <a class="is-active" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug"><i data-lucide="circle-dot"></i> Issues</a>
+    <a asp-controller="PullRequest" asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug"><i data-lucide="git-pull-request"></i> Pull requests</a>
 </nav>
 <header class="page-heading">
     <div><h1>Issues</h1><p>Track work and repository discussions.</p></div>

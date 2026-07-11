@@ -1,0 +1,39 @@
+@model PullRequestDetailViewModel
+@{ ViewData["Title"] = $"#{Model.PullRequest.Number} {Model.PullRequest.Title}"; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><a asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug">Pull requests</a><span>/</span><span>#@Model.PullRequest.Number</span></nav>
+<header class="page-heading issue-heading">
+    <div>
+        <h1>@Model.PullRequest.Title <span class="issue-number">#@Model.PullRequest.Number</span></h1>
+        <p><span class="status-badge @(Model.PullRequest.State == PullRequestState.Open ? "status-public" : "status-private")">@(Model.PullRequest.IsDraft && Model.PullRequest.State == PullRequestState.Open ? "Draft" : Model.PullRequest.State)</span> @Model.PullRequest.Author wants to merge <strong>@Model.PullRequest.SourceBranch</strong> into <strong>@Model.PullRequest.TargetBranch</strong></p>
+    </div>
+    @if (Model.CanEdit) { <div class="page-actions"><a class="btn" asp-action="Edit" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="pencil"></i> Edit</a></div> }
+</header>
+@if (TempData["PullRequestError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
+<nav class="repository-navigation" aria-label="Pull Request views">
+    <a class="is-active" asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="message-square"></i> Conversation</a>
+    <span><i data-lucide="list-ordered"></i> Commits</span>
+    <span><i data-lucide="files"></i> Files changed</span>
+</nav>
+<div class="issue-detail-layout">
+    <div class="issue-conversation">
+        <article class="discussion-post"><header><strong>@Model.PullRequest.Author</strong><span>@Model.PullRequest.CreatedAtUtc.ToString("u")</span></header><div class="markdown-body">@Html.Raw(Model.PullRequest.BodyHtml)</div></article>
+        <ol class="issue-timeline">
+        @foreach (var item in Model.PullRequest.Timeline.Where(item => item.Type != PullRequestEventType.Created))
+        {
+            <li class="timeline-event"><i data-lucide="activity"></i><span><strong>@item.Actor</strong> @item.Type.ToString().ToLowerInvariant() @item.Detail</span><time>@item.CreatedAtUtc.ToString("u")</time></li>
+        }
+        </ol>
+    </div>
+    <aside class="issue-sidebar">
+        <section><h2>Source</h2><p>@Model.PullRequest.SourceBranch</p><code>@Model.PullRequest.CurrentHeadSha[..Math.Min(12, Model.PullRequest.CurrentHeadSha.Length)]</code></section>
+        <section><h2>Target</h2><p>@Model.PullRequest.TargetBranch</p><code>@Model.PullRequest.CurrentBaseSha[..Math.Min(12, Model.PullRequest.CurrentBaseSha.Length)]</code></section>
+        @if (Model.CanEdit && Model.PullRequest.State == PullRequestState.Open)
+        {
+            <form asp-action="Draft" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" method="post"><input type="hidden" name="isDraft" value="@(!Model.PullRequest.IsDraft ? "true" : "false")" /><button class="btn" type="submit"><i data-lucide="@(Model.PullRequest.IsDraft ? "send" : "file-pen-line")"></i> @(Model.PullRequest.IsDraft ? "Mark ready for review" : "Convert to draft")</button></form>
+        }
+        @if (Model.CanChangeState && Model.PullRequest.State != PullRequestState.Merged)
+        {
+            <form asp-action="State" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" method="post"><input type="hidden" name="state" value="@(Model.PullRequest.State == PullRequestState.Open ? "Closed" : "Open")" /><button class="btn" type="submit"><i data-lucide="@(Model.PullRequest.State == PullRequestState.Open ? "circle-x" : "rotate-ccw")"></i> @(Model.PullRequest.State == PullRequestState.Open ? "Close pull request" : "Reopen pull request")</button></form>
+        }
+    </aside>
+</div>
