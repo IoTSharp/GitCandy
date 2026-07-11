@@ -123,6 +123,152 @@ internal sealed class PullRequestService(
                 cancellationToken);
     }
 
+    public async Task<IReadOnlyList<PullRequestReviewThread>> GetReviewThreadsAsync(long repositoryId, long number, CancellationToken cancellationToken = default)
+    {
+        var pullRequestId = await _dbContext.PullRequests.AsNoTracking()
+            .Where(item => item.RepositoryId == repositoryId && item.Number == number)
+            .Select(item => (long?)item.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (pullRequestId is null) return [];
+
+        var threads = await _dbContext.Set<GitCandyPullRequestReviewThread>().AsNoTracking().AsSplitQuery()
+            .Include(item => item.Author).Include(item => item.ResolvedBy)
+            .Include(item => item.Comments).ThenInclude(item => item.Author)
+            .Where(item => item.PullRequestId == pullRequestId.Value)
+            .OrderBy(item => item.CreatedAtUtc).ThenBy(item => item.Id)
+            .ToArrayAsync(cancellationToken);
+        return threads.Select(ToReviewThread).ToArray();
+    }
+
+    public async Task<PullRequestMutationResult> AddReviewThreadAsync(long repositoryId, long number, string actorUserId, CreatePullRequestReviewThreadCommand command, CancellationToken cancellationToken = default)
+    {
+        if (!IsValidReviewBody(command.Body) || string.IsNullOrWhiteSpace(command.Path)
+            || command.Path.Length > SchemaLimits.GitPath || command.StartLine < 1 || command.EndLine < command.StartLine)
+            return PullRequestMutationResult.Invalid;
+
+        if (!await CanReadAsUserAsync(repositoryId, actorUserId, cancellationToken))
+            return PullRequestMutationResult.Forbidden;
+
+        var refreshResult = await RefreshPullRequestAsync(repositoryId, number, cancellationToken);
+        if (refreshResult != PullRequestMutationResult.Succeeded) return refreshResult;
+
+        var pullRequest = await _dbContext.PullRequests.Include(item => item.Repository)
+            .SingleOrDefaultAsync(item => item.RepositoryId == repositoryId && item.Number == number, cancellationToken);
+        if (pullRequest is null) return PullRequestMutationResult.NotFound;
+        if (pullRequest.State != PullRequestState.Open) return PullRequestMutationResult.Invalid;
+
+        var address = await GetAddressAsync(repositoryId, cancellationToken);
+        if (address is null || pullRequest.Repository is null) return PullRequestMutationResult.NotFound;
+        var anchor = _gitRepository.CaptureReviewAnchor(
+            pullRequest.Repository.StorageName, pullRequest.CurrentBaseSha, pullRequest.CurrentHeadSha,
+            command.Path.Trim(), command.Side, command.StartLine, command.EndLine, cancellationToken);
+        if (anchor is null) return PullRequestMutationResult.Invalid;
+
+        var now = UtcNow;
+        var thread = new GitCandyPullRequestReviewThread
+        {
+            AuthorUserId = actorUserId,
+            OriginalBaseSha = pullRequest.CurrentBaseSha,
+            OriginalHeadSha = pullRequest.CurrentHeadSha,
+            OriginalPath = anchor.Path,
+            OriginalSide = anchor.Side,
+            OriginalStartLine = anchor.StartLine,
+            OriginalEndLine = anchor.EndLine,
+            AnchorContext = anchor.Context,
+            CurrentHeadSha = pullRequest.CurrentHeadSha,
+            CurrentPath = anchor.Path,
+            CurrentSide = anchor.Side,
+            CurrentStartLine = anchor.StartLine,
+            CurrentEndLine = anchor.EndLine,
+            CreatedAtUtc = now,
+            UpdatedAtUtc = now,
+            Version = 1
+        };
+        thread.Comments.Add(NewReviewComment(actorUserId, command.Body, address.Value.NamespaceSlug, address.Value.RepositorySlug, now));
+        pullRequest.ReviewThreads.Add(thread);
+        Touch(pullRequest);
+        return await SaveMutationAsync(cancellationToken);
+    }
+
+    public async Task<PullRequestMutationResult> AddReviewReplyAsync(long repositoryId, long number, long threadId, string actorUserId, string body, CancellationToken cancellationToken = default)
+    {
+        if (!IsValidReviewBody(body)) return PullRequestMutationResult.Invalid;
+        var pullRequest = await FindPullRequestAsync(repositoryId, number, cancellationToken);
+        if (pullRequest is null) return PullRequestMutationResult.NotFound;
+        if (!await CanReadAsUserAsync(repositoryId, actorUserId, cancellationToken)) return PullRequestMutationResult.Forbidden;
+        var thread = await _dbContext.Set<GitCandyPullRequestReviewThread>().Include(item => item.Comments)
+            .SingleOrDefaultAsync(item => item.Id == threadId && item.PullRequestId == pullRequest.Id, cancellationToken);
+        var address = await GetAddressAsync(repositoryId, cancellationToken);
+        if (thread is null || address is null) return PullRequestMutationResult.NotFound;
+
+        var now = UtcNow;
+        thread.Comments.Add(NewReviewComment(actorUserId, body, address.Value.NamespaceSlug, address.Value.RepositorySlug, now));
+        thread.UpdatedAtUtc = now;
+        thread.Version++;
+        Touch(pullRequest);
+        return await SaveMutationAsync(cancellationToken);
+    }
+
+    public async Task<PullRequestMutationResult> SetReviewThreadResolvedAsync(long repositoryId, long number, long threadId, string actorUserId, bool isOwner, bool resolved, CancellationToken cancellationToken = default)
+    {
+        var pullRequest = await FindPullRequestAsync(repositoryId, number, cancellationToken);
+        if (pullRequest is null) return PullRequestMutationResult.NotFound;
+        if (!await CanReadAsUserAsync(repositoryId, actorUserId, cancellationToken)) return PullRequestMutationResult.Forbidden;
+        var thread = await _dbContext.Set<GitCandyPullRequestReviewThread>().SingleOrDefaultAsync(
+            item => item.Id == threadId && item.PullRequestId == pullRequest.Id, cancellationToken);
+        if (thread is null) return PullRequestMutationResult.NotFound;
+        if (!isOwner && !string.Equals(thread.AuthorUserId, actorUserId, StringComparison.Ordinal)) return PullRequestMutationResult.Forbidden;
+        if (thread.IsResolved == resolved) return PullRequestMutationResult.Succeeded;
+
+        thread.IsResolved = resolved;
+        thread.ResolvedByUserId = resolved ? actorUserId : null;
+        thread.ResolvedAtUtc = resolved ? UtcNow : null;
+        thread.UpdatedAtUtc = UtcNow;
+        thread.Version++;
+        Touch(pullRequest);
+        return await SaveMutationAsync(cancellationToken);
+    }
+
+    public async Task<PullRequestMutationResult> RefreshPullRequestAsync(long repositoryId, long number, CancellationToken cancellationToken = default)
+    {
+        var pullRequest = await _dbContext.PullRequests.Include(item => item.Repository).Include(item => item.ReviewThreads)
+            .SingleOrDefaultAsync(item => item.RepositoryId == repositoryId && item.Number == number, cancellationToken);
+        if (pullRequest is null) return PullRequestMutationResult.NotFound;
+        if (pullRequest.State != PullRequestState.Open || pullRequest.Repository is null) return PullRequestMutationResult.Succeeded;
+
+        var comparison = _gitRepository.CompareBranches(
+            pullRequest.Repository.StorageName, pullRequest.SourceBranch, pullRequest.TargetBranch, cancellationToken);
+        if (comparison is null) return PullRequestMutationResult.BranchNotFound;
+        if (string.Equals(comparison.BaseSha, pullRequest.CurrentBaseSha, StringComparison.Ordinal)
+            && string.Equals(comparison.HeadSha, pullRequest.CurrentHeadSha, StringComparison.Ordinal))
+            return PullRequestMutationResult.Succeeded;
+
+        foreach (var thread in pullRequest.ReviewThreads)
+        {
+            var remapped = _gitRepository.RemapReviewAnchor(
+                pullRequest.Repository.StorageName, comparison.BaseSha, comparison.HeadSha,
+                thread.OriginalSide, thread.AnchorContext, cancellationToken);
+            thread.CurrentHeadSha = comparison.HeadSha;
+            thread.CurrentPath = remapped?.Path;
+            thread.CurrentSide = remapped?.Side;
+            thread.CurrentStartLine = remapped?.StartLine;
+            thread.CurrentEndLine = remapped?.EndLine;
+            thread.IsOutdated = remapped is null;
+            thread.UpdatedAtUtc = UtcNow;
+            thread.Version++;
+        }
+
+        var previousHeadSha = pullRequest.CurrentHeadSha;
+        pullRequest.CurrentBaseSha = comparison.BaseSha;
+        pullRequest.CurrentHeadSha = comparison.HeadSha;
+        Touch(pullRequest);
+        _gitRepository.UpdatePullRequestHead(pullRequest.Repository.StorageName, pullRequest.Number, comparison.HeadSha, cancellationToken);
+        var result = await SaveMutationAsync(cancellationToken);
+        if (result != PullRequestMutationResult.Succeeded)
+            _gitRepository.UpdatePullRequestHead(pullRequest.Repository.StorageName, pullRequest.Number, previousHeadSha, CancellationToken.None);
+        return result;
+    }
+
     public async Task<PullRequestDetails> CreatePullRequestAsync(
         long repositoryId,
         CreatePullRequestCommand command,
@@ -515,6 +661,25 @@ internal sealed class PullRequestService(
 
     private static PullRequestTimelineItem[] EmptyTimeline => [];
 
+    private GitCandyPullRequestReviewComment NewReviewComment(string actorUserId, string body, string namespaceSlug, string repositorySlug, DateTime createdAtUtc) =>
+        new()
+        {
+            AuthorUserId = actorUserId,
+            BodyMarkdown = body.Trim(),
+            BodyHtml = _markdownRenderer.Render(body, namespaceSlug, repositorySlug),
+            CreatedAtUtc = createdAtUtc,
+            Version = 1
+        };
+
+    private static PullRequestReviewThread ToReviewThread(GitCandyPullRequestReviewThread item) =>
+        new(item.Id, item.AuthorUserId, item.OriginalBaseSha, item.OriginalHeadSha, item.OriginalPath,
+            item.OriginalSide, item.OriginalStartLine, item.OriginalEndLine, item.CurrentHeadSha,
+            item.CurrentPath, item.CurrentSide, item.CurrentStartLine, item.CurrentEndLine, item.IsOutdated,
+            item.IsResolved, item.ResolvedBy?.UserName, item.CreatedAtUtc, item.UpdatedAtUtc,
+            item.Comments.OrderBy(comment => comment.CreatedAtUtc).ThenBy(comment => comment.Id)
+                .Select(comment => new PullRequestReviewComment(comment.Id, comment.AuthorUserId,
+                    comment.Author?.UserName ?? string.Empty, comment.BodyMarkdown, comment.BodyHtml, comment.CreatedAtUtc)).ToArray());
+
     private static PullRequestDetails ToDetails(
         GitCandyPullRequest item,
         IReadOnlyList<PullRequestTimelineItem>? timeline = null) =>
@@ -587,6 +752,9 @@ internal sealed class PullRequestService(
                 $"Body cannot exceed {SchemaLimits.IssueBody} characters.");
         }
     }
+
+    private static bool IsValidReviewBody(string body) =>
+        !string.IsNullOrWhiteSpace(body) && body.Length <= SchemaLimits.IssueBody;
 
     private static bool IsTransientCreateConflict(Exception exception) =>
         exception is DbUpdateException

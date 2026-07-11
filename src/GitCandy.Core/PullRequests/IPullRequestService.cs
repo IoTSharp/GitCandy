@@ -24,6 +24,21 @@ public interface IPullRequestService
         bool includeFiles,
         CancellationToken cancellationToken = default);
 
+    /// <summary>读取 Pull Request 的行内评审 threads 与回复。</summary>
+    Task<IReadOnlyList<PullRequestReviewThread>> GetReviewThreadsAsync(long repositoryId, long number, CancellationToken cancellationToken = default);
+
+    /// <summary>创建由当前不可变 base/head diff 验证的行内评审 thread。</summary>
+    Task<PullRequestMutationResult> AddReviewThreadAsync(long repositoryId, long number, string actorUserId, CreatePullRequestReviewThreadCommand command, CancellationToken cancellationToken = default);
+
+    /// <summary>回复已有行内评审 thread。</summary>
+    Task<PullRequestMutationResult> AddReviewReplyAsync(long repositoryId, long number, long threadId, string actorUserId, string body, CancellationToken cancellationToken = default);
+
+    /// <summary>resolve 或重新打开行内评审 thread。</summary>
+    Task<PullRequestMutationResult> SetReviewThreadResolvedAsync(long repositoryId, long number, long threadId, string actorUserId, bool isOwner, bool resolved, CancellationToken cancellationToken = default);
+
+    /// <summary>刷新 source/target tip，并以保存的 hunk context 重映射 review anchors。</summary>
+    Task<PullRequestMutationResult> RefreshPullRequestAsync(long repositoryId, long number, CancellationToken cancellationToken = default);
+
     /// <summary>读取可用于同仓库 Pull Request 的本地分支。</summary>
     Task<IReadOnlyList<PullRequestBranch>> GetBranchesAsync(
         long repositoryId,
@@ -87,6 +102,12 @@ public interface IPullRequestGitRepository
         int commitPageSize,
         bool includeFiles,
         CancellationToken cancellationToken = default);
+
+    /// <summary>验证行范围并从不可变 diff 生成可靠的 hunk context。</summary>
+    PullRequestReviewAnchor? CaptureReviewAnchor(string repositoryStorageName, string baseSha, string headSha, string path, PullRequestDiffSide side, int startLine, int endLine, CancellationToken cancellationToken = default);
+
+    /// <summary>在新 base/head diff 中唯一匹配保存的 hunk context；不唯一或不存在时返回 null。</summary>
+    PullRequestReviewAnchor? RemapReviewAnchor(string repositoryStorageName, string baseSha, string headSha, PullRequestDiffSide side, string context, CancellationToken cancellationToken = default);
 
     /// <summary>创建或更新服务端维护的 refs/pull/{number}/head，并阻止 receive-pack 写入该命名空间。</summary>
     void UpdatePullRequestHead(

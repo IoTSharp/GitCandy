@@ -10,7 +10,7 @@ This vertical slice starts Milestone 12 with same-repository Pull Requests. It a
 - original/current base and head SHA snapshots and optimistic concurrency;
 - server-maintained `refs/pull/{number}/head` refs.
 
-Review comments, reviewers, mergeability, merge/squash, Issue closing, and cross-fork Pull Requests remain in M12 `#132-#139`.
+Reviewers, mergeability, merge/squash, Issue closing, and cross-fork Pull Requests remain in M12 `#134-#139`. Conversation/Commits/Files changed and inline review threads are covered by the subsequent #132 and #133 slices.
 
 ## Database impact
 

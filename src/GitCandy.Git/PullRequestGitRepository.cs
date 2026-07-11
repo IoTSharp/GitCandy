@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 namespace GitCandy.Git;
 
 /// <summary>基于 LibGit2Sharp 的 PR 分支快照与内部 ref 实现。</summary>
-public sealed class PullRequestGitRepository(
+public sealed partial class PullRequestGitRepository(
     IGitServiceFactory serviceFactory,
     IManagedGitRepositoryService repositoryService,
     IOptions<RepositoryBrowserOptions> browserOptions) : IPullRequestGitRepository
@@ -98,11 +98,11 @@ public sealed class PullRequestGitRepository(
 
         var divergence = repository.ObjectDatabase.CalculateHistoryDivergence(baseCommit, headCommit);
         var commits = repository.Commits.QueryBy(new CommitFilter
-            {
-                IncludeReachableFrom = headCommit,
-                ExcludeReachableFrom = mergeBase,
-                SortBy = CommitSortStrategies.Time | CommitSortStrategies.Topological
-            })
+        {
+            IncludeReachableFrom = headCommit,
+            ExcludeReachableFrom = mergeBase,
+            SortBy = CommitSortStrategies.Time | CommitSortStrategies.Topological
+        })
             .Skip((commitPage - 1) * commitPageSize)
             .Take(commitPageSize + 1)
             .Select(static commit => new PullRequestCommit(

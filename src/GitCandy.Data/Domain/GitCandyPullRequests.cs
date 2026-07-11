@@ -32,6 +32,7 @@ public sealed class GitCandyPullRequest
     public GitCandyUser? Author { get; set; }
     public GitCandyUser? MergedBy { get; set; }
     public ICollection<GitCandyPullRequestTimelineEvent> Timeline { get; } = [];
+    public ICollection<GitCandyPullRequestReviewThread> ReviewThreads { get; } = [];
 }
 
 public sealed class GitCandyPullRequestTimelineEvent

@@ -871,6 +871,153 @@ namespace GitCandy.Data.SqlServer.Migrations
                     b.ToTable("PullRequests", (string)null);
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AuthorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BodyHtml")
+                        .IsRequired()
+                        .HasMaxLength(131072)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BodyMarkdown")
+                        .IsRequired()
+                        .HasMaxLength(65536)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("ThreadId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("ThreadId", "CreatedAtUtc", "Id")
+                        .HasDatabaseName("IX_PullRequestReviewComments_ThreadId_CreatedAtUtc_Id");
+
+                    b.ToTable("PullRequestReviewComments", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewThread", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("AnchorContext")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AuthorUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CurrentEndLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CurrentHeadSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CurrentPath")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("CurrentSide")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<int?>("CurrentStartLine")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsOutdated")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsResolved")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OriginalBaseSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("OriginalEndLine")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OriginalHeadSha")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("OriginalPath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("OriginalSide")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<int>("OriginalStartLine")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PullRequestId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime?>("ResolvedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ResolvedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("ResolvedByUserId");
+
+                    b.HasIndex("PullRequestId", "CreatedAtUtc", "Id")
+                        .HasDatabaseName("IX_PullRequestReviewThreads_PullRequestId_CreatedAtUtc_Id");
+
+                    b.HasIndex("PullRequestId", "IsOutdated", "IsResolved")
+                        .HasDatabaseName("IX_PullRequestReviewThreads_PullRequestId_Status");
+
+                    b.ToTable("PullRequestReviewThreads", (string)null);
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestTimelineEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -1789,6 +1936,51 @@ namespace GitCandy.Data.SqlServer.Migrations
                     b.Navigation("Repository");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewComment", b =>
+                {
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyPullRequestReviewThread", "Thread")
+                        .WithMany("Comments")
+                        .HasForeignKey("ThreadId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Thread");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewThread", b =>
+                {
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyPullRequest", "PullRequest")
+                        .WithMany("ReviewThreads")
+                        .HasForeignKey("PullRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", "ResolvedBy")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Author");
+
+                    b.Navigation("PullRequest");
+
+                    b.Navigation("ResolvedBy");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestTimelineEvent", b =>
                 {
                     b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Actor")
@@ -2022,7 +2214,14 @@ namespace GitCandy.Data.SqlServer.Migrations
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
                 {
+                    b.Navigation("ReviewThreads");
+
                     b.Navigation("Timeline");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewThread", b =>
+                {
+                    b.Navigation("Comments");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>

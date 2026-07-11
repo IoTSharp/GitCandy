@@ -139,6 +139,49 @@ public sealed class PullRequestServiceTests
         Assert.HasCount(1, changes.Files);
     }
 
+    [TestMethod]
+    public async Task ReviewThread_WithReplyAndResolve_PersistsSanitizedConversation()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync();
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+        var pullRequest = await service.CreatePullRequestAsync(fixture.RepositoryId, NewCommand(fixture.AuthorId, "feature"));
+
+        Assert.AreEqual(PullRequestMutationResult.Succeeded, await service.AddReviewThreadAsync(
+            fixture.RepositoryId, pullRequest.Number, fixture.AuthorId,
+            new CreatePullRequestReviewThreadCommand("README.md", PullRequestDiffSide.New, 2, 2, "Check this <script>alert(1)</script>")));
+        var thread = (await service.GetReviewThreadsAsync(fixture.RepositoryId, pullRequest.Number)).Single();
+        Assert.IsFalse(thread.IsOutdated);
+        Assert.IsFalse(thread.Comments[0].BodyHtml.Contains("<script", StringComparison.OrdinalIgnoreCase));
+
+        Assert.AreEqual(PullRequestMutationResult.Succeeded, await service.AddReviewReplyAsync(
+            fixture.RepositoryId, pullRequest.Number, thread.Id, fixture.AuthorId, "Updated."));
+        Assert.AreEqual(PullRequestMutationResult.Succeeded, await service.SetReviewThreadResolvedAsync(
+            fixture.RepositoryId, pullRequest.Number, thread.Id, fixture.AuthorId, isOwner: false, resolved: true));
+        thread = (await service.GetReviewThreadsAsync(fixture.RepositoryId, pullRequest.Number)).Single();
+        Assert.HasCount(2, thread.Comments);
+        Assert.IsTrue(thread.IsResolved);
+    }
+
+    [TestMethod]
+    public async Task RefreshPullRequest_WithUnmatchedContext_MarksThreadOutdatedAndUpdatesHeadRef()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync();
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+        var pullRequest = await service.CreatePullRequestAsync(fixture.RepositoryId, NewCommand(fixture.AuthorId, "feature"));
+        await service.AddReviewThreadAsync(
+            fixture.RepositoryId, pullRequest.Number, fixture.AuthorId,
+            new CreatePullRequestReviewThreadCommand("README.md", PullRequestDiffSide.New, 2, 2, "Check this."));
+
+        fixture.Git.FeatureHeadSha = FakePullRequestGitRepository.UpdatedFeatureSha;
+        fixture.Git.CanRemap = false;
+        Assert.AreEqual(PullRequestMutationResult.Succeeded, await service.RefreshPullRequestAsync(fixture.RepositoryId, pullRequest.Number));
+
+        var thread = (await service.GetReviewThreadsAsync(fixture.RepositoryId, pullRequest.Number)).Single();
+        Assert.IsTrue(thread.IsOutdated);
+        Assert.IsNull(thread.CurrentPath);
+        Assert.AreEqual(FakePullRequestGitRepository.UpdatedFeatureSha, fixture.Git.HeadReferences[pullRequest.Number]);
+    }
+
     private static CreatePullRequestCommand NewCommand(string authorId, string sourceBranch) =>
         new("PR title", "PR body", authorId, sourceBranch, "main", IsDraft: true);
 
@@ -254,10 +297,13 @@ public sealed class PullRequestServiceTests
     {
         public const string MainSha = "1111111111111111111111111111111111111111";
         public const string FeatureSha = "2222222222222222222222222222222222222222";
+        public const string UpdatedFeatureSha = "4444444444444444444444444444444444444444";
         private const string EmptySha = "3333333333333333333333333333333333333333";
 
         public Dictionary<long, string> HeadReferences { get; } = [];
         public string? LastStorageName { get; private set; }
+        public string FeatureHeadSha { get; set; } = FeatureSha;
+        public bool CanRemap { get; set; } = true;
 
         public IReadOnlyList<PullRequestBranch> GetBranches(
             string repositoryStorageName,
@@ -281,7 +327,7 @@ public sealed class PullRequestServiceTests
 
             return sourceBranch switch
             {
-                "feature" => new PullRequestBranchComparison(MainSha, FeatureSha, 1, 0),
+                "feature" => new PullRequestBranchComparison(MainSha, FeatureHeadSha, 1, 0),
                 "empty" => new PullRequestBranchComparison(MainSha, EmptySha, 0, 1),
                 "main" => new PullRequestBranchComparison(MainSha, MainSha, 0, 0),
                 _ => null
@@ -327,6 +373,28 @@ public sealed class PullRequestServiceTests
             string headSha,
             CancellationToken cancellationToken = default) =>
             HeadReferences[number] = headSha;
+
+        public PullRequestReviewAnchor? CaptureReviewAnchor(
+            string repositoryStorageName,
+            string baseSha,
+            string headSha,
+            string path,
+            PullRequestDiffSide side,
+            int startLine,
+            int endLine,
+            CancellationToken cancellationToken = default) =>
+            path == "README.md" && side == PullRequestDiffSide.New && startLine == 2 && endLine == 2
+                ? new PullRequestReviewAnchor(path, side, startLine, endLine, "fake-context")
+                : null;
+
+        public PullRequestReviewAnchor? RemapReviewAnchor(
+            string repositoryStorageName,
+            string baseSha,
+            string headSha,
+            PullRequestDiffSide side,
+            string context,
+            CancellationToken cancellationToken = default) =>
+            CanRemap ? new PullRequestReviewAnchor("README.md", side, 2, 2, context) : null;
 
         public void DeletePullRequestHead(
             string repositoryStorageName,

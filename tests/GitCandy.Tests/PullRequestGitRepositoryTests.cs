@@ -44,6 +44,33 @@ public sealed class PullRequestGitRepositoryTests
             Assert.AreEqual("README.md", changes.Files[0].Path);
             Assert.IsNotNull(changes.Files[0].Patch);
 
+            var anchor = service.CaptureReviewAnchor(
+                "reviews",
+                comparison.BaseSha,
+                comparison.HeadSha,
+                "README.md",
+                PullRequestDiffSide.New,
+                startLine: 2,
+                endLine: 2);
+            Assert.IsNotNull(anchor);
+            Assert.AreEqual(2, anchor.StartLine);
+            var remappedAnchor = service.RemapReviewAnchor(
+                "reviews",
+                comparison.BaseSha,
+                comparison.HeadSha,
+                PullRequestDiffSide.New,
+                anchor.Context);
+            Assert.IsNotNull(remappedAnchor);
+            Assert.AreEqual("README.md", remappedAnchor.Path);
+            Assert.IsNull(service.CaptureReviewAnchor(
+                "reviews",
+                comparison.BaseSha,
+                comparison.HeadSha,
+                "README.md",
+                PullRequestDiffSide.New,
+                startLine: 200,
+                endLine: 200));
+
             var renameComparison = service.CompareBranches("reviews", "rename", "main");
             Assert.IsNotNull(renameComparison);
             var renameChanges = service.ReadChangeSet(

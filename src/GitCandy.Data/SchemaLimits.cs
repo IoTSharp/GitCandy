@@ -27,4 +27,6 @@ internal static class SchemaLimits
     public const int CommitSha = 64;
     public const int GitRefName = 255;
     public const int PullRequestPairKey = 520;
+    public const int GitPath = 1024;
+    public const int ReviewAnchorContext = 8192;
 }

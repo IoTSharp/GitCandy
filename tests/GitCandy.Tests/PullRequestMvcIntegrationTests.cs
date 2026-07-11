@@ -71,11 +71,31 @@ public sealed partial class PullRequestMvcIntegrationTests
         var filesHtml = await files.Content.ReadAsStringAsync();
         StringAssert.Contains(filesHtml, "README.md");
         StringAssert.Contains(filesHtml, "language-diff");
+        StringAssert.Contains(filesHtml, "Add review comment");
+        var reviewToken = AntiforgeryTokenRegex().Match(filesHtml).Groups[1].Value;
+        using var review = await fixture.Client.PostAsync(
+            "/review-author/reviews/pulls/1/review-threads",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = reviewToken,
+                ["Path"] = "README.md",
+                ["Side"] = "New",
+                ["StartLine"] = "2",
+                ["EndLine"] = "2",
+                ["Body"] = "Check feature line."
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, review.StatusCode);
+        using var reviewedFiles = await fixture.Client.GetAsync("/review-author/reviews/pulls/1/files");
+        var reviewedFilesHtml = await reviewedFiles.Content.ReadAsStringAsync();
+        StringAssert.Contains(reviewedFilesHtml, "Check feature line.");
+        StringAssert.Contains(reviewedFilesHtml, "Resolve");
 
         await fixture.MakeRepositoryPrivateAsync();
         using var anonymousClient = fixture.CreateClient();
         using var denied = await anonymousClient.GetAsync("/review-author/reviews/pulls/1");
         Assert.AreEqual(HttpStatusCode.NotFound, denied.StatusCode);
+        using var deniedFiles = await anonymousClient.GetAsync("/review-author/reviews/pulls/1/files");
+        Assert.AreEqual(HttpStatusCode.NotFound, deniedFiles.StatusCode);
     }
 
     private sealed class PullRequestWebFixture : IAsyncDisposable

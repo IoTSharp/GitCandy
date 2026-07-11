@@ -10,6 +10,7 @@
     <a asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="list-ordered"></i> Commits</a>
     <a class="is-active" asp-action="Files" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="files"></i> Files changed</a>
 </nav>
+@if (TempData["PullRequestError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
 @if (Model.Changes.DiffTruncated) { <div class="alert alert-warning">The diff reached a configured display limit; omitted patches remain available through Git.</div> }
 @if (Model.Changes.Files.Count == 0)
 {
@@ -17,6 +18,9 @@
 }
 @foreach (var file in Model.Changes.Files)
 {
+    var fileThreads = Model.ReviewThreads.Where(thread => !thread.IsOutdated
+        && (string.Equals(thread.CurrentPath, file.Path, StringComparison.Ordinal)
+            || string.Equals(thread.CurrentPath, file.OldPath, StringComparison.Ordinal))).ToArray();
     <section class="diff-file">
         <header>
             <strong>@if (!string.IsNullOrEmpty(file.OldPath) && !string.Equals(file.OldPath, file.Path, StringComparison.Ordinal)) { <span>@file.OldPath → </span> }@file.Path</strong>
@@ -30,6 +34,61 @@
                 <summary><i data-lucide="chevron-right"></i> Patch</summary>
                 <pre><code class="language-diff" data-highlight>@file.Patch</code></pre>
             </details>
+        }
+        @foreach (var thread in fileThreads)
+        {
+            <article class="review-thread @(thread.IsResolved ? "is-resolved" : null)" id="review-thread-@thread.Id">
+                <header><strong>@thread.CurrentSide @thread.CurrentStartLine@if (thread.CurrentEndLine != thread.CurrentStartLine) { <span>-@thread.CurrentEndLine</span> }</strong><span>@(thread.IsResolved ? $"Resolved by {thread.ResolvedBy}" : "Open")</span></header>
+                @foreach (var comment in thread.Comments)
+                {
+                    <div class="review-comment"><div><strong>@comment.Author</strong><time>@comment.CreatedAtUtc.ToString("u")</time></div><div class="markdown-body">@Html.Raw(comment.BodyHtml)</div></div>
+                }
+                @if (Model.CanReview)
+                {
+                    <form class="review-reply-form" asp-action="AddReviewReply" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" asp-route-threadId="@thread.Id" method="post"><textarea name="Body" rows="2" maxlength="65536" required aria-label="Review reply"></textarea><button class="btn btn-primary" type="submit"><i data-lucide="reply"></i> Reply</button></form>
+                }
+                @if (Model.CanReview && (Model.IsOwner || string.Equals(Model.CurrentUserId, thread.AuthorUserId, StringComparison.Ordinal)))
+                {
+                    <form class="review-resolve-form" asp-action="SetReviewThreadResolved" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" asp-route-threadId="@thread.Id" method="post"><input type="hidden" name="resolved" value="@(!thread.IsResolved ? "true" : "false")" /><button class="btn" type="submit"><i data-lucide="@(thread.IsResolved ? "rotate-ccw" : "check")"></i> @(thread.IsResolved ? "Reopen" : "Resolve")</button></form>
+                }
+            </article>
+        }
+        @if (Model.CanReview && !file.IsBinary && file.Patch is not null && Model.PullRequest.State == PullRequestState.Open)
+        {
+            <details class="review-compose">
+                <summary><i data-lucide="message-square-plus"></i> Add review comment</summary>
+                <form asp-action="AddReviewThread" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" method="post">
+                    <input type="hidden" name="Path" value="@file.Path" />
+                    <input type="hidden" name="OldPath" value="@file.OldPath" />
+                    <div class="form-grid review-anchor-fields">
+                        <label>Side<select name="Side"><option value="New">New</option><option value="Old">Old</option></select></label>
+                        <label>Start line<input name="StartLine" type="number" min="1" required /></label>
+                        <label>End line<input name="EndLine" type="number" min="1" required /></label>
+                    </div>
+                    <label>Comment<textarea name="Body" rows="4" maxlength="65536" required></textarea></label>
+                    <button class="btn btn-primary" type="submit"><i data-lucide="message-square-plus"></i> Start thread</button>
+                </form>
+            </details>
+        }
+    </section>
+}
+@if (Model.ReviewThreads.Any(thread => thread.IsOutdated))
+{
+    <section class="outdated-review-threads">
+        <h2>Outdated review threads</h2>
+        @foreach (var thread in Model.ReviewThreads.Where(thread => thread.IsOutdated))
+        {
+            <article class="review-thread is-outdated" id="review-thread-@thread.Id">
+                <header><strong>@thread.OriginalPath · @thread.OriginalSide @thread.OriginalStartLine-@thread.OriginalEndLine</strong><span>Outdated</span></header>
+                @foreach (var comment in thread.Comments)
+                {
+                    <div class="review-comment"><div><strong>@comment.Author</strong><time>@comment.CreatedAtUtc.ToString("u")</time></div><div class="markdown-body">@Html.Raw(comment.BodyHtml)</div></div>
+                }
+                @if (Model.CanReview)
+                {
+                    <form class="review-reply-form" asp-action="AddReviewReply" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" asp-route-threadId="@thread.Id" method="post"><textarea name="Body" rows="2" maxlength="65536" required aria-label="Review reply"></textarea><button class="btn btn-primary" type="submit"><i data-lucide="reply"></i> Reply</button></form>
+                }
+            </article>
         }
     </section>
 }

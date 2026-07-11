@@ -711,7 +711,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #130 | PR schema、编号与引用快照 | 建立 PullRequest、source/target ref、original/current base/head SHA、merge result 和并发字段，复用 M11 WorkItemNumber/timeline；维护服务端只读 `refs/pull/{number}/head` 等内部 refs，拒绝客户端写入，分支删除后历史仍可读 |
 | ✅ #131 | 创建、Draft 与状态流转 | 同仓库 branch compare 后创建 PR，支持 draft/ready、edit、close/reopen；禁止 source=target、无差异、无读写权限和重复 open PR |
 | ✅ #132 | Conversation、Commits、Files changed | 展示 description/timeline、提交列表、merge-base diff、renames/binary/large diff 降级、分页/折叠和固定 commit 链接 |
-| ⬜ #133 | 行内 Review threads | 支持单行/范围评论、reply、resolve/unresolve 和 outdated；新 push 后基于 hunk context 重映射，不能把评论静默挂到错误代码 |
+| ✅ #133 | 行内 Review threads | 支持单行/范围评论、reply、resolve/unresolve 和 outdated；新 push 后基于 hunk context 重映射，不能把评论静默挂到错误代码 |
 | ⬜ #134 | Reviewer 与 Review 状态 | author/assignee/reviewer 分离，支持 request review、comment、approve、request changes、dismiss/re-request；本人批准和过期批准策略显式配置 |
 | ⬜ #135 | Mergeability 与冲突检测 | 汇总 draft、source/target 变化、conflict、required approval/check 和 branch policy；状态异步刷新但合并时必须同步复核 |
 | ⬜ #136 | Merge commit 与 Squash 服务 | 所有 ref 写入收敛到受控 merge service，生成可审阅 message，校验目标未变化，写入失败不留下半完成状态，并触发 hook/audit/index queue |

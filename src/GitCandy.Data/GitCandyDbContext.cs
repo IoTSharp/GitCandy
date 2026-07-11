@@ -116,6 +116,7 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         builder.ConfigureNamespaceModel();
         builder.ConfigureIssueModel();
         builder.ConfigurePullRequestModel();
+        builder.ConfigurePullRequestReviewModel();
 
         builder.Entity<GitCandyUser>(entity =>
         {

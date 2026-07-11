@@ -45,6 +45,31 @@ public sealed class PullRequestChangesViewModel
     public required RepositoryAddressResolution Repository { get; init; }
     public required PullRequestDetails PullRequest { get; init; }
     public required PullRequestChangeSet Changes { get; init; }
+    public IReadOnlyList<PullRequestReviewThread> ReviewThreads { get; init; } = [];
+    public bool CanReview { get; init; }
+    public bool IsOwner { get; init; }
+    public string? CurrentUserId { get; init; }
+}
+
+public sealed class PullRequestReviewThreadFormViewModel
+{
+    [Required, StringLength(1024)]
+    public string Path { get; set; } = string.Empty;
+    [StringLength(1024)]
+    public string? OldPath { get; set; }
+    public PullRequestDiffSide Side { get; set; } = PullRequestDiffSide.New;
+    [Range(1, int.MaxValue)]
+    public int StartLine { get; set; }
+    [Range(1, int.MaxValue)]
+    public int EndLine { get; set; }
+    [Required, StringLength(65536)]
+    public string Body { get; set; } = string.Empty;
+}
+
+public sealed class PullRequestReviewReplyFormViewModel
+{
+    [Required, StringLength(65536)]
+    public string Body { get; set; } = string.Empty;
 }
 
 public sealed class PullRequestCommitViewModel

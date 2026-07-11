@@ -372,6 +372,50 @@ public sealed class PullRequestController(
                 cancellationToken),
             cancellationToken);
 
+    [HttpPost("{number:long}/review-threads")]
+    [Authorize]
+    public async Task<IActionResult> AddReviewThread(string namespaceSlug, string project, long number, PullRequestReviewThreadFormViewModel model, CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null || string.IsNullOrWhiteSpace(_currentUser.UserId)) return NotFound();
+        var result = ModelState.IsValid
+            ? await _pullRequestService.AddReviewThreadAsync(access.Value.Address.RepositoryId, number, _currentUser.UserId,
+                new CreatePullRequestReviewThreadCommand(
+                    model.Side == PullRequestDiffSide.Old && !string.IsNullOrWhiteSpace(model.OldPath) ? model.OldPath : model.Path,
+                    model.Side,
+                    model.StartLine,
+                    model.EndLine,
+                    model.Body), cancellationToken)
+            : PullRequestMutationResult.Invalid;
+        SetReviewMutationError(result);
+        return RedirectToAction(nameof(Files), new { namespaceSlug, project, number });
+    }
+
+    [HttpPost("{number:long}/review-threads/{threadId:long}/replies")]
+    [Authorize]
+    public async Task<IActionResult> AddReviewReply(string namespaceSlug, string project, long number, long threadId, PullRequestReviewReplyFormViewModel model, CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null || string.IsNullOrWhiteSpace(_currentUser.UserId)) return NotFound();
+        var result = ModelState.IsValid
+            ? await _pullRequestService.AddReviewReplyAsync(access.Value.Address.RepositoryId, number, threadId, _currentUser.UserId, model.Body, cancellationToken)
+            : PullRequestMutationResult.Invalid;
+        SetReviewMutationError(result);
+        return RedirectToAction(nameof(Files), new { namespaceSlug, project, number });
+    }
+
+    [HttpPost("{number:long}/review-threads/{threadId:long}/resolved")]
+    [Authorize]
+    public async Task<IActionResult> SetReviewThreadResolved(string namespaceSlug, string project, long number, long threadId, bool resolved, CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null || string.IsNullOrWhiteSpace(_currentUser.UserId)) return NotFound();
+        var result = await _pullRequestService.SetReviewThreadResolvedAsync(
+            access.Value.Address.RepositoryId, number, threadId, _currentUser.UserId, access.Value.IsOwner, resolved, cancellationToken);
+        SetReviewMutationError(result);
+        return RedirectToAction(nameof(Files), new { namespaceSlug, project, number });
+    }
+
     private async Task<IActionResult> MutateAsync(
         string namespaceSlug,
         string project,
@@ -443,6 +487,8 @@ public sealed class PullRequestController(
             return null;
         }
 
+        await _pullRequestService.RefreshPullRequestAsync(access.Value.Address.RepositoryId, number, cancellationToken);
+
         var pullRequest = await _pullRequestService.GetPullRequestAsync(
             access.Value.Address.RepositoryId,
             number,
@@ -465,7 +511,13 @@ public sealed class PullRequestController(
             {
                 Repository = access.Value.Address,
                 PullRequest = pullRequest,
-                Changes = changes
+                Changes = changes,
+                ReviewThreads = includeFiles
+                    ? await _pullRequestService.GetReviewThreadsAsync(access.Value.Address.RepositoryId, number, cancellationToken)
+                    : [],
+                CanReview = includeFiles && _currentUser.IsAuthenticated,
+                IsOwner = access.Value.IsOwner,
+                CurrentUserId = _currentUser.UserId
             };
     }
 
@@ -533,6 +585,11 @@ public sealed class PullRequestController(
 
     private void AddMutationError(PullRequestMutationResult result) =>
         ModelState.AddModelError(string.Empty, MutationMessage(result));
+
+    private void SetReviewMutationError(PullRequestMutationResult result)
+    {
+        if (result != PullRequestMutationResult.Succeeded) TempData["PullRequestError"] = MutationMessage(result);
+    }
 
     private static string MutationMessage(PullRequestMutationResult result) => result switch
     {

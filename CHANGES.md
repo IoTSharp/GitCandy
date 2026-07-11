@@ -3,6 +3,8 @@
 ---
 ### Unreleased
 #### Added
+ - Added M12 #133 inline Pull Request review threads with server-validated old/new line ranges, replies, resolve/reopen, immutable original anchors, and unique hunk-context remapping that explicitly marks missing or ambiguous matches as outdated.
+ - Added SQLite and SQL Server review-thread migrations plus real bare-repository anchor tests and migration-backed thread lifecycle coverage.
  - Added M12 #132 Pull Request Conversation, paged Commits, and collapsible Files changed views backed by immutable SHA snapshots and merge-base diffs, including rename detection, binary/large-diff degradation, and fixed-SHA commit links.
  - Added the first M12 Pull Request vertical slice at `/{namespace}/{repository}/pulls`, including same-repository branch comparison, shared Issue/PR numbering, draft/ready, edit, close/reopen, timeline, and private-repository suppression.
  - Added SQLite and SQL Server `PullRequests` and `PullRequestTimelineEvents` migrations with original/current base/head snapshots, merge-result placeholders, optimistic concurrency, and one-open-PR-per-branch-pair enforcement.
