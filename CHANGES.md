@@ -2,6 +2,13 @@
 
 ---
 ### Unreleased
+#### Summary
+ - Completed the ASP.NET Core 10 migration baseline with EF Core, ASP.NET Core Identity, SQLite runtime migrations, SQL Server migration SQL, nullable analysis, architecture gates, and a single-process Web/SSH/background host.
+ - Completed Git Smart HTTP and built-in SSH clone/fetch/push, protocol v2 forwarding, large-pack streaming, unified repository/path authorization, stable namespace aliases, and Git LFS basic transfer.
+ - Completed repository lifecycle and code browsing for create/import/fork/delete, tree/blob/raw, commits, diff, blame, compare, fixed permalinks, and streamed archives.
+ - Completed account, team, repository, 2FA, TOTP recovery-code, optional OpenID Connect, SSH-key, responsive theme, health-check, OpenTelemetry, and Docker/Linux/Windows deployment workflows.
+ - Completed the M11-M12 collaboration baseline with Issues, Markdown discussions, labels, milestones, notifications, Pull Requests, cross-fork sources, inline review, approvals, mergeability, merge commits, and squash.
+
 #### Added
  - Completed M12 #135-#139 with explainable mergeability, required approvals, unresolved-thread and conflict gates, server-side merge commit/squash, conditional ref rollback, and merge-result timeline records.
  - Added stable cross-fork Pull Request source repository IDs, controlled local object import into read-only PR refs, and same-fork-network permission validation.
@@ -134,6 +141,7 @@
  - Added nullable `ForkedFromRepository` and `ForkNetworkRoot` columns to SQLite and SQL Server repository schemas.
 
 #### Removed
+ - Removed the retired ASP.NET MVC5/.NET Framework 4.5 project and legacy `GitCandy.sln`; migration behavior baselines remain under `docs/migration`, and the deleted implementation remains available through Git history.
  - Removed the migrated host's static `GitCandy.Log.Logger` compatibility adapter, legacy log rotation job, and unused `LogPathFormat` setting. Runtime logging now uses only dependency-injected `ILogger<T>` instances and ASP.NET Core logging providers.
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 

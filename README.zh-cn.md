@@ -52,7 +52,7 @@ dotnet build GitCandy.slnx
 dotnet test GitCandy.slnx
 ```
 
-`GitCandy.slnx` 是当前 ASP.NET Core 主线 solution。旧 `GitCandy.sln` 和 MVC5 源码只保留为迁移行为参考。
+`GitCandy.slnx` 是当前唯一活动 solution。已退役的 MVC5 源码可通过 Git 历史查阅，行为基线继续保留在 `docs/migration`。
 
 ## 协议
 

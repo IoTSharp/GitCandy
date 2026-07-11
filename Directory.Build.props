@@ -1,8 +1,5 @@
 <Project>
   <PropertyGroup>
-    <IsLegacyMvc5Project Condition="'$(MSBuildProjectFullPath)' == '$(MSBuildThisFileDirectory)GitCandy\GitCandy.csproj'">true</IsLegacyMvc5Project>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(IsLegacyMvc5Project)' != 'true'">
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

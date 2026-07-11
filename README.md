@@ -82,7 +82,7 @@ dotnet test GitCandy.slnx
 
 The client bundle is rebuilt incrementally by MSBuild from `src/GitCandy/ClientApp`. See [the M9 UI implementation record](docs/design/m9-ui-implementation.md) for asset, theme, visual baseline, and rollback details.
 
-`GitCandy.slnx` is the active ASP.NET Core solution. The legacy `GitCandy.sln` and MVC5 source remain only as migration behavior references.
+`GitCandy.slnx` is the only active solution. The retired MVC5 source remains available through Git history, while its behavior baselines remain under `docs/migration`.
 
 ## License
 
