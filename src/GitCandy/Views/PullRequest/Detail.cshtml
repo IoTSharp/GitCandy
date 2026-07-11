@@ -11,8 +11,8 @@
 @if (TempData["PullRequestError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
 <nav class="repository-navigation" aria-label="Pull Request views">
     <a class="is-active" asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="message-square"></i> Conversation</a>
-    <span><i data-lucide="list-ordered"></i> Commits</span>
-    <span><i data-lucide="files"></i> Files changed</span>
+    <a asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="list-ordered"></i> Commits</a>
+    <a asp-action="Files" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="files"></i> Files changed</a>
 </nav>
 <div class="issue-detail-layout">
     <div class="issue-conversation">

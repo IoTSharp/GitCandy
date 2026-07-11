@@ -1,7 +1,9 @@
 using System.Text;
+using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.PullRequests;
 using LibGit2Sharp;
+using Microsoft.Extensions.Options;
 
 namespace GitCandy.Tests;
 
@@ -18,7 +20,8 @@ public sealed class PullRequestGitRepositoryTests
             var pathResolver = new PullRequestPathResolver(rootPath);
             var service = new PullRequestGitRepository(
                 new GitServiceFactory(pathResolver),
-                new LibGit2RepositoryService(pathResolver));
+                new LibGit2RepositoryService(pathResolver),
+                Options.Create(new RepositoryBrowserOptions()));
 
             var branches = service.GetBranches("reviews");
             Assert.IsTrue(branches.Any(item => item.Name == "main"));
@@ -26,6 +29,72 @@ public sealed class PullRequestGitRepositoryTests
             var comparison = service.CompareBranches("reviews", "feature", "main");
             Assert.IsNotNull(comparison);
             Assert.AreEqual(1, comparison.AheadBy);
+            var changes = service.ReadChangeSet(
+                "reviews",
+                comparison.BaseSha,
+                comparison.HeadSha,
+                commitPage: 1,
+                commitPageSize: 20,
+                includeFiles: true);
+            Assert.IsNotNull(changes);
+            Assert.AreEqual(comparison.BaseSha, changes.MergeBaseSha);
+            Assert.HasCount(1, changes.Commits);
+            Assert.AreEqual("Feature", changes.Commits[0].MessageShort);
+            Assert.HasCount(1, changes.Files);
+            Assert.AreEqual("README.md", changes.Files[0].Path);
+            Assert.IsNotNull(changes.Files[0].Patch);
+
+            var renameComparison = service.CompareBranches("reviews", "rename", "main");
+            Assert.IsNotNull(renameComparison);
+            var renameChanges = service.ReadChangeSet(
+                "reviews",
+                renameComparison.BaseSha,
+                renameComparison.HeadSha,
+                commitPage: 1,
+                commitPageSize: 20,
+                includeFiles: true);
+            Assert.IsNotNull(renameChanges);
+            Assert.HasCount(1, renameChanges.Files);
+            Assert.AreEqual("Renamed", renameChanges.Files[0].Status);
+            Assert.AreEqual("README.md", renameChanges.Files[0].OldPath);
+            Assert.AreEqual("README-renamed.md", renameChanges.Files[0].Path);
+
+            var multiComparison = service.CompareBranches("reviews", "multi", "main");
+            Assert.IsNotNull(multiComparison);
+            var firstPage = service.ReadChangeSet(
+                "reviews",
+                multiComparison.BaseSha,
+                multiComparison.HeadSha,
+                commitPage: 1,
+                commitPageSize: 1,
+                includeFiles: false);
+            var secondPage = service.ReadChangeSet(
+                "reviews",
+                multiComparison.BaseSha,
+                multiComparison.HeadSha,
+                commitPage: 2,
+                commitPageSize: 1,
+                includeFiles: false);
+            Assert.IsNotNull(firstPage);
+            Assert.IsNotNull(secondPage);
+            Assert.IsTrue(firstPage.HasNextCommitPage);
+            Assert.IsFalse(secondPage.HasNextCommitPage);
+            Assert.HasCount(1, firstPage.Commits);
+            Assert.HasCount(1, secondPage.Commits);
+
+            var binaryComparison = service.CompareBranches("reviews", "binary", "main");
+            Assert.IsNotNull(binaryComparison);
+            var binaryChanges = service.ReadChangeSet(
+                "reviews",
+                binaryComparison.BaseSha,
+                binaryComparison.HeadSha,
+                commitPage: 1,
+                commitPageSize: 20,
+                includeFiles: true);
+            Assert.IsNotNull(binaryChanges);
+            Assert.HasCount(1, binaryChanges.Files);
+            Assert.IsTrue(binaryChanges.Files[0].IsBinary);
+            Assert.AreEqual("binary.dat", binaryChanges.Files[0].Path);
 
             using (var repository = new Repository(repositoryPath))
             {
@@ -53,12 +122,49 @@ public sealed class PullRequestGitRepositoryTests
         }
     }
 
+    [TestMethod]
+    public void ReadChangeSet_WithConfiguredDiffLimit_OmitsOversizedPatch()
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            CreateBareRepository(rootPath);
+            var pathResolver = new PullRequestPathResolver(rootPath);
+            var service = new PullRequestGitRepository(
+                new GitServiceFactory(pathResolver),
+                new LibGit2RepositoryService(pathResolver),
+                Options.Create(new RepositoryBrowserOptions { MaxDiffCharacters = 1 }));
+            var comparison = service.CompareBranches("reviews", "feature", "main");
+            Assert.IsNotNull(comparison);
+
+            var changes = service.ReadChangeSet(
+                "reviews",
+                comparison.BaseSha,
+                comparison.HeadSha,
+                commitPage: 1,
+                commitPageSize: 20,
+                includeFiles: true);
+
+            Assert.IsNotNull(changes);
+            Assert.IsTrue(changes.DiffTruncated);
+            Assert.HasCount(1, changes.Files);
+            Assert.IsNull(changes.Files[0].Patch);
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
+    }
+
     private static string CreateBareRepository(string rootPath)
     {
         var workPath = Path.Combine(rootPath, "work");
         Repository.Init(workPath);
         string mainSha;
         string featureSha;
+        string renameSha;
+        string multiSha;
+        string binarySha;
         using (var repository = new Repository(workPath))
         {
             var signature = new Signature(
@@ -76,6 +182,29 @@ public sealed class PullRequestGitRepositoryTests
             File.AppendAllText(Path.Combine(workPath, "README.md"), "feature\n", Encoding.UTF8);
             Commands.Stage(repository, "README.md");
             featureSha = repository.Commit("Feature", signature, signature).Id.Sha;
+            Commands.Checkout(repository, main);
+            var rename = repository.CreateBranch("rename", initial);
+            Commands.Checkout(repository, rename);
+            File.Move(
+                Path.Combine(workPath, "README.md"),
+                Path.Combine(workPath, "README-renamed.md"));
+            Commands.Stage(repository, "*");
+            renameSha = repository.Commit("Rename README", signature, signature).Id.Sha;
+            Commands.Checkout(repository, main);
+            var multi = repository.CreateBranch("multi", initial);
+            Commands.Checkout(repository, multi);
+            File.AppendAllText(Path.Combine(workPath, "README.md"), "one\n", Encoding.UTF8);
+            Commands.Stage(repository, "README.md");
+            repository.Commit("Multi one", signature, signature);
+            File.AppendAllText(Path.Combine(workPath, "README.md"), "two\n", Encoding.UTF8);
+            Commands.Stage(repository, "README.md");
+            multiSha = repository.Commit("Multi two", signature, signature).Id.Sha;
+            Commands.Checkout(repository, main);
+            var binary = repository.CreateBranch("binary", initial);
+            Commands.Checkout(repository, binary);
+            File.WriteAllBytes(Path.Combine(workPath, "binary.dat"), [0, 1, 2, 3]);
+            Commands.Stage(repository, "binary.dat");
+            binarySha = repository.Commit("Add binary", signature, signature).Id.Sha;
         }
 
         var barePath = Path.Combine(rootPath, "reviews.git");
@@ -84,6 +213,9 @@ public sealed class PullRequestGitRepositoryTests
         {
             SetReference(bare, "refs/heads/main", mainSha);
             SetReference(bare, "refs/heads/feature", featureSha);
+            SetReference(bare, "refs/heads/rename", renameSha);
+            SetReference(bare, "refs/heads/multi", multiSha);
+            SetReference(bare, "refs/heads/binary", binarySha);
             bare.Refs.UpdateTarget(bare.Refs.Head, "refs/heads/main");
         }
 

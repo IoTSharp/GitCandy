@@ -1,0 +1,32 @@
+@model PullRequestChangesViewModel
+@{ ViewData["Title"] = $"Commits · #{Model.PullRequest.Number}"; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><a asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug">Pull requests</a><span>/</span><a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number">#@Model.PullRequest.Number</a><span>/</span><span>Commits</span></nav>
+<header class="page-heading pr-subview-heading">
+    <div><h1>@Model.PullRequest.Title</h1><p><strong>@Model.Changes.AheadBy</strong> ahead and <strong>@Model.Changes.BehindBy</strong> behind @Model.PullRequest.TargetBranch</p></div>
+    <code title="Head commit">@Model.Changes.HeadSha[..Math.Min(12, Model.Changes.HeadSha.Length)]</code>
+</header>
+<nav class="repository-navigation" aria-label="Pull Request views">
+    <a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="message-square"></i> Conversation</a>
+    <a class="is-active" asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="list-ordered"></i> Commits</a>
+    <a asp-action="Files" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="files"></i> Files changed</a>
+</nav>
+@if (Model.Changes.Commits.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="git-commit-horizontal"></i><h2>No commits on this page</h2></div></section>
+}
+else
+{
+    <ol class="commit-list">
+    @foreach (var commit in Model.Changes.Commits)
+    {
+        <li>
+            <div><a asp-action="Commit" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" asp-route-sha="@commit.Sha">@commit.MessageShort</a><p>@commit.AuthorName · <time datetime="@commit.AuthoredAt.ToString("O")">@commit.AuthoredAt.ToString("u")</time></p></div>
+            <code>@commit.Sha[..Math.Min(12, commit.Sha.Length)]</code>
+        </li>
+    }
+    </ol>
+}
+<nav class="pager" aria-label="Pull Request commit pages">
+    @if (Model.Changes.CommitPage > 1) { <a class="btn" asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" asp-route-page="@(Model.Changes.CommitPage - 1)"><i data-lucide="arrow-left"></i> Newer</a> }
+    @if (Model.Changes.HasNextCommitPage) { <a class="btn" asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" asp-route-page="@(Model.Changes.CommitPage + 1)">Older <i data-lucide="arrow-right"></i></a> }
+</nav>

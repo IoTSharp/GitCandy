@@ -48,6 +48,40 @@ public sealed record PullRequestBranchComparison(
     int AheadBy,
     int BehindBy);
 
+/// <summary>Pull Request 比较范围内的提交摘要。</summary>
+public sealed record PullRequestCommit(
+    string Sha,
+    string Message,
+    string MessageShort,
+    string AuthorName,
+    string AuthorEmail,
+    DateTimeOffset AuthoredAt,
+    IReadOnlyList<string> ParentShas);
+
+/// <summary>Pull Request merge-base diff 中的单文件变更。</summary>
+public sealed record PullRequestFileChange(
+    string Path,
+    string? OldPath,
+    string Status,
+    bool IsBinary,
+    int LinesAdded,
+    int LinesDeleted,
+    string? Patch);
+
+/// <summary>Pull Request 的 merge-base、提交页和可选文件 diff。</summary>
+public sealed record PullRequestChangeSet(
+    string MergeBaseSha,
+    string BaseSha,
+    string HeadSha,
+    int AheadBy,
+    int BehindBy,
+    int CommitPage,
+    int CommitPageSize,
+    bool HasNextCommitPage,
+    IReadOnlyList<PullRequestCommit> Commits,
+    IReadOnlyList<PullRequestFileChange> Files,
+    bool DiffTruncated);
+
 /// <summary>Pull Request 列表摘要。</summary>
 public sealed record PullRequestSummary(
     long Id,

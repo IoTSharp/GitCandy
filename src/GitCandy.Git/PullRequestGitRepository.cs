@@ -1,17 +1,21 @@
+using GitCandy.Configuration;
 using GitCandy.PullRequests;
 using LibGit2Sharp;
+using Microsoft.Extensions.Options;
 
 namespace GitCandy.Git;
 
 /// <summary>基于 LibGit2Sharp 的 PR 分支快照与内部 ref 实现。</summary>
 public sealed class PullRequestGitRepository(
     IGitServiceFactory serviceFactory,
-    IManagedGitRepositoryService repositoryService) : IPullRequestGitRepository
+    IManagedGitRepositoryService repositoryService,
+    IOptions<RepositoryBrowserOptions> browserOptions) : IPullRequestGitRepository
 {
     private const string HeadsPrefix = "refs/heads/";
     private const string PullRequestRefPrefix = "refs/pull/";
     private readonly IGitServiceFactory _serviceFactory = serviceFactory;
     private readonly IManagedGitRepositoryService _repositoryService = repositoryService;
+    private readonly RepositoryBrowserOptions _browserOptions = browserOptions.Value;
 
     /// <inheritdoc />
     public IReadOnlyList<PullRequestBranch> GetBranches(
@@ -53,6 +57,85 @@ public sealed class PullRequestGitRepository(
             source.Tip.Id.Sha,
             divergence?.BehindBy ?? 0,
             divergence?.AheadBy ?? 0);
+    }
+
+    /// <inheritdoc />
+    public PullRequestChangeSet? ReadChangeSet(
+        string repositoryStorageName,
+        string baseSha,
+        string headSha,
+        int commitPage,
+        int commitPageSize,
+        bool includeFiles,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseSha);
+        ArgumentException.ThrowIfNullOrWhiteSpace(headSha);
+        if (commitPage < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(commitPage));
+        }
+
+        if (commitPageSize is < 1 or > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(commitPageSize));
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        using var repository = Open(repositoryStorageName);
+        var baseCommit = repository.Lookup<Commit>(baseSha.Trim());
+        var headCommit = repository.Lookup<Commit>(headSha.Trim());
+        if (baseCommit is null || headCommit is null)
+        {
+            return null;
+        }
+
+        var mergeBase = repository.ObjectDatabase.FindMergeBase(baseCommit, headCommit);
+        if (mergeBase is null)
+        {
+            return null;
+        }
+
+        var divergence = repository.ObjectDatabase.CalculateHistoryDivergence(baseCommit, headCommit);
+        var commits = repository.Commits.QueryBy(new CommitFilter
+            {
+                IncludeReachableFrom = headCommit,
+                ExcludeReachableFrom = mergeBase,
+                SortBy = CommitSortStrategies.Time | CommitSortStrategies.Topological
+            })
+            .Skip((commitPage - 1) * commitPageSize)
+            .Take(commitPageSize + 1)
+            .Select(static commit => new PullRequestCommit(
+                commit.Id.Sha,
+                commit.Message,
+                commit.MessageShort,
+                commit.Author.Name,
+                commit.Author.Email,
+                commit.Author.When,
+                commit.Parents.Select(static parent => parent.Id.Sha).ToArray()))
+            .ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var hasNextCommitPage = commits.Length > commitPageSize;
+        var files = Array.Empty<PullRequestFileChange>();
+        var diffTruncated = false;
+        if (includeFiles)
+        {
+            (files, diffTruncated) = ReadDiff(repository, mergeBase.Tree, headCommit.Tree, cancellationToken);
+        }
+
+        return new PullRequestChangeSet(
+            mergeBase.Id.Sha,
+            baseCommit.Id.Sha,
+            headCommit.Id.Sha,
+            divergence?.BehindBy ?? 0,
+            divergence?.AheadBy ?? 0,
+            commitPage,
+            commitPageSize,
+            hasNextCommitPage,
+            commits.Take(commitPageSize).ToArray(),
+            files,
+            diffTruncated);
     }
 
     /// <inheritdoc />
@@ -130,6 +213,52 @@ public sealed class PullRequestGitRepository(
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryStorageName);
         var context = _serviceFactory.Create(repositoryStorageName);
         return new Repository(_repositoryService.ResolveExistingPath(context));
+    }
+
+    private (PullRequestFileChange[] Files, bool Truncated) ReadDiff(
+        Repository repository,
+        Tree oldTree,
+        Tree newTree,
+        CancellationToken cancellationToken)
+    {
+        var patch = repository.Diff.Compare<Patch>(
+            oldTree,
+            newTree,
+            new CompareOptions { Similarity = SimilarityOptions.Renames });
+        var files = new List<PullRequestFileChange>();
+        var characters = 0;
+        var truncated = false;
+        foreach (var change in patch)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (files.Count >= _browserOptions.MaxDiffFiles)
+            {
+                truncated = true;
+                break;
+            }
+
+            var content = change.Patch;
+            if (characters + content.Length > _browserOptions.MaxDiffCharacters)
+            {
+                content = null;
+                truncated = true;
+            }
+            else
+            {
+                characters += content.Length;
+            }
+
+            files.Add(new PullRequestFileChange(
+                change.Path,
+                change.OldPath,
+                change.Status.ToString(),
+                change.IsBinaryComparison,
+                change.LinesAdded,
+                change.LinesDeleted,
+                content));
+        }
+
+        return (files.ToArray(), truncated);
     }
 
     private static string NormalizeBranch(string branchName, string parameterName)

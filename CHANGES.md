@@ -3,6 +3,7 @@
 ---
 ### Unreleased
 #### Added
+ - Added M12 #132 Pull Request Conversation, paged Commits, and collapsible Files changed views backed by immutable SHA snapshots and merge-base diffs, including rename detection, binary/large-diff degradation, and fixed-SHA commit links.
  - Added the first M12 Pull Request vertical slice at `/{namespace}/{repository}/pulls`, including same-repository branch comparison, shared Issue/PR numbering, draft/ready, edit, close/reopen, timeline, and private-repository suppression.
  - Added SQLite and SQL Server `PullRequests` and `PullRequestTimelineEvents` migrations with original/current base/head snapshots, merge-result placeholders, optimistic concurrency, and one-open-PR-per-branch-pair enforcement.
  - Added server-maintained, fetchable `refs/pull/{number}/head` refs with additive `receive.hideRefs` protection, real bare-repository coverage, and Kestrel create/detail/private-denial integration coverage.

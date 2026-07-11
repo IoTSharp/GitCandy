@@ -1,0 +1,23 @@
+@model PullRequestCommitViewModel
+@{ ViewData["Title"] = Model.Commit.Commit.MessageShort; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number">#@Model.PullRequest.Number</a><span>/</span><a asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number">Commits</a><span>/</span><span>@Model.Commit.Commit.Id[..12]</span></nav>
+<header class="page-heading">
+    <div><h1>@Model.Commit.Commit.MessageShort</h1><p>@Model.Commit.Commit.AuthorName · <time datetime="@Model.Commit.Commit.AuthoredAt.ToString("O")">@Model.Commit.Commit.AuthoredAt.ToString("u")</time></p></div>
+    <code>@Model.Commit.Commit.Id</code>
+</header>
+<nav class="repository-navigation" aria-label="Pull Request views">
+    <a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="message-square"></i> Conversation</a>
+    <a class="is-active" asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="list-ordered"></i> Commits</a>
+    <a asp-action="Files" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="files"></i> Files changed</a>
+</nav>
+<pre class="commit-message">@Model.Commit.Commit.Message</pre>
+@if (Model.Commit.DiffTruncated) { <div class="alert alert-warning">The diff reached a configured display limit; omitted patches remain available through Git.</div> }
+@foreach (var file in Model.Commit.Files)
+{
+    <section class="diff-file">
+        <header><strong>@file.Path</strong><span class="diff-stat">+@file.LinesAdded -@file.LinesDeleted · @file.Status</span></header>
+        @if (file.IsBinary) { <p class="binary-diff">Binary file changed.</p> }
+        else if (file.Patch is null) { <p class="binary-diff">Patch omitted by the configured diff limit.</p> }
+        else { <pre><code class="language-diff" data-highlight>@file.Patch</code></pre> }
+    </section>
+}

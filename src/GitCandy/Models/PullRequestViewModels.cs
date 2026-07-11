@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using GitCandy.Application;
+using GitCandy.Git;
 using GitCandy.PullRequests;
 
 namespace GitCandy.Models;
@@ -37,4 +38,18 @@ public sealed class PullRequestDetailViewModel
     public required PullRequestDetails PullRequest { get; init; }
     public bool CanEdit { get; init; }
     public bool CanChangeState { get; init; }
+}
+
+public sealed class PullRequestChangesViewModel
+{
+    public required RepositoryAddressResolution Repository { get; init; }
+    public required PullRequestDetails PullRequest { get; init; }
+    public required PullRequestChangeSet Changes { get; init; }
+}
+
+public sealed class PullRequestCommitViewModel
+{
+    public required RepositoryAddressResolution Repository { get; init; }
+    public required PullRequestDetails PullRequest { get; init; }
+    public required RepositoryCommitResult Commit { get; init; }
 }

@@ -15,6 +15,15 @@ public interface IPullRequestService
         long number,
         CancellationToken cancellationToken = default);
 
+    /// <summary>读取 PR 保存的 base/head 快照对应的提交页和 merge-base diff。</summary>
+    Task<PullRequestChangeSet?> GetPullRequestChangesAsync(
+        long repositoryId,
+        long number,
+        int commitPage,
+        int commitPageSize,
+        bool includeFiles,
+        CancellationToken cancellationToken = default);
+
     /// <summary>读取可用于同仓库 Pull Request 的本地分支。</summary>
     Task<IReadOnlyList<PullRequestBranch>> GetBranchesAsync(
         long repositoryId,
@@ -67,6 +76,16 @@ public interface IPullRequestGitRepository
         string repositoryStorageName,
         string sourceBranch,
         string targetBranch,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>按不可变 SHA 读取分页提交和 merge-base diff。</summary>
+    PullRequestChangeSet? ReadChangeSet(
+        string repositoryStorageName,
+        string baseSha,
+        string headSha,
+        int commitPage,
+        int commitPageSize,
+        bool includeFiles,
         CancellationToken cancellationToken = default);
 
     /// <summary>创建或更新服务端维护的 refs/pull/{number}/head，并阻止 receive-pack 写入该命名空间。</summary>

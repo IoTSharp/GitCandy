@@ -1,0 +1,35 @@
+@model PullRequestChangesViewModel
+@{ ViewData["Title"] = $"Files changed · #{Model.PullRequest.Number}"; var additions = Model.Changes.Files.Sum(file => file.LinesAdded); var deletions = Model.Changes.Files.Sum(file => file.LinesDeleted); }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@Model.Repository.CanonicalPath">@Model.Repository.NamespaceSlug/@Model.Repository.RepositorySlug</a><span>/</span><a asp-action="Index" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug">Pull requests</a><span>/</span><a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number">#@Model.PullRequest.Number</a><span>/</span><span>Files changed</span></nav>
+<header class="page-heading pr-subview-heading">
+    <div><h1>@Model.PullRequest.Title</h1><p>@Model.Changes.Files.Count files changed · <span class="diff-additions">+@additions</span> <span class="diff-deletions">-@deletions</span></p></div>
+    <code title="Merge base">base @Model.Changes.MergeBaseSha[..Math.Min(12, Model.Changes.MergeBaseSha.Length)]</code>
+</header>
+<nav class="repository-navigation" aria-label="Pull Request views">
+    <a asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="message-square"></i> Conversation</a>
+    <a asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="list-ordered"></i> Commits</a>
+    <a class="is-active" asp-action="Files" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="files"></i> Files changed</a>
+</nav>
+@if (Model.Changes.DiffTruncated) { <div class="alert alert-warning">The diff reached a configured display limit; omitted patches remain available through Git.</div> }
+@if (Model.Changes.Files.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="files"></i><h2>No file changes</h2></div></section>
+}
+@foreach (var file in Model.Changes.Files)
+{
+    <section class="diff-file">
+        <header>
+            <strong>@if (!string.IsNullOrEmpty(file.OldPath) && !string.Equals(file.OldPath, file.Path, StringComparison.Ordinal)) { <span>@file.OldPath → </span> }@file.Path</strong>
+            <span class="diff-stat">+@file.LinesAdded -@file.LinesDeleted · @file.Status</span>
+        </header>
+        @if (file.IsBinary) { <p class="binary-diff">Binary file changed.</p> }
+        else if (file.Patch is null) { <p class="binary-diff">Patch omitted by the configured diff limit.</p> }
+        else
+        {
+            <details class="diff-patch" open>
+                <summary><i data-lucide="chevron-right"></i> Patch</summary>
+                <pre><code class="language-diff" data-highlight>@file.Patch</code></pre>
+            </details>
+        }
+    </section>
+}

@@ -94,6 +94,35 @@ internal sealed class PullRequestService(
             : _gitRepository.GetBranches(storageName, cancellationToken);
     }
 
+    public async Task<PullRequestChangeSet?> GetPullRequestChangesAsync(
+        long repositoryId,
+        long number,
+        int commitPage,
+        int commitPageSize,
+        bool includeFiles,
+        CancellationToken cancellationToken = default)
+    {
+        var snapshot = await _dbContext.PullRequests.AsNoTracking()
+            .Where(item => item.RepositoryId == repositoryId && item.Number == number)
+            .Select(item => new
+            {
+                item.Repository!.StorageName,
+                item.CurrentBaseSha,
+                item.CurrentHeadSha
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        return snapshot is null
+            ? null
+            : _gitRepository.ReadChangeSet(
+                snapshot.StorageName,
+                snapshot.CurrentBaseSha,
+                snapshot.CurrentHeadSha,
+                commitPage,
+                commitPageSize,
+                includeFiles,
+                cancellationToken);
+    }
+
     public async Task<PullRequestDetails> CreatePullRequestAsync(
         long repositoryId,
         CreatePullRequestCommand command,

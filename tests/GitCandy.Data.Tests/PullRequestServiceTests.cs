@@ -115,6 +115,30 @@ public sealed class PullRequestServiceTests
         Assert.AreEqual(PullRequestMutationResult.Forbidden, forbidden.Result);
     }
 
+    [TestMethod]
+    public async Task GetPullRequestChanges_WithStoredSnapshot_ReturnsPagedMergeBaseDiff()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync();
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+        var pullRequest = await service.CreatePullRequestAsync(
+            fixture.RepositoryId,
+            NewCommand(fixture.AuthorId, "feature"));
+
+        var changes = await service.GetPullRequestChangesAsync(
+            fixture.RepositoryId,
+            pullRequest.Number,
+            commitPage: 1,
+            commitPageSize: 20,
+            includeFiles: true);
+
+        Assert.IsNotNull(changes);
+        Assert.AreEqual(FakePullRequestGitRepository.MainSha, changes.BaseSha);
+        Assert.AreEqual(FakePullRequestGitRepository.FeatureSha, changes.HeadSha);
+        Assert.AreEqual("reviews", fixture.Git.LastStorageName);
+        Assert.HasCount(1, changes.Commits);
+        Assert.HasCount(1, changes.Files);
+    }
+
     private static CreatePullRequestCommand NewCommand(string authorId, string sourceBranch) =>
         new("PR title", "PR body", authorId, sourceBranch, "main", IsDraft: true);
 
@@ -233,6 +257,7 @@ public sealed class PullRequestServiceTests
         private const string EmptySha = "3333333333333333333333333333333333333333";
 
         public Dictionary<long, string> HeadReferences { get; } = [];
+        public string? LastStorageName { get; private set; }
 
         public IReadOnlyList<PullRequestBranch> GetBranches(
             string repositoryStorageName,
@@ -261,6 +286,39 @@ public sealed class PullRequestServiceTests
                 "main" => new PullRequestBranchComparison(MainSha, MainSha, 0, 0),
                 _ => null
             };
+        }
+
+        public PullRequestChangeSet? ReadChangeSet(
+            string repositoryStorageName,
+            string baseSha,
+            string headSha,
+            int commitPage,
+            int commitPageSize,
+            bool includeFiles,
+            CancellationToken cancellationToken = default)
+        {
+            LastStorageName = repositoryStorageName;
+            return new PullRequestChangeSet(
+                MainSha,
+                baseSha,
+                headSha,
+                AheadBy: 1,
+                BehindBy: 0,
+                commitPage,
+                commitPageSize,
+                HasNextCommitPage: false,
+                [new PullRequestCommit(
+                    FeatureSha,
+                    "Feature\n",
+                    "Feature",
+                    "Author",
+                    "author@example.com",
+                    DateTimeOffset.UtcNow,
+                    [MainSha])],
+                includeFiles
+                    ? [new PullRequestFileChange("README.md", null, "Modified", false, 1, 0, "+feature")]
+                    : [],
+                DiffTruncated: false);
         }
 
         public void UpdatePullRequestHead(

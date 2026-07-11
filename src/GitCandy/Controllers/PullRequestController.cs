@@ -2,10 +2,13 @@ using GitCandy.Application;
 using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Configuration;
+using GitCandy.Git;
 using GitCandy.Models;
 using GitCandy.PullRequests;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace GitCandy.Controllers;
 
@@ -15,12 +18,18 @@ public sealed class PullRequestController(
     IRepositoryAddressResolver addressResolver,
     IPullRequestService pullRequestService,
     IAuthorizationService authorizationService,
-    ICurrentUser currentUser) : CandyControllerBase
+    ICurrentUser currentUser,
+    IRepositoryBrowserService repositoryBrowserService,
+    IGitServiceFactory gitServiceFactory,
+    IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
 {
     private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
     private readonly IPullRequestService _pullRequestService = pullRequestService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
+    private readonly IRepositoryBrowserService _repositoryBrowserService = repositoryBrowserService;
+    private readonly IGitServiceFactory _gitServiceFactory = gitServiceFactory;
+    private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
 
     [HttpGet]
     [AllowAnonymous]
@@ -182,6 +191,84 @@ public sealed class PullRequestController(
         });
     }
 
+    [HttpGet("{number:long}/commits")]
+    [AllowAnonymous]
+    [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
+    public async Task<IActionResult> Commits(
+        string namespaceSlug,
+        string project,
+        long number,
+        int page = 1,
+        CancellationToken cancellationToken = default)
+    {
+        var model = await GetChangesViewModelAsync(
+            namespaceSlug,
+            project,
+            number,
+            Math.Max(1, page),
+            includeFiles: false,
+            cancellationToken);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [HttpGet("{number:long}/files")]
+    [AllowAnonymous]
+    [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
+    public async Task<IActionResult> Files(
+        string namespaceSlug,
+        string project,
+        long number,
+        CancellationToken cancellationToken = default)
+    {
+        var model = await GetChangesViewModelAsync(
+            namespaceSlug,
+            project,
+            number,
+            commitPage: 1,
+            includeFiles: true,
+            cancellationToken);
+        return model is null ? NotFound() : View(model);
+    }
+
+    [HttpGet("{number:long}/commits/{sha:length(40)}")]
+    [AllowAnonymous]
+    [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
+    public async Task<IActionResult> Commit(
+        string namespaceSlug,
+        string project,
+        long number,
+        string sha,
+        CancellationToken cancellationToken = default)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null)
+        {
+            return NotFound();
+        }
+
+        var pullRequest = await _pullRequestService.GetPullRequestAsync(
+            access.Value.Address.RepositoryId,
+            number,
+            cancellationToken);
+        if (pullRequest is null)
+        {
+            return NotFound();
+        }
+
+        var commit = _repositoryBrowserService.ReadCommit(
+            _gitServiceFactory.Create(access.Value.Address.StorageName),
+            sha,
+            cancellationToken);
+        return commit is null
+            ? NotFound()
+            : View(new PullRequestCommitViewModel
+            {
+                Repository = access.Value.Address,
+                PullRequest = pullRequest,
+                Commit = commit
+            });
+    }
+
     [HttpGet("{number:long}/edit")]
     [Authorize]
     public async Task<IActionResult> Edit(
@@ -340,6 +427,46 @@ public sealed class PullRequestController(
         }
 
         return (null, pullRequest);
+    }
+
+    private async Task<PullRequestChangesViewModel?> GetChangesViewModelAsync(
+        string namespaceSlug,
+        string project,
+        long number,
+        int commitPage,
+        bool includeFiles,
+        CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null)
+        {
+            return null;
+        }
+
+        var pullRequest = await _pullRequestService.GetPullRequestAsync(
+            access.Value.Address.RepositoryId,
+            number,
+            cancellationToken);
+        if (pullRequest is null)
+        {
+            return null;
+        }
+
+        var changes = await _pullRequestService.GetPullRequestChangesAsync(
+            access.Value.Address.RepositoryId,
+            number,
+            commitPage,
+            Math.Clamp(_applicationOptions.NumberOfCommitsPerPage, 1, 100),
+            includeFiles,
+            cancellationToken);
+        return changes is null
+            ? null
+            : new PullRequestChangesViewModel
+            {
+                Repository = access.Value.Address,
+                PullRequest = pullRequest,
+                Changes = changes
+            };
     }
 
     private async Task PopulateBranchesAsync(

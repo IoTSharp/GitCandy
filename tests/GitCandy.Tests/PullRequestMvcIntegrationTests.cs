@@ -56,6 +56,22 @@ public sealed partial class PullRequestMvcIntegrationTests
         StringAssert.Contains(html, "feature");
         fixture.AssertPullRequestHeadExists(1);
 
+        using var commits = await fixture.Client.GetAsync("/review-author/reviews/pulls/1/commits");
+        Assert.AreEqual(HttpStatusCode.OK, commits.StatusCode);
+        var commitsHtml = await commits.Content.ReadAsStringAsync();
+        StringAssert.Contains(commitsHtml, "Feature");
+        var commitLink = PullRequestCommitLinkRegex().Match(commitsHtml);
+        Assert.IsTrue(commitLink.Success);
+        using var commit = await fixture.Client.GetAsync(WebUtility.HtmlDecode(commitLink.Groups[1].Value));
+        Assert.AreEqual(HttpStatusCode.OK, commit.StatusCode);
+        StringAssert.Contains(await commit.Content.ReadAsStringAsync(), "Feature");
+
+        using var files = await fixture.Client.GetAsync("/review-author/reviews/pulls/1/files");
+        Assert.AreEqual(HttpStatusCode.OK, files.StatusCode);
+        var filesHtml = await files.Content.ReadAsStringAsync();
+        StringAssert.Contains(filesHtml, "README.md");
+        StringAssert.Contains(filesHtml, "language-diff");
+
         await fixture.MakeRepositoryPrivateAsync();
         using var anonymousClient = fixture.CreateClient();
         using var denied = await anonymousClient.GetAsync("/review-author/reviews/pulls/1");
@@ -331,4 +347,7 @@ public sealed partial class PullRequestMvcIntegrationTests
 
     [GeneratedRegex("name=\"__RequestVerificationToken\"[^>]*value=\"([^\"]+)\"", RegexOptions.CultureInvariant)]
     private static partial Regex AntiforgeryTokenRegex();
+
+    [GeneratedRegex("href=\"([^\"]+/pulls/1/commits/[0-9a-f]{40})\"", RegexOptions.CultureInvariant)]
+    private static partial Regex PullRequestCommitLinkRegex();
 }
