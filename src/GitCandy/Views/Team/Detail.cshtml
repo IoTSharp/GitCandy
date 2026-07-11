@@ -1,14 +1,10 @@
 @model TeamDetailsViewModel
-@{
-    ViewData["Title"] = Model.Team.Name;
-}
-<h3>@Model.Team.Name</h3>
-<dl class="dl-horizontal">
-    <dt>Description</dt><dd>@Model.Team.Description</dd>
-    <dt>Members</dt><dd>@foreach (var member in Model.Team.Members) { <a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName" class="label label-default">@member.DisplayName</a> }</dd>
-    <dt>@Text["Shared_Repositories"]</dt><dd>@foreach (var repository in Model.Team.Repositories) { <a asp-controller="Repository" asp-action="Detail" asp-route-name="@repository" class="label label-default">@repository</a> }</dd>
+@{ ViewData["Title"] = Model.Team.Name; }
+<header class="page-heading">
+    <div><h1>@Model.Team.Name</h1><p>@(string.IsNullOrWhiteSpace(Model.Team.Description) ? "No team description." : Model.Team.Description)</p></div>
+    @if (Model.CanManage) { <div class="page-actions"><a asp-action="Users" asp-route-name="@Model.Team.Name" class="btn"><i data-lucide="users"></i> Members</a><a asp-action="Edit" asp-route-name="@Model.Team.Name" class="btn btn-primary"><i data-lucide="settings"></i> Edit</a></div> }
+</header>
+<dl class="details-grid">
+    <dt>Members</dt><dd>@if (Model.Team.Members.Count == 0) { <span class="entity-meta">None</span> } @foreach (var member in Model.Team.Members) { <a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName" class="label">@member.DisplayName</a> }</dd>
+    <dt>@Text["Shared_Repositories"]</dt><dd>@if (Model.Team.Repositories.Count == 0) { <span class="entity-meta">None</span> } @foreach (var repository in Model.Team.Repositories) { <a asp-controller="Repository" asp-action="Detail" asp-route-name="@repository" class="label">@repository</a> }</dd>
 </dl>
-@if (Model.CanManage)
-{
-    <p><a asp-action="Edit" asp-route-name="@Model.Team.Name" class="btn btn-primary">Edit</a> <a asp-action="Users" asp-route-name="@Model.Team.Name" class="btn btn-info">Members</a></p>
-}

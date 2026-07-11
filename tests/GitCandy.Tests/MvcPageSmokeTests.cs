@@ -36,9 +36,13 @@ public sealed class MvcPageSmokeTests
         var html = await response.Content.ReadAsStringAsync();
         StringAssert.Contains(html, "public-repository");
         Assert.IsFalse(html.Contains("private-repository", StringComparison.Ordinal));
-        StringAssert.Contains(html, "/Content/bootstrap.css");
-        StringAssert.Contains(html, "/Scripts/highlight.pack.js");
-        StringAssert.Contains(html, "/Scripts/marked.js");
+        StringAssert.Contains(html, "/assets/app.css");
+        StringAssert.Contains(html, "/assets/app.js");
+        StringAssert.Contains(html, "data-theme=\"system\"");
+        StringAssert.Contains(html, "class=\"app-sidebar\"");
+        StringAssert.Contains(html, "class=\"theme-control\"");
+        Assert.IsFalse(html.Contains("bootstrap.css", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(html.Contains("jquery", StringComparison.OrdinalIgnoreCase));
         StringAssert.Contains(html, "/Account/Login?returnUrl=");
 
         var accountHtml = await fixture.GetStringAsync("/Account/Detail/profile-user");
@@ -50,14 +54,8 @@ public sealed class MvcPageSmokeTests
 
         string[] expectedAssets =
         [
-            "/Content/bootstrap.css",
-            "/Content/bootstrap-switch.css",
-            "/Content/highlight.css",
-            "/Scripts/bootstrap-switch.js",
-            "/Scripts/highlight.pack.js",
-            "/Scripts/marked.js",
-            "/Scripts/common.js",
-            "/fonts/glyphicons-halflings-regular.woff2"
+            "/assets/app.css",
+            "/assets/app.js"
         ];
         foreach (var assetPath in expectedAssets)
         {
@@ -77,6 +75,18 @@ public sealed class MvcPageSmokeTests
     }
 
     [TestMethod]
+    public async Task ApplicationShell_WithThemeCookie_RendersThemeBeforeClientScriptRuns()
+    {
+        await using var fixture = await MvcWebFixture.CreateAsync();
+        fixture.Client.DefaultRequestHeaders.Add("Cookie", ".GitCandy.Theme=dark");
+
+        var html = await fixture.GetStringAsync("/Repository");
+
+        StringAssert.Contains(html, "<html lang=\"en-US\" data-theme=\"dark\">");
+        StringAssert.Contains(html, "aria-pressed=\"true\" data-theme-value=\"dark\"");
+    }
+
+    [TestMethod]
     public async Task CrudPages_WithAdministrator_SubmitValidatedAntiforgeryProtectedForms()
     {
         await using var fixture = await MvcWebFixture.CreateAsync();
@@ -84,7 +94,7 @@ public sealed class MvcPageSmokeTests
         await fixture.LoginAsync("m5-admin", AdministratorPassword);
 
         StringAssert.Contains(await fixture.GetStringAsync("/Account/Index"), "m5-admin");
-        StringAssert.Contains(await fixture.GetStringAsync("/Setting/Edit"), "Settings are read-only in M5");
+        StringAssert.Contains(await fixture.GetStringAsync("/Setting/Edit"), "Effective runtime configuration");
 
         var invalidRepositoryToken = await fixture.GetAntiforgeryTokenAsync("/Repository/Create");
         using var invalidRepositoryResponse = await fixture.PostFormAsync(

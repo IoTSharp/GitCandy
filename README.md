@@ -45,12 +45,16 @@ Tagged GitHub Releases also contain Linux and Windows service packages, migratio
 
 ## Development
 
+.NET 10 SDK and Node.js 20 or later are required. Node is used only to bundle the self-hosted CSS, JavaScript, and Lucide icons; published deployments do not require Node or a CDN.
+
 ```bash
 dotnet tool restore
 dotnet restore GitCandy.slnx
 dotnet build GitCandy.slnx
 dotnet test GitCandy.slnx
 ```
+
+The client bundle is rebuilt incrementally by MSBuild from `src/GitCandy/ClientApp`. See [the M9 UI implementation record](docs/design/m9-ui-implementation.md) for asset, theme, visual baseline, and rollback details.
 
 `GitCandy.slnx` is the active ASP.NET Core solution. The legacy `GitCandy.sln` and MVC5 source remain only as migration behavior references.
 

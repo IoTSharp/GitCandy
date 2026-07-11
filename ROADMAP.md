@@ -591,16 +591,16 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #093 | Nullable 全面启用 | 活动项目已全面启用 nullable，移除迁移源码中的局部关闭和无说明的 null-forgiving，用显式空值契约清理告警，并新增源码门禁测试；全解决方案构建 0 警告/0 错误，完整测试通过 |
 | ✅ #094 | 架构拆分深化 | 已建立 Core/Data/Git/SSH/Web 编译边界、模块内 DI 注册和项目依赖方向门禁；公开行为保持不变 |
 | ✅ #095 | Observability | 已引入 OpenTelemetry tracing/metrics/logging，覆盖 ASP.NET Core 请求、runtime、Git transport 和 Quartz job，并支持可配置 OTLP/Console exporter |
-| ⬜ #096 | 前端资产管线 | 在 #090 原型和依赖清单稳定后，独立评估并引入 npm/Vite/esbuild/WebOptimizer 等资产管线；不在此项迁移业务页面 |
+| ✅ #096 | 前端资产管线 | 已使用 npm lockfile + esbuild 建立离线资产构建，Lucide 自托管打包，Docker 独立 Node stage 不进入运行镜像 |
 | ✅ #097 | LibGit2Sharp 升级 | 活动 net10.0 主线已采用 0.31.0 / NativeBinaries 2.0.323，并覆盖 bare 初始化、仓库验证、HEAD/commit/branch/tag 和 native runtime 回归 |
 | ✅ #098 | 减少 Git helper 依赖 | 仓库初始化、验证和元数据读取已进入托管服务；外部进程门禁将 helper 锁定为 upload-pack、receive-pack、upload-archive |
 | ✅ #099 | 外部 OpenSSH 可选适配 | 已提供默认关闭的 AuthorizedKeysCommand + key-specific forced-command 入口，复用 Identity key、权限、路径和 transport；内置 SSH 仍为默认 |
-| ⬜ #100 | 双主题运行机制与应用框架 | 实现 System/Light/Dark 主题选择、持久化、首屏无闪烁，以及全局 header/navigation/content/footer 响应式框架 |
-| ⬜ #101 | 仓库工作区 UI | 按原型迁移仓库列表、详情、代码树、提交、diff、clone URL 和权限操作；保持公开 URL 与 Git 协议行为 |
-| ⬜ #102 | 账户与凭据 UI | 按原型迁移登录、注册、账户、密码和 SSH key 页面；不改变 Identity、cookie 或权限语义 |
-| ⬜ #103 | 团队与管理 UI | 按原型迁移用户、团队、协作者和设置页面；服务端继续执行全部安全关键授权 |
-| ⬜ #104 | 响应式、无障碍与完整状态 | 覆盖桌面/移动、键盘、焦点、对比度、reduced motion，以及 loading/empty/error/denied/destructive 状态 |
-| ⬜ #105 | 视觉回归与 Bootstrap 3 收尾 | 建立 Light/Dark 与桌面/移动 Playwright 截图基线，确认替代能力后移除 Bootstrap 3 运行时引用并记录回滚方式 |
+| ✅ #100 | 双主题运行机制与应用框架 | 已实现首屏 System/Light/Dark、`.GitCandy.Theme` 持久化和全局响应式 header/navigation/content/footer |
+| 🚧 #101 | 仓库工作区 UI | 已迁移列表、详情、clone URL、元数据/权限操作；代码树、提交和 diff 等待活动主线对应读取 action/service 后闭环 |
+| ✅ #102 | 账户与凭据 UI | 已迁移登录、注册、资料、密码、Identity security 和 SSH key 页面，不改变认证语义 |
+| ✅ #103 | 团队与管理 UI | 已迁移用户、团队、成员、协作者和只读设置页面，服务端授权保持不变 |
+| ✅ #104 | 响应式、无障碍与完整状态 | 已覆盖桌面/移动、键盘焦点、reduced motion 与 empty/error/denied/destructive 等状态 |
+| ✅ #105 | 视觉回归与 Bootstrap 3 收尾 | 已建立 Light/Dark、桌面/移动 Playwright 基线并移除 Bootstrap 3/jQuery/Glyphicons 运行时资产 |
 
 验收：
 

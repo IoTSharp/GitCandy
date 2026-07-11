@@ -2,5 +2,12 @@
 @{
     ViewData["Title"] = $"Delete {Model}";
 }
-<div class="panel panel-danger"><div class="panel-heading"><h4 class="panel-title">Confirm deletion</h4></div><div class="panel-body">Delete repository metadata for <strong>@Model</strong>? The M6 Git backend remains responsible for repository filesystem deletion.</div></div>
-<form asp-action="Delete" asp-route-name="@Model" method="post"><a asp-action="Detail" asp-route-name="@Model" class="btn btn-default">@Text["Shared_Back"]</a><button type="submit" class="btn btn-danger pull-right">@Text["Shared_Delete"]</button></form>
+<header class="page-heading"><div><h1>Delete @Model</h1><p>This destructive action cannot be undone.</p></div></header>
+<div class="alert alert-danger" role="alert">
+    <strong>Repository metadata will be deleted.</strong>
+    The Git backend remains responsible for repository filesystem deletion.
+</div>
+<form asp-action="Delete" asp-route-name="@Model" method="post" class="form-actions" data-confirm="Delete repository @Model?">
+    <a asp-action="Detail" asp-route-name="@Model" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a>
+    <button type="submit" class="btn btn-danger"><i data-lucide="trash-2"></i> @Text["Shared_Delete"]</button>
+</form>

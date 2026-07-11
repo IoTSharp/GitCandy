@@ -1,13 +1,9 @@
 @model string
-@{
-    ViewData["Title"] = $"Delete {Model}";
-}
-<div class="panel panel-danger">
-    <div class="panel-heading"><h4 class="panel-title">Confirm deletion</h4></div>
-    <div class="panel-body">Delete user <strong>@Model</strong>? This cannot be undone.</div>
-</div>
-<div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-<form asp-action="Delete" asp-route-name="@Model" method="post">
-    <a asp-action="Detail" asp-route-name="@Model" class="btn btn-default">@Text["Shared_Back"]</a>
-    <button type="submit" class="btn btn-danger pull-right">@Text["Shared_Delete"]</button>
+@{ ViewData["Title"] = $"Delete {Model}"; }
+<header class="page-heading"><div><h1>Delete @Model</h1><p>This destructive action cannot be undone.</p></div></header>
+<div class="alert alert-danger" role="alert">The user identity and its GitCandy relationships will be deleted.</div>
+<div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+<form asp-action="Delete" asp-route-name="@Model" method="post" class="form-actions" data-confirm="Delete user @Model?">
+    <a asp-action="Detail" asp-route-name="@Model" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a>
+    <button type="submit" class="btn btn-danger"><i data-lucide="trash-2"></i> @Text["Shared_Delete"]</button>
 </form>

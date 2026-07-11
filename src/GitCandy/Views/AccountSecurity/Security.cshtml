@@ -27,13 +27,13 @@
     {
         <p>Two-factor authentication is enabled. @Model.RecoveryCodesLeft recovery codes remain.</p>
         <div class="form-actions">
-            <form asp-action="GenerateRecoveryCodes" method="post">
+            <form asp-action="GenerateRecoveryCodes" method="post" data-confirm="Replace all existing recovery codes?">
                 <button type="submit" class="btn btn-default">Replace recovery codes</button>
             </form>
-            <form asp-action="DisableAuthenticator" method="post">
+            <form asp-action="DisableAuthenticator" method="post" data-confirm="Disable two-factor authentication?">
                 <button type="submit" class="btn btn-warning">Disable</button>
             </form>
-            <form asp-action="ResetAuthenticator" method="post">
+            <form asp-action="ResetAuthenticator" method="post" data-confirm="Reset the authenticator key? Existing authenticator codes will stop working.">
                 <button type="submit" class="btn btn-danger">Reset authenticator</button>
             </form>
         </div>
@@ -62,7 +62,7 @@
             {
                 <li class="list-group-item">
                     @login.ProviderDisplayName
-                    <form asp-action="RemoveExternalLogin" method="post" class="pull-right">
+                    <form asp-action="RemoveExternalLogin" method="post" class="pull-right" data-confirm="Remove this external login from your account?">
                         <input type="hidden" name="loginProvider" value="@login.LoginProvider" />
                         <button type="submit" class="btn btn-xs btn-danger">Remove</button>
                     </form>

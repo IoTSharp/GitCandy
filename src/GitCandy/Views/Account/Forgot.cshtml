@@ -1,6 +1,6 @@
 @{
     ViewData["Title"] = "Password recovery";
 }
-<h3>Password recovery</h3>
-<div class="alert alert-info">Self-service password reset is not enabled yet. Contact a GitCandy administrator.</div>
-<a asp-action="Login" class="btn btn-default">@Text["Shared_Back"]</a>
+<section class="account-shell"><i data-lucide="key-round"></i><h1>Password recovery</h1>
+<div class="alert alert-info" role="status">Self-service password reset is not enabled. Contact a GitCandy administrator.</div>
+<a asp-action="Login" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></section>

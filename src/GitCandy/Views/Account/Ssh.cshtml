@@ -2,19 +2,23 @@
 @{
     ViewData["Title"] = $"SSH keys - {Model.UserName}";
 }
-<h3>SSH keys for @Model.UserName</h3>
-<table class="table table-striped">
-    <thead><tr><th>Type</th><th>Fingerprint</th><th>Imported</th><th></th></tr></thead>
-    <tbody>
+<header class="page-heading"><div><h1>SSH keys</h1><p>Public keys allowed to authenticate as <strong>@Model.UserName</strong>.</p></div><div class="page-actions"><a asp-action="Detail" asp-route-name="@Model.UserName" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div></header>
+@if (Model.Keys.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="file-key"></i><h2>No SSH keys</h2><p>Add an OpenSSH public key to use the built-in SSH transport.</p></div></section>
+}
+else
+{
+    <div class="table-responsive"><table class="table"><thead><tr><th scope="col">Type</th><th scope="col">Fingerprint</th><th scope="col">Imported</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
     @foreach (var key in Model.Keys)
     {
-        <tr><td>@key.KeyType</td><td><code>@key.Fingerprint</code></td><td>@key.ImportedAtUtc.ToString("u")</td><td><form asp-action="ChooseSsh" asp-route-act="del" asp-route-fingerprint="@key.Fingerprint" method="post"><input type="hidden" name="User" value="@Model.UserName" /><input type="hidden" name="PublicKey" value="delete" /><button type="submit" class="btn btn-danger btn-xs">@Text["Shared_Delete"]</button></form></td></tr>
+        <tr><td>@key.KeyType</td><td><code>@key.Fingerprint</code></td><td>@key.ImportedAtUtc.ToString("u")</td><td class="text-right"><form asp-action="ChooseSsh" asp-route-act="del" asp-route-fingerprint="@key.Fingerprint" method="post" data-confirm="Delete SSH key @key.Fingerprint?"><input type="hidden" name="User" value="@Model.UserName" /><input type="hidden" name="PublicKey" value="delete" /><button type="submit" class="icon-button" aria-label="Delete SSH key" data-tooltip="Delete key"><i data-lucide="trash-2"></i></button></form></td></tr>
     }
-    </tbody>
-</table>
-<form asp-action="ChooseSsh" method="post">
+    </tbody></table></div>
+}
+<h2>Add key</h2>
+<form asp-action="ChooseSsh" method="post" class="account-form">
     <input type="hidden" name="User" value="@Model.UserName" />
-    <div class="form-group"><label for="PublicKey">OpenSSH public key</label><textarea id="PublicKey" name="PublicKey" rows="4" class="form-control"></textarea></div>
-    <button type="submit" class="btn btn-primary">Add key</button>
-    <a asp-action="Detail" asp-route-name="@Model.UserName" class="btn btn-default">@Text["Shared_Back"]</a>
+    <div class="form-field"><label for="PublicKey">OpenSSH public key</label><textarea id="PublicKey" name="PublicKey" rows="4" required spellcheck="false"></textarea><p class="form-hint">Paste one public key. Private key material must never be uploaded.</p></div>
+    <button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Add key</button>
 </form>

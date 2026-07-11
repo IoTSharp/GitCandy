@@ -2,5 +2,6 @@
 @{
     ViewData["Title"] = $"Edit {Model.Name}";
 }
-<h3>Edit @Model.Name</h3>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Detail" asp-route-name="@Model.Name">@Model.Name</a><span>/</span><span>Edit</span></nav>
+<header class="page-heading"><div><h1>Edit @Model.Name</h1><p>Update visibility and anonymous access without changing the repository URL.</p></div></header>
 <partial name="_Form" model="Model" />

@@ -2,9 +2,18 @@
 @{
     ViewData["Title"] = Model.User.UserName;
 }
-
-<h3>@Model.User.DisplayName</h3>
-<dl class="dl-horizontal">
+<header class="page-heading">
+    <div><h1>@Model.User.DisplayName</h1><p>@@@Model.User.UserName</p></div>
+    @if (Model.CanEdit)
+    {
+        <div class="page-actions">
+            <a asp-action="Ssh" asp-route-name="@Model.User.UserName" class="btn"><i data-lucide="file-key"></i> SSH keys</a>
+            <a asp-controller="AccountSecurity" asp-action="Security" class="btn"><i data-lucide="shield"></i> Security</a>
+            <a asp-action="Edit" asp-route-name="@Model.User.UserName" class="btn btn-primary"><i data-lucide="settings"></i> Edit</a>
+        </div>
+    }
+</header>
+<dl class="details-grid">
     <dt>Username</dt><dd>@Model.User.UserName</dd>
     <dt>Email</dt><dd><a href="mailto:@Model.User.Email">@Model.User.Email</a></dd>
     @if (User.IsInRole(RoleNames.Administrator))
@@ -12,27 +21,8 @@
         <dt>Administrator</dt><dd>@(Model.User.IsAdministrator ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
     }
     <dt>@Text["Shared_Teams"]</dt>
-    <dd>
-        @foreach (var team in Model.User.Teams)
-        {
-            <a asp-controller="Team" asp-action="Detail" asp-route-name="@team" class="label label-default">@team</a>
-        }
-    </dd>
+    <dd>@if (Model.User.Teams.Count == 0) { <span class="entity-meta">None</span> } @foreach (var team in Model.User.Teams) { <a asp-controller="Team" asp-action="Detail" asp-route-name="@team" class="label">@team</a> }</dd>
     <dt>@Text["Shared_Repositories"]</dt>
-    <dd>
-        @foreach (var repository in Model.User.Repositories)
-        {
-            <a asp-controller="Repository" asp-action="Detail" asp-route-name="@repository" class="label label-default">@repository</a>
-        }
-    </dd>
-    <dt>Description</dt><dd>@Model.User.Description</dd>
+    <dd>@if (Model.User.Repositories.Count == 0) { <span class="entity-meta">None</span> } @foreach (var repository in Model.User.Repositories) { <a asp-controller="Repository" asp-action="Detail" asp-route-name="@repository" class="label">@repository</a> }</dd>
+    <dt>Description</dt><dd>@(string.IsNullOrWhiteSpace(Model.User.Description) ? "No description" : Model.User.Description)</dd>
 </dl>
-@if (Model.CanEdit)
-{
-    <p>
-        <a asp-action="Edit" asp-route-name="@Model.User.UserName" class="btn btn-primary">Edit</a>
-        <a asp-action="Ssh" asp-route-name="@Model.User.UserName" class="btn btn-info">SSH keys</a>
-        <a asp-action="Change" class="btn btn-default">Change password</a>
-        <a asp-controller="AccountSecurity" asp-action="Security" class="btn btn-default">Account security</a>
-    </p>
-}

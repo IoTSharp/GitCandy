@@ -26,4 +26,17 @@
     <ProjectReference Include="..\GitCandy.Ssh\GitCandy.Ssh.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ClientAssetSource Include="ClientApp\app.css;ClientApp\app.js" />
+  </ItemGroup>
+
+  <Target Name="BuildClientAssets"
+          BeforeTargets="Build"
+          Condition="'$(SkipClientAssetsBuild)' != 'true'"
+          Inputs="ClientApp\package-lock.json;@(ClientAssetSource)"
+          Outputs="wwwroot\assets\app.css;wwwroot\assets\app.js">
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\ClientApp" Command="npm ci --ignore-scripts" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\ClientApp" Command="npm run build" />
+  </Target>
+
 </Project>

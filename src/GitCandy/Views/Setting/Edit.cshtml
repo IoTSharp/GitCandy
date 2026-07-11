@@ -1,21 +1,11 @@
 @model SettingViewModel
-@{
-    ViewData["Title"] = Text["Setting_EditTitle"];
-}
-<h4>@Text["Setting_EditTitle"]</h4>
-<div class="alert alert-info">Settings are read-only in M5. Runtime configuration remains owned by appsettings and environment variables until the M8 deployment/configuration slice.</div>
-<dl class="dl-horizontal">
-    <dt>Public server</dt><dd>@Model.IsPublicServer</dd>
-    <dt>Force SSL</dt><dd>@Model.ForceSsl</dd>
-    <dt>SSL port</dt><dd>@Model.SslPort</dd>
-    <dt>Allow registration</dt><dd>@Model.AllowRegisterUser</dd>
-    <dt>Allow repository creation</dt><dd>@Model.AllowRepositoryCreation</dd>
-    <dt>Repository path</dt><dd><code>@Model.RepositoryPath</code></dd>
-    <dt>Cache path</dt><dd><code>@Model.CachePath</code></dd>
-    <dt>Git core path</dt><dd><code>@Model.GitCorePath</code></dd>
-    <dt>Commits per page</dt><dd>@Model.NumberOfCommitsPerPage</dd>
-    <dt>Items per list</dt><dd>@Model.NumberOfItemsPerList</dd>
-    <dt>Contributors</dt><dd>@Model.NumberOfRepositoryContributors</dd>
-    <dt>SSH enabled</dt><dd>@Model.EnableSsh</dd>
-    <dt>SSH port</dt><dd>@Model.SshPort</dd>
+@{ ViewData["Title"] = Text["Setting_EditTitle"]; }
+<header class="page-heading"><div><h1>@Text["Setting_EditTitle"]</h1><p>Effective runtime configuration for this GitCandy instance.</p></div></header>
+<div class="alert alert-info" role="status"><strong>Read only.</strong> Change these values through appsettings or environment variables, then restart the application.</div>
+<dl class="details-grid">
+    <dt>Public server</dt><dd>@Model.IsPublicServer</dd><dt>Force SSL</dt><dd>@Model.ForceSsl</dd><dt>SSL port</dt><dd>@Model.SslPort</dd>
+    <dt>Allow registration</dt><dd>@Model.AllowRegisterUser</dd><dt>Allow repository creation</dt><dd>@Model.AllowRepositoryCreation</dd>
+    <dt>Repository path</dt><dd><code>@Model.RepositoryPath</code></dd><dt>Cache path</dt><dd><code>@Model.CachePath</code></dd><dt>Git core path</dt><dd><code>@Model.GitCorePath</code></dd>
+    <dt>Commits per page</dt><dd>@Model.NumberOfCommitsPerPage</dd><dt>Items per list</dt><dd>@Model.NumberOfItemsPerList</dd><dt>Contributors</dt><dd>@Model.NumberOfRepositoryContributors</dd>
+    <dt>SSH enabled</dt><dd>@Model.EnableSsh</dd><dt>SSH port</dt><dd>@Model.SshPort</dd>
 </dl>

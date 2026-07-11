@@ -1,11 +1,9 @@
 @model TeamFormViewModel
-@{
-    ViewData["Title"] = "Create team";
-}
-<h3>Create team</h3>
-<form asp-action="Create" method="post" class="form-horizontal">
-    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
-    <div class="form-group"><label asp-for="Name" class="col-md-3 control-label"></label><div class="col-md-6"><input asp-for="Name" class="form-control" /><span asp-validation-for="Name" class="text-danger"></span></div></div>
-    <div class="form-group"><label asp-for="Description" class="col-md-3 control-label"></label><div class="col-md-6"><textarea asp-for="Description" rows="4" class="form-control"></textarea><span asp-validation-for="Description" class="text-danger"></span></div></div>
-    <div class="form-group"><div class="col-md-offset-3 col-md-6"><button type="submit" class="btn btn-primary">@Text["Shared_Create"]</button> <a asp-action="Index" class="btn btn-default">@Text["Shared_Back"]</a></div></div>
+@{ ViewData["Title"] = "Create team"; }
+<header class="page-heading"><div><h1>Create team</h1><p>Teams group users for repository access.</p></div></header>
+<form asp-action="Create" method="post" class="account-form">
+    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+    <div class="form-field"><label asp-for="Name"></label><input asp-for="Name" autocomplete="off" /><span asp-validation-for="Name"></span></div>
+    <div class="form-field"><label asp-for="Description"></label><textarea asp-for="Description" rows="4"></textarea><span asp-validation-for="Description"></span></div>
+    <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> @Text["Shared_Create"]</button><a asp-action="Index" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div>
 </form>

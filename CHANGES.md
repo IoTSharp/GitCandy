@@ -70,6 +70,9 @@
  - Added optional OTLP and diagnostic Console exporters with configuration validation and sanitized Git telemetry tags.
  - Added LibGit2Sharp 0.31.0 managed repository operations for bare initialization, repository validation, and HEAD/commit/branch/tag snapshots.
  - Added an optional, disabled-by-default OpenSSH AuthorizedKeysCommand and key-specific forced-command adapter that reuses Identity SSH keys, repository permissions, path validation, and the shared Git transport backend.
+ - Added the M9 npm lockfile + esbuild frontend asset pipeline with self-hosted Lucide icons and a Docker-only Node build stage.
+ - Added System/Light/Dark theme selection with first-paint Razor rendering, `.GitCandy.Theme` persistence, and responsive application navigation.
+ - Added Light/Dark desktop/mobile Playwright screenshot baselines and MVC smoke coverage for the new production assets.
 
 #### Changed
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
@@ -94,9 +97,12 @@
  - Split framework-independent contracts into `GitCandy.Core`, Git transport into `GitCandy.Git`, EF/Identity application implementations into `GitCandy.Data`, and the complete hosted SSH runtime into `GitCandy.Ssh`; `GitCandy` remains the single-process MVC host and composition root.
  - Git transport and scheduler operations now emit low-cardinality duration, active-operation, result, and error telemetry without repository, user, or physical-path attributes.
  - Git transport now delegates repository discovery and validity checks to the managed LibGit2Sharp repository service; external process launches remain limited to the three official Git wire-protocol helpers and readiness checking.
+ - Modernized repository, account, Identity security, SSH key, team, user administration, and read-only settings Razor views while preserving routes, form fields, antiforgery, authentication, and authorization behavior.
+ - Mobile navigation now uses inert content, trapped focus, Escape/backdrop dismissal, and focus return; shared UI states support keyboard focus, reduced motion, safe errors, empty results, and destructive confirmations.
 
 #### Removed
  - Removed the migrated host's static `GitCandy.Log.Logger` compatibility adapter, legacy log rotation job, and unused `LogPathFormat` setting. Runtime logging now uses only dependency-injected `ILogger<T>` instances and ASP.NET Core logging providers.
+ - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.

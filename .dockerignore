@@ -8,6 +8,8 @@ packages
 GitCandy
 **/bin
 **/obj
+**/node_modules
+src/GitCandy/wwwroot/assets
 **/*.db
 **/*.log
 **/App_Data

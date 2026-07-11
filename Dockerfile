@@ -1,7 +1,16 @@
+FROM node:24-alpine AS client-assets
+WORKDIR /src/src/GitCandy/ClientApp
+
+COPY src/GitCandy/ClientApp/package.json src/GitCandy/ClientApp/package-lock.json ./
+RUN npm ci --ignore-scripts
+COPY src/GitCandy/ClientApp/app.css src/GitCandy/ClientApp/app.js ./
+RUN npm run build
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
 WORKDIR /src
 
 COPY . .
+COPY --from=client-assets /src/src/GitCandy/wwwroot/assets src/GitCandy/wwwroot/assets
 RUN dotnet restore GitCandy.slnx
 RUN dotnet publish src/GitCandy/GitCandy.csproj \
     --configuration Release \
@@ -9,6 +18,7 @@ RUN dotnet publish src/GitCandy/GitCandy.csproj \
     --output /app/publish \
     -p:DebugType=None \
     -p:DebugSymbols=false \
+    -p:SkipClientAssetsBuild=true \
     -p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final

@@ -2,21 +2,51 @@
 @{
     ViewData["Title"] = Text["Repository_ListTitle"];
 }
-<h4>@Text["Repository_ListTitle"]</h4>
-@if (Model.CanCreateRepository)
-{
-    <p class="text-right"><a asp-action="Create" class="btn btn-primary">@Text["Shared_Create"]</a></p>
-}
-<table class="table table-hover border-area">
-    <thead><tr><th>Name</th><th>Description</th><th>Visibility</th></tr></thead>
-    <tbody>
-    @foreach (var repository in Model.Repositories)
+<header class="page-heading">
+    <div>
+        <h1>@Text["Repository_ListTitle"]</h1>
+        <p>Repositories available to your current account.</p>
+    </div>
+    @if (Model.CanCreateRepository)
     {
-        <tr>
-            <td><a asp-action="Tree" asp-route-name="@repository.Name">@repository.Name</a></td>
-            <td>@repository.Description</td>
-            <td>@(repository.IsPrivate ? "Private" : "Public")</td>
-        </tr>
+        <div class="page-actions">
+            <a asp-action="Create" class="btn btn-primary"><i data-lucide="plus"></i> @Text["Shared_Create"]</a>
+        </div>
     }
-    </tbody>
-</table>
+</header>
+
+@if (Model.Repositories.Count == 0)
+{
+    <section class="empty-state" aria-labelledby="empty-repositories-title">
+        <div>
+            <i data-lucide="folder-git-2"></i>
+            <h2 id="empty-repositories-title">No repositories available</h2>
+            <p>Create a repository or ask an owner to grant access.</p>
+        </div>
+    </section>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr><th scope="col">Name</th><th scope="col">Description</th><th scope="col">Visibility</th></tr>
+            </thead>
+            <tbody>
+            @foreach (var repository in Model.Repositories)
+            {
+                <tr>
+                    <td><a asp-action="Detail" asp-route-name="@repository.Name">@repository.Name</a></td>
+                    <td>@(string.IsNullOrWhiteSpace(repository.Description) ? "No description" : repository.Description)</td>
+                    <td>
+                        <span class="status-badge @(repository.IsPrivate ? "status-private" : "status-public")">
+                            <i data-lucide="@(repository.IsPrivate ? "lock-keyhole" : "external-link")"></i>
+                            @(repository.IsPrivate ? "Private" : "Public")
+                        </span>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

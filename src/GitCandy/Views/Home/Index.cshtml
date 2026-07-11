@@ -1,8 +1,7 @@
-﻿@{
-    ViewData["Title"] = "GitCandy";
-}
-
-<section class="host-shell">
-    <h1>GitCandy</h1>
-    <p>ASP.NET Core host shell</p>
-</section>
+@{ ViewData["Title"] = "GitCandy"; }
+<header class="page-heading"><div><h1>GitCandy</h1><p>Lightweight, self-hosted Git repositories with HTTP and SSH transport.</p></div><div class="page-actions"><a asp-controller="Repository" asp-action="Index" class="btn btn-primary"><i data-lucide="folder-git-2"></i> Browse repositories</a></div></header>
+<dl class="details-grid">
+    <dt>Web application</dt><dd>ASP.NET Core MVC on .NET 10</dd>
+    <dt>Git transport</dt><dd>Smart HTTP and built-in SSH</dd>
+    <dt>Identity</dt><dd>ASP.NET Core Identity</dd>
+</dl>

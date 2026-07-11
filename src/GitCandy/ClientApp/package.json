@@ -1,0 +1,11 @@
+{
+  "name": "gitcandy-client",
+  "private": true,
+  "scripts": {
+    "build": "esbuild app.js app.css --bundle --minify --sourcemap --outdir=../wwwroot/assets"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.6",
+    "lucide": "0.468.0"
+  }
+}

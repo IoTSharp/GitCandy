@@ -1,30 +1,18 @@
 @model TeamDetailsViewModel
-@{
-    ViewData["Title"] = $"Members - {Model.Team.Name}";
+@{ ViewData["Title"] = $"Members - {Model.Team.Name}"; }
+<header class="page-heading"><div><h1>Members of @Model.Team.Name</h1><p>Team administrators can add members and delegate team administration.</p></div><div class="page-actions"><a asp-action="Detail" asp-route-name="@Model.Team.Name" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div></header>
+@if (Model.Team.Members.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="users"></i><h2>No team members</h2><p>Add the first member below.</p></div></section>
 }
-<h3>Members of @Model.Team.Name</h3>
-<table class="table table-striped">
-    <thead><tr><th>User</th><th>Role</th><th></th></tr></thead>
-    <tbody>
+else
+{
+    <div class="table-responsive"><table class="table"><thead><tr><th scope="col">User</th><th scope="col">Role</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
     @foreach (var member in Model.Team.Members)
     {
-        <tr>
-            <td><a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName">@member.DisplayName</a></td>
-            <td>@(member.IsAdministrator ? "Administrator" : "Member")</td>
-            <td class="text-right">
-                <form asp-action="ChooseUser" method="post" class="form-inline">
-                    <input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="User" value="@member.UserName" />
-                    <button type="submit" name="Act" value="@(member.IsAdministrator ? "member" : "admin")" class="btn btn-default btn-xs">@(member.IsAdministrator ? "Make member" : "Make administrator")</button>
-                    <button type="submit" name="Act" value="del" class="btn btn-danger btn-xs">@Text["Shared_Delete"]</button>
-                </form>
-            </td>
-        </tr>
+        <tr><td><a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName">@member.DisplayName</a><div class="entity-meta">@@@member.UserName</div></td><td>@(member.IsAdministrator ? "Administrator" : "Member")</td><td class="text-right"><div class="inline-actions"><form asp-action="ChooseUser" method="post"><input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="User" value="@member.UserName" /><button type="submit" name="Act" value="@(member.IsAdministrator ? "member" : "admin")" class="btn btn-xs">@(member.IsAdministrator ? "Make member" : "Make administrator")</button></form><form asp-action="ChooseUser" method="post" data-confirm="Remove @member.UserName from @Model.Team.Name?"><input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="User" value="@member.UserName" /><button type="submit" name="Act" value="del" class="icon-button" aria-label="Remove @member.UserName" data-tooltip="Remove member"><i data-lucide="trash-2"></i></button></form></div></td></tr>
     }
-    </tbody>
-</table>
-<form asp-action="ChooseUser" method="post" class="form-inline">
-    <input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="Act" value="add" />
-    <div class="form-group"><label for="User">Username</label> <input id="User" name="User" class="form-control" required /></div>
-    <button type="submit" class="btn btn-primary">Add member</button>
-    <a asp-action="Detail" asp-route-name="@Model.Team.Name" class="btn btn-default">@Text["Shared_Back"]</a>
-</form>
+    </tbody></table></div>
+}
+<h2>Add member</h2>
+<form asp-action="ChooseUser" method="post" class="account-form"><input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="Act" value="add" /><div class="form-field"><label for="User">Username</label><input id="User" name="User" required autocomplete="off" /></div><button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Add member</button></form>

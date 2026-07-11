@@ -2,28 +2,23 @@
 @{
     ViewData["Title"] = Text["Account_ListTitle"];
 }
-
-<h4>@Text["Account_ListTitle"]</h4>
-<form asp-action="Index" method="get" class="row">
-    <div class="form-group col-md-5">
-        <div class="input-group">
-            <input type="search" name="query" value="@Model.Query" class="form-control" />
-            <span class="input-group-btn"><button type="submit" class="btn btn-default">@Text["Shared_Search"]</button></span>
-        </div>
-    </div>
+<header class="page-heading">
+    <div><h1>@Text["Account_ListTitle"]</h1><p>Manage local identities and administrator access.</p></div>
+    <div class="page-actions"><a asp-action="Create" class="btn btn-primary"><i data-lucide="plus"></i> @Text["Shared_Create"]</a></div>
+</header>
+<form asp-action="Index" method="get" class="filter-bar" role="search">
+    <div class="input-group"><input type="search" name="query" value="@Model.Query" aria-label="Search users" /><span class="input-group-btn"><button type="submit" class="btn" aria-label="Search"><i data-lucide="search"></i></button></span></div>
 </form>
-<p class="text-right"><a asp-action="Create" class="btn btn-primary">@Text["Shared_Create"]</a></p>
-<table class="table table-hover table-striped">
-    <thead><tr><th>Username</th><th>Display name</th><th>Email</th><th>Administrator</th></tr></thead>
-    <tbody>
+@if (Model.Users.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="user"></i><h2>No users found</h2><p>Change the search query or create an account.</p></div></section>
+}
+else
+{
+    <div class="table-responsive"><table class="table table-hover"><thead><tr><th scope="col">Username</th><th scope="col">Display name</th><th scope="col">Email</th><th scope="col">Administrator</th></tr></thead><tbody>
     @foreach (var user in Model.Users)
     {
-        <tr>
-            <td><a asp-action="Detail" asp-route-name="@user.UserName">@user.UserName</a></td>
-            <td>@user.DisplayName</td>
-            <td><a href="mailto:@user.Email">@user.Email</a></td>
-            <td>@(user.IsAdministrator ? Text["Shared_Yes"] : Text["Shared_No"])</td>
-        </tr>
+        <tr><td><a asp-action="Detail" asp-route-name="@user.UserName">@user.UserName</a></td><td>@user.DisplayName</td><td><a href="mailto:@user.Email">@user.Email</a></td><td>@(user.IsAdministrator ? Text["Shared_Yes"] : Text["Shared_No"])</td></tr>
     }
-    </tbody>
-</table>
+    </tbody></table></div>
+}

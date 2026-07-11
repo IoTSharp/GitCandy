@@ -5,8 +5,9 @@
 
 <section class="account-shell">
     <h1>Create account</h1>
+    <p class="page-subtitle">Create a local identity for repository and SSH access.</p>
     <form asp-action="Create" method="post" class="account-form">
-        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
         <div class="form-field">
             <label asp-for="UserName"></label>
             <input asp-for="UserName" autocomplete="username" autofocus />
@@ -38,7 +39,7 @@
             <span asp-validation-for="Description"></span>
         </div>
         <div class="form-actions">
-            <button type="submit" class="primary-button">Create account</button>
+            <button type="submit" class="primary-button"><i data-lucide="user"></i> Create account</button>
             <a asp-action="Login">Sign in</a>
         </div>
     </form>

@@ -6,8 +6,9 @@
 
 <section class="account-shell">
     <h1>Sign in</h1>
+    <p class="page-subtitle">Use your GitCandy account to access private repositories and credentials.</p>
     <form asp-action="Login" asp-route-returnUrl="@returnUrl" method="post" class="account-form">
-        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
         <div class="form-field">
             <label asp-for="UserNameOrEmail"></label>
             <input asp-for="UserNameOrEmail" autocomplete="username" autofocus />
@@ -23,7 +24,7 @@
             <span>@Html.DisplayNameFor(model => model.RememberMe)</span>
         </label>
         <div class="form-actions">
-            <button type="submit" class="primary-button">Sign in</button>
+            <button type="submit" class="primary-button"><i data-lucide="log-in"></i> Sign in</button>
             <a asp-action="Create">Create account</a>
         </div>
     </form>
@@ -34,7 +35,7 @@
             @foreach (var provider in Model.ExternalProviders)
             {
                 <form asp-controller="AccountSecurity" asp-action="ExternalLogin" asp-route-returnUrl="@returnUrl" method="post">
-                    <button type="submit" name="provider" value="@provider.Scheme" class="btn btn-default">
+                    <button type="submit" name="provider" value="@provider.Scheme" class="btn">
                         Sign in with @provider.DisplayName
                     </button>
                 </form>

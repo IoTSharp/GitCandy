@@ -173,6 +173,9 @@ ClientBin/
 *.pfx
 *.publishsettings
 node_modules/
+src/GitCandy/wwwroot/assets/
+.playwright-cli/
+output/
 orleans.codegen.cs
 
 # RIA/Silverlight projects

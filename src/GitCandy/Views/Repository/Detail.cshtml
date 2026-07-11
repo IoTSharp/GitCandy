@@ -1,14 +1,51 @@
 @model RepositoryDetailsViewModel
 @{
     ViewData["Title"] = Model.Repository.Name;
+    var cloneUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}/git/{Model.Repository.Name}.git";
 }
-<h3>@Model.Repository.Name</h3>
-<dl class="dl-horizontal">
-    <dt>Private</dt><dd>@(Model.Repository.IsPrivate ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a asp-action="Index">@Text["Shared_Repositories"]</a><span aria-hidden="true">/</span><span>@Model.Repository.Name</span>
+</nav>
+<header class="page-heading">
+    <div>
+        <h1>@Model.Repository.Name</h1>
+        <p>@(string.IsNullOrWhiteSpace(Model.Repository.Description) ? "No repository description." : Model.Repository.Description)</p>
+    </div>
+    @if (Model.CanManage)
+    {
+        <div class="page-actions">
+            <a asp-action="Coop" asp-route-name="@Model.Repository.Name" class="btn"><i data-lucide="users"></i> Relationships</a>
+            <a asp-action="Edit" asp-route-name="@Model.Repository.Name" class="btn btn-primary"><i data-lucide="settings"></i> Edit</a>
+        </div>
+    }
+</header>
+
+<section aria-labelledby="clone-heading">
+    <h2 id="clone-heading">Clone</h2>
+    <div class="input-group">
+        <input id="repository-clone-url" type="text" value="@cloneUrl" readonly aria-label="HTTPS clone URL" />
+        <span class="input-group-btn">
+            <button type="button" class="btn" data-copy-target="#repository-clone-url" data-label="Copy clone URL" data-copied="Copied" data-tooltip="Copy clone URL" aria-label="Copy clone URL">
+                <i data-lucide="copy"></i>
+            </button>
+        </span>
+    </div>
+</section>
+
+<h2>Repository access</h2>
+<dl class="details-grid">
+    <dt>Visibility</dt>
+    <dd><span class="status-badge @(Model.Repository.IsPrivate ? "status-private" : "status-public")">@(Model.Repository.IsPrivate ? "Private" : "Public")</span></dd>
     <dt>Anonymous read</dt><dd>@(Model.Repository.AllowAnonymousRead ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
     <dt>Anonymous write</dt><dd>@(Model.Repository.AllowAnonymousWrite ? Text["Shared_Yes"] : Text["Shared_No"])</dd>
-    <dt>Description</dt><dd>@Model.Repository.Description</dd>
-    <dt>Collaborators</dt><dd>@foreach (var user in Model.Repository.Users) { <a asp-controller="Account" asp-action="Detail" asp-route-name="@user.UserName" class="label label-default">@user.UserName</a> }</dd>
-    <dt>@Text["Shared_Teams"]</dt><dd>@foreach (var team in Model.Repository.Teams) { <a asp-controller="Team" asp-action="Detail" asp-route-name="@team.TeamName" class="label label-default">@team.TeamName</a> }</dd>
+    <dt>Collaborators</dt>
+    <dd>
+        @if (Model.Repository.Users.Count == 0) { <span class="entity-meta">None</span> }
+        @foreach (var user in Model.Repository.Users) { <a asp-controller="Account" asp-action="Detail" asp-route-name="@user.UserName" class="label">@user.UserName</a> }
+    </dd>
+    <dt>@Text["Shared_Teams"]</dt>
+    <dd>
+        @if (Model.Repository.Teams.Count == 0) { <span class="entity-meta">None</span> }
+        @foreach (var team in Model.Repository.Teams) { <a asp-controller="Team" asp-action="Detail" asp-route-name="@team.TeamName" class="label">@team.TeamName</a> }
+    </dd>
 </dl>
-<p><a asp-action="Tree" asp-route-name="@Model.Repository.Name" class="btn btn-default">Repository tree</a> @if (Model.CanManage) { <a asp-action="Edit" asp-route-name="@Model.Repository.Name" class="btn btn-primary">Edit</a> <a asp-action="Coop" asp-route-name="@Model.Repository.Name" class="btn btn-info">Relationships</a> }</p>
