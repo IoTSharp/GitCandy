@@ -52,6 +52,8 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
             repository.AllowAnonymousRead,
             repository.AllowAnonymousWrite,
             repository.CreatedAtUtc,
+            repository.ForkedFromRepository,
+            repository.ForkNetworkRoot,
             users,
             teams);
     }
@@ -253,7 +255,9 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         {
             Name = command.Name.Trim(),
             Description = command.Description.Trim(),
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            ForkedFromRepository = NormalizeOptionalName(command.ForkedFromRepository),
+            ForkNetworkRoot = NormalizeOptionalName(command.ForkNetworkRoot)
         };
         ApplyVisibility(repository, command);
         return repository;
@@ -264,5 +268,10 @@ internal sealed class RepositoryManagementService(GitCandyDbContext dbContext)
         repository.IsPrivate = command.IsPrivate;
         repository.AllowAnonymousRead = !command.IsPrivate && command.AllowAnonymousRead;
         repository.AllowAnonymousWrite = repository.AllowAnonymousRead && command.AllowAnonymousWrite;
+    }
+
+    private static string? NormalizeOptionalName(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

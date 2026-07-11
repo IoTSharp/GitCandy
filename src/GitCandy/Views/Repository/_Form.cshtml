@@ -17,6 +17,27 @@
             <span asp-validation-for="Name"></span>
         }
     </div>
+    @if (!isEdit)
+    {
+        <div class="form-field">
+            <label asp-for="InitializationMode"></label>
+            <select asp-for="InitializationMode" asp-items="Html.GetEnumSelectList<RepositoryCreationMode>()"></select>
+        </div>
+        <div class="form-field">
+            <label asp-for="Source"></label>
+            <input asp-for="Source" autocomplete="off" placeholder="https://example.com/project.git or repository name" />
+            <span asp-validation-for="Source"></span>
+            <p class="form-hint">Import accepts credential-free HTTP(S), SSH or Git URLs. Fork accepts an existing readable repository name.</p>
+        </div>
+    }
+    else
+    {
+        <div class="form-field">
+            <label asp-for="DefaultBranch"></label>
+            <input asp-for="DefaultBranch" autocomplete="off" />
+            <span asp-validation-for="DefaultBranch"></span>
+        </div>
+    }
     <div class="form-field checkbox-field">
         <input asp-for="IsPrivate" />
         <label asp-for="IsPrivate"></label>

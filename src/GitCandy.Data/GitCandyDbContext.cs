@@ -184,6 +184,12 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.Property(repository => repository.AllowAnonymousWrite)
                 .IsRequired();
 
+            entity.Property(repository => repository.ForkedFromRepository)
+                .HasMaxLength(SchemaLimits.RepositoryName);
+
+            entity.Property(repository => repository.ForkNetworkRoot)
+                .HasMaxLength(SchemaLimits.RepositoryName);
+
             entity.HasIndex(repository => repository.NormalizedName)
                 .HasDatabaseName("IX_Repositories_NormalizedName")
                 .IsUnique();

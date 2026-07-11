@@ -20,6 +20,22 @@ public interface IManagedGitRepositoryService
     GitRepositoryContext InitializeBare(string repositoryName);
 
     /// <summary>
+    /// 将远程或本地 Git 仓库以 bare 形式克隆到配置根目录。
+    /// </summary>
+    GitRepositoryContext CloneBare(
+        string source,
+        string repositoryName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// 设置 bare 仓库 HEAD 指向的本地分支。
+    /// </summary>
+    bool SetDefaultBranch(
+        GitRepositoryContext repository,
+        string branchName,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// 读取仓库 HEAD、分支、标签和最近提交摘要。
     /// </summary>
     /// <param name="repository">仓库上下文。</param>

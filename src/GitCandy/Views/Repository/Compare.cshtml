@@ -1,0 +1,20 @@
+@model RepositoryCompareViewModel
+@{ ViewData["Title"] = "Compare"; var repositoryName = Model?.RepositoryName ?? Context.Request.Query["name"].ToString(); }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Tree" asp-route-name="@repositoryName">@repositoryName</a><span>/</span><span>Compare</span></nav>
+<partial name="_RepositoryNavigation" model="repositoryName" />
+<header class="page-heading"><div><h1>Compare revisions</h1></div></header>
+<form asp-action="Compare" method="get" class="compare-form">
+    <input type="hidden" name="name" value="@repositoryName" />
+    <div class="form-field"><label for="baseRevision">Base</label><input id="baseRevision" name="baseRevision" value="@Model?.Compare.Base.RequestedRevision" /></div>
+    <div class="form-field"><label for="headRevision">Head</label><input id="headRevision" name="headRevision" value="@Model?.Compare.Head.RequestedRevision" /></div>
+    <button class="btn btn-primary" type="submit"><i data-lucide="git-compare-arrows"></i> Compare</button>
+</form>
+@if (Model is not null)
+{
+    <p class="compare-summary"><strong>@Model.Compare.AheadBy</strong> ahead · <strong>@Model.Compare.BehindBy</strong> behind</p>
+    @if (Model.Compare.DiffTruncated) { <div class="alert alert-warning">The diff reached a configured display limit.</div> }
+    @foreach (var file in Model.Compare.Files)
+    {
+        <section class="diff-file"><header><strong>@file.Path</strong><span class="diff-stat">+@file.LinesAdded -@file.LinesDeleted · @file.Status</span></header>@if (file.IsBinary) { <p class="binary-diff">Binary file changed.</p> } else if (file.Patch is not null) { <pre><code class="language-diff" data-highlight>@file.Patch</code></pre> }</section>
+    }
+}

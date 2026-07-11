@@ -80,6 +80,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseRouting();
+app.UseRequestTimeouts();
 
 app.UseRequestLocalization();
 app.UseAuthentication();

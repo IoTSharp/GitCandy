@@ -1,0 +1,7 @@
+@model string
+<nav class="repository-navigation" aria-label="Repository navigation">
+    <a asp-action="Tree" asp-route-name="@Model"><i data-lucide="folder-tree"></i> Code</a>
+    <a asp-action="Commits" asp-route-name="@Model"><i data-lucide="history"></i> Commits</a>
+    <a asp-action="Compare" asp-route-name="@Model"><i data-lucide="git-compare-arrows"></i> Compare</a>
+    <a asp-action="Detail" asp-route-name="@Model"><i data-lucide="settings-2"></i> Repository</a>
+</nav>

@@ -50,7 +50,9 @@ public sealed record RepositoryEdit(
     string Description,
     bool IsPrivate,
     bool AllowAnonymousRead,
-    bool AllowAnonymousWrite);
+    bool AllowAnonymousWrite,
+    string? ForkedFromRepository = null,
+    string? ForkNetworkRoot = null);
 
 /// <summary>用户仓库角色摘要。</summary>
 public sealed record RepositoryUserRoleSummary(
@@ -70,6 +72,8 @@ public sealed record RepositoryDetails(
     bool AllowAnonymousRead,
     bool AllowAnonymousWrite,
     DateTime CreatedAtUtc,
+    string? ForkedFromRepository,
+    string? ForkNetworkRoot,
     IReadOnlyList<RepositoryUserRoleSummary> Users,
     IReadOnlyList<RepositoryTeamRoleSummary> Teams);
 

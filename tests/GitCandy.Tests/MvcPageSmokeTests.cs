@@ -124,6 +124,10 @@ public sealed class MvcPageSmokeTests
             });
         Assert.AreEqual(HttpStatusCode.Redirect, repositoryResponse.StatusCode);
         StringAssert.Contains(await fixture.GetStringAsync("/Repository/Detail/m5-repository"), "M5 repository");
+        StringAssert.Contains(
+            await fixture.GetStringAsync("/Repository/Tree/m5-repository"),
+            "No commits are available.");
+        Assert.IsTrue(fixture.PhysicalRepositoryExists("m5-repository"));
 
         var repositoryEditToken = await fixture.GetAntiforgeryTokenAsync("/Repository/Edit/m5-repository");
         using var repositoryEditResponse = await fixture.PostFormAsync(
@@ -163,6 +167,7 @@ public sealed class MvcPageSmokeTests
             new Dictionary<string, string>());
         Assert.AreEqual(HttpStatusCode.Redirect, repositoryDeleteResponse.StatusCode);
         Assert.IsNull(await fixture.FindRepositoryAsync("m5-repository"));
+        Assert.IsFalse(fixture.PhysicalRepositoryExists("m5-repository"));
 
         var teamDeleteToken = await fixture.GetAntiforgeryTokenAsync("/Team/Delete/m5-team");
         using var teamDeleteResponse = await fixture.PostFormAsync(
@@ -190,6 +195,12 @@ public sealed class MvcPageSmokeTests
         public HttpClient Client { get; }
 
         private string TempRoot { get; }
+
+        public bool PhysicalRepositoryExists(string repositoryName)
+        {
+            return Directory.Exists(Path.Combine(TempRoot, "Repositories", repositoryName))
+                || Directory.Exists(Path.Combine(TempRoot, "Repositories", $"{repositoryName}.git"));
+        }
 
         public static async Task<MvcWebFixture> CreateAsync()
         {

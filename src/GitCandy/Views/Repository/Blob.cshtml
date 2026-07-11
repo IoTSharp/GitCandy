@@ -1,0 +1,45 @@
+@model RepositoryBlobViewModel
+@{
+    ViewData["Title"] = Model.Blob.Name;
+    var lines = Model.Blob.Text?.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n') ?? [];
+    var parentPath = System.IO.Path.GetDirectoryName(Model.Blob.Path)?.Replace('\\', '/');
+}
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><span>@Model.Blob.Name</span></nav>
+<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<header class="page-heading">
+    <div><h1>@Model.Blob.Name</h1><p>@Model.Blob.Size.ToString("N0") bytes · @Model.Blob.Revision.DisplayName</p></div>
+    <div class="page-actions">
+        <a class="btn" asp-action="Raw" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blob.Path" asp-route-revision="@Model.Blob.Revision.CommitId"><i data-lucide="download"></i> Raw</a>
+        <a class="btn" asp-action="Blame" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blob.Path" asp-route-revision="@Model.Blob.Revision.CommitId"><i data-lucide="scan-text"></i> Blame</a>
+        <a class="btn" asp-action="Blob" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blob.Path" asp-route-revision="@Model.Blob.Revision.CommitId"><i data-lucide="link"></i> Permalink</a>
+        <button class="icon-button" type="button" data-copy-lines data-tooltip="Copy selected lines" aria-label="Copy selected lines"><i data-lucide="copy"></i></button>
+    </div>
+</header>
+<nav class="path-breadcrumb" aria-label="Code path"><a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@parentPath" asp-route-revision="@Model.Blob.Revision.RequestedRevision">@Model.RepositoryName / @Model.Blob.Path</a></nav>
+@if (Model.Blob.IsTooLarge)
+{
+    <div class="alert alert-warning">This file exceeds the configured display limit. Raw streaming remains available.</div>
+}
+else if (Model.Blob.IsBinary)
+{
+    <div class="alert alert-info">Binary content is not rendered. Raw download remains available.</div>
+}
+else if (Model.Blob.HasUnknownEncoding)
+{
+    <div class="alert alert-warning">The text encoding is not recognized. Raw download preserves the original bytes.</div>
+}
+else
+{
+    <div class="code-view" data-code-view data-commit="@Model.Blob.Revision.CommitId">
+        <table><tbody>
+        @for (var index = 0; index < lines.Length; index++)
+        {
+            var lineNumber = index + 1;
+            <tr id="@($"L{lineNumber}")" data-line="@lineNumber">
+                <td class="line-number"><a href="@($"#L{lineNumber}")" data-line-anchor="@lineNumber">@lineNumber</a></td>
+                <td class="line-code"><code class="language-@Model.Blob.Language" data-highlight>@lines[index]</code></td>
+            </tr>
+        }
+        </tbody></table>
+    </div>
+}

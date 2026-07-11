@@ -6,6 +6,7 @@
   },
   "devDependencies": {
     "esbuild": "0.25.6",
+    "highlight.js": "11.11.1",
     "lucide": "0.468.0"
   }
 }

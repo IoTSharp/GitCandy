@@ -1,0 +1,15 @@
+@model RepositoryCommitsViewModel
+@{ ViewData["Title"] = $"{Model.RepositoryName} commits"; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><span>Commits</span></nav>
+<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<header class="page-heading"><div><h1>Commit history</h1><p>@Model.Page.Revision.DisplayName</p></div></header>
+<ol class="commit-list">
+@foreach (var commit in Model.Page.Commits)
+{
+    <li><div><a asp-action="Commit" asp-route-name="@Model.RepositoryName" asp-route-path="@commit.Id">@commit.MessageShort</a><p>@commit.AuthorName · <time datetime="@commit.AuthoredAt.ToString("O")">@commit.AuthoredAt.ToString("u")</time></p></div><code>@commit.Id[..12]</code></li>
+}
+</ol>
+<nav class="pager" aria-label="Commit pages">
+    @if (Model.Page.Page > 1) { <a class="btn" asp-action="Commits" asp-route-name="@Model.RepositoryName" asp-route-revision="@Model.Page.Revision.RequestedRevision" asp-route-page="@(Model.Page.Page - 1)"><i data-lucide="arrow-left"></i> Newer</a> }
+    @if (Model.Page.HasNextPage) { <a class="btn" asp-action="Commits" asp-route-name="@Model.RepositoryName" asp-route-revision="@Model.Page.Revision.RequestedRevision" asp-route-page="@(Model.Page.Page + 1)">Older <i data-lucide="arrow-right"></i></a> }
+</nav>

@@ -66,6 +66,7 @@ public static class WebServiceCollectionExtensions
             .PersistKeysToFileSystem(new DirectoryInfo(
                 ResolveDataProtectionKeysPath(configuration, contentRootPath)));
         services.AddGitSmartHttpOptions(configuration);
+        services.AddRepositoryBrowserOptions(configuration);
         var identitySettings = AddGitCandyIdentityOptions(services, configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
@@ -363,6 +364,36 @@ public static class WebServiceCollectionExtensions
             .Validate(
                 options => options.MaxConcurrentOperations is >= 1 and <= 1024,
                 $"{nameof(GitSmartHttpOptions.MaxConcurrentOperations)} must be between 1 and 1024.")
+            .ValidateOnStart();
+
+        return services;
+    }
+
+    private static IServiceCollection AddRepositoryBrowserOptions(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<RepositoryBrowserOptions>()
+            .Bind(configuration.GetSection(RepositoryBrowserOptions.SectionName))
+            .Validate(options => options.MaxDisplayedBlobBytes > 0, "MaxDisplayedBlobBytes must be greater than zero.")
+            .Validate(options => options.MaxDiffCharacters > 0, "MaxDiffCharacters must be greater than zero.")
+            .Validate(options => options.MaxDiffFiles > 0, "MaxDiffFiles must be greater than zero.")
+            .Validate(options => options.MaxArchiveBytes > 0, "MaxArchiveBytes must be greater than zero.")
+            .Validate(options => options.MaxArchiveEntries > 0, "MaxArchiveEntries must be greater than zero.")
+            .Validate(options => options.OperationTimeout > TimeSpan.Zero, "OperationTimeout must be greater than zero.")
+            .ValidateOnStart();
+        var browserSettings = configuration
+            .GetSection(RepositoryBrowserOptions.SectionName)
+            .Get<RepositoryBrowserOptions>() ?? new RepositoryBrowserOptions();
+        services.AddRequestTimeouts(options => options.AddPolicy(
+            RepositoryBrowserOptions.RequestTimeoutPolicyName,
+            browserSettings.OperationTimeout));
+        services.AddOptions<GitLfsOptions>()
+            .Bind(configuration.GetSection(GitLfsOptions.SectionName))
+            .Validate(options => options.MaxObjectBytes > 0, "MaxObjectBytes must be greater than zero.")
+            .Validate(options => options.RepositoryQuotaBytes >= 0, "RepositoryQuotaBytes cannot be negative.")
+            .Validate(options => options.StreamBufferSize >= 4096, "StreamBufferSize must be at least 4096 bytes.")
+            .Validate(options => options.OperationTimeout > TimeSpan.Zero, "OperationTimeout must be greater than zero.")
             .ValidateOnStart();
 
         return services;

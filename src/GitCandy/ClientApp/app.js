@@ -1,20 +1,29 @@
 import {
   Archive,
   ArrowLeft,
+  ArrowRight,
+  Box,
   Check,
   ChevronDown,
   CircleAlert,
   Clipboard,
   Code2,
   Copy,
+  Download,
   ExternalLink,
+  FileCode2,
   FileKey,
   FolderGit2,
+  Folder,
+  FolderTree,
   Gauge,
   GitBranch,
+  GitCompareArrows,
+  History,
   KeyRound,
   Languages,
   Lightbulb,
+  Link,
   LockKeyhole,
   LogIn,
   LogOut,
@@ -23,7 +32,9 @@ import {
   Moon,
   Plus,
   Search,
+  ScanText,
   Settings,
+  Settings2,
   Shield,
   Sun,
   Trash2,
@@ -34,6 +45,41 @@ import {
   X,
   createIcons
 } from "lucide";
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import csharp from "highlight.js/lib/languages/csharp";
+import css from "highlight.js/lib/languages/css";
+import diff from "highlight.js/lib/languages/diff";
+import go from "highlight.js/lib/languages/go";
+import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
+import plaintext from "highlight.js/lib/languages/plaintext";
+import powershell from "highlight.js/lib/languages/powershell";
+import python from "highlight.js/lib/languages/python";
+import rust from "highlight.js/lib/languages/rust";
+import sql from "highlight.js/lib/languages/sql";
+import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yaml from "highlight.js/lib/languages/yaml";
+
+hljs.registerLanguage("bash", bash);
+hljs.registerLanguage("csharp", csharp);
+hljs.registerLanguage("css", css);
+hljs.registerLanguage("diff", diff);
+hljs.registerLanguage("go", go);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("json", json);
+hljs.registerLanguage("markdown", markdown);
+hljs.registerLanguage("plaintext", plaintext);
+hljs.registerLanguage("powershell", powershell);
+hljs.registerLanguage("python", python);
+hljs.registerLanguage("razor", xml);
+hljs.registerLanguage("rust", rust);
+hljs.registerLanguage("sql", sql);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("xml", xml);
+hljs.registerLanguage("yaml", yaml);
 
 const themeCookieName = ".GitCandy.Theme";
 const supportedThemes = new Set(["system", "light", "dark"]);
@@ -154,24 +200,76 @@ function initializeConfirmations() {
   });
 }
 
+function initializeCodeViews() {
+  document.querySelectorAll("[data-highlight]").forEach((element) => hljs.highlightElement(element));
+
+  document.querySelectorAll("[data-code-view]").forEach((view) => {
+    const rows = [...view.querySelectorAll("tr[data-line]")];
+    let anchorLine = null;
+    const selectRange = (start, end) => {
+      const lower = Math.min(start, end);
+      const upper = Math.max(start, end);
+      rows.forEach((row) => row.classList.toggle("is-selected", Number(row.dataset.line) >= lower && Number(row.dataset.line) <= upper));
+      history.replaceState(null, "", `${location.pathname}${location.search}#L${lower}${lower === upper ? "" : `-L${upper}`}`);
+    };
+
+    view.querySelectorAll("[data-line-anchor]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const line = Number(link.dataset.lineAnchor);
+        if (event.shiftKey && anchorLine !== null) {
+          selectRange(anchorLine, line);
+        } else {
+          anchorLine = line;
+          selectRange(line, line);
+        }
+      });
+    });
+
+    const match = location.hash.match(/^#L(\d+)(?:-L(\d+))?$/);
+    if (match) {
+      anchorLine = Number(match[1]);
+      selectRange(anchorLine, Number(match[2] ?? match[1]));
+      view.querySelector(`#L${anchorLine}`)?.scrollIntoView({ block: "center" });
+    }
+  });
+
+  document.querySelectorAll("[data-copy-lines]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const selected = [...document.querySelectorAll("[data-code-view] tr.is-selected .line-code")];
+      const source = selected.length > 0 ? selected : [...document.querySelectorAll("[data-code-view] .line-code")];
+      await navigator.clipboard.writeText(source.map((line) => line.textContent ?? "").join("\n"));
+    });
+  });
+}
+
 createIcons({
   icons: {
     Archive,
     ArrowLeft,
+    ArrowRight,
+    Box,
     Check,
     ChevronDown,
     CircleAlert,
     Clipboard,
     Code2,
     Copy,
+    Download,
     ExternalLink,
+    FileCode2,
     FileKey,
     FolderGit2,
+    Folder,
+    FolderTree,
     Gauge,
     GitBranch,
+    GitCompareArrows,
+    History,
     KeyRound,
     Languages,
     Lightbulb,
+    Link,
     LockKeyhole,
     LogIn,
     LogOut,
@@ -180,7 +278,9 @@ createIcons({
     Moon,
     Plus,
     Search,
+    ScanText,
     Settings,
+    Settings2,
     Shield,
     Sun,
     Trash2,
@@ -196,3 +296,4 @@ initializeThemeControl();
 initializeNavigation();
 initializeCopyButtons();
 initializeConfirmations();
+initializeCodeViews();

@@ -73,6 +73,10 @@
  - Added the M9 npm lockfile + esbuild frontend asset pipeline with self-hosted Lucide icons and a Docker-only Node build stage.
  - Added System/Light/Dark theme selection with first-paint Razor rendering, `.GitCandy.Theme` persistence, and responsive application navigation.
  - Added Light/Dark desktop/mobile Playwright screenshot baselines and MVC smoke coverage for the new production assets.
+ - Added M9 #106-#108 repository lifecycle and code workspace services for bare creation, credential-free import, fork networks, default branches, safe deletion, tree/blob/raw, commit/diff/blame/compare, and streamed ZIP archives.
+ - Added fixed-commit code permalinks, `#Lx-Ly` line selection/copying, bundled syntax highlighting, and explicit binary, unknown-encoding, large-file, symlink, submodule, diff, archive, and path boundaries.
+ - Added M9 #109 Git LFS v2 basic batch, upload, download, existence, and verify endpoints with repository authorization, quotas, temporary SHA-256 validation, atomic object commits, and range downloads.
+ - Added real `git lfs` push/fetch/clone integration coverage and repository browser/lifecycle boundary tests.
 
 #### Changed
  - Moved Linux/container production defaults for HTTP, SQLite, repository/cache storage, SSH host key, Data Protection keys, and SSH port into the main application configuration; Docker Compose no longer duplicates application settings as environment variables.
@@ -99,6 +103,8 @@
  - Git transport now delegates repository discovery and validity checks to the managed LibGit2Sharp repository service; external process launches remain limited to the three official Git wire-protocol helpers and readiness checking.
  - Modernized repository, account, Identity security, SSH key, team, user administration, and read-only settings Razor views while preserving routes, form fields, antiforgery, authentication, and authorization behavior.
  - Mobile navigation now uses inert content, trapped focus, Escape/backdrop dismissal, and focus return; shared UI states support keyboard focus, reduced motion, safe errors, empty results, and destructive confirmations.
+ - Repository create/delete now coordinates EF metadata with physical Git and LFS storage instead of operating on metadata only.
+ - Added nullable `ForkedFromRepository` and `ForkNetworkRoot` columns to SQLite and SQL Server repository schemas.
 
 #### Removed
  - Removed the migrated host's static `GitCandy.Log.Logger` compatibility adapter, legacy log rotation job, and unused `LogPathFormat` setting. Runtime logging now uses only dependency-injected `ILogger<T>` instances and ASP.NET Core logging providers.
@@ -108,7 +114,8 @@
  - Web authentication no longer accepts the legacy `_gc_auth` cookie, password hashes, `PasswordVersion`, or `AuthorizationLog`; users must be recreated in the ASP.NET Core Identity schema or imported later without passwords.
  - Selected MVC `AccountController` plus Razor Views for the migrated account UI; Git Smart HTTP now uses the independent M6 endpoint and authentication scheme.
  - Migrated the M5 account/team/repository public URL shapes to real ASP.NET Core controllers and replaced the Git HTTP compatibility placeholder in M6.
- - Repository CRUD remains metadata-only; bare repository creation/import/deletion must use dedicated lifecycle operations through the established Git backend boundary.
+ - Repository CRUD now uses dedicated lifecycle operations through the established Git backend boundary; existing `{name}` and `{name}.git` physical layouts remain readable.
+ - Added `GitCandy:RepositoryBrowser` resource limits and `GitCandy:Lfs` object-size, quota, buffering, timeout, and enablement settings. `CachePath/lfs` is persistent object data and must be backed up.
  - Migrated language selection to the standard ASP.NET Core culture cookie while temporarily retaining the legacy `Lang` cookie.
  - Kept settings read-only in M5; configuration persistence, process restart, and SSH host-key regeneration remain scoped to M8/M7.
  - Added optional `GitCandy:GitHttp` request-size, timeout, and stream-buffer settings; reverse proxies must configure matching body and timeout limits.

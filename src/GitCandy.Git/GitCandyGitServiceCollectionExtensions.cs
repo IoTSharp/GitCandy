@@ -20,6 +20,9 @@ public static class GitCandyGitServiceCollectionExtensions
         services.TryAddSingleton<IGitRepositoryPathResolver, GitRepositoryPathResolver>();
         services.TryAddScoped<IGitServiceFactory, GitServiceFactory>();
         services.TryAddSingleton<IManagedGitRepositoryService, LibGit2RepositoryService>();
+        services.TryAddSingleton<IRepositoryBrowserService, RepositoryBrowserService>();
+        services.TryAddSingleton<IGitLfsObjectStore, GitLfsObjectStore>();
+        services.TryAddScoped<GitCandy.Application.IRepositoryLifecycleService, RepositoryLifecycleService>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
         services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
 

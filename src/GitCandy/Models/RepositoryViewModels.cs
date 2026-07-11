@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using GitCandy.Application;
+using GitCandy.Git;
 
 namespace GitCandy.Models;
 
@@ -30,6 +31,17 @@ public sealed class RepositoryFormViewModel
     [Display(Name = "Allow anonymous write")]
     public bool AllowAnonymousWrite { get; set; }
 
+    [Display(Name = "Initialize repository")]
+    public RepositoryCreationMode InitializationMode { get; set; }
+
+    [StringLength(2048)]
+    [Display(Name = "Remote URL or source repository")]
+    public string? Source { get; set; }
+
+    [StringLength(255)]
+    [Display(Name = "Default branch")]
+    public string? DefaultBranch { get; set; }
+
     public RepositoryEdit ToCommand()
     {
         return new RepositoryEdit(
@@ -39,6 +51,48 @@ public sealed class RepositoryFormViewModel
             AllowAnonymousRead,
             AllowAnonymousWrite);
     }
+}
+
+public sealed class RepositoryTreeViewModel
+{
+    public required string RepositoryName { get; init; }
+
+    public RepositoryTreeResult? Tree { get; init; }
+}
+
+public sealed class RepositoryBlobViewModel
+{
+    public required string RepositoryName { get; init; }
+
+    public required RepositoryBlobResult Blob { get; init; }
+}
+
+public sealed class RepositoryCommitsViewModel
+{
+    public required string RepositoryName { get; init; }
+
+    public required RepositoryCommitPage Page { get; init; }
+}
+
+public sealed class RepositoryCommitViewModel
+{
+    public required string RepositoryName { get; init; }
+
+    public required RepositoryCommitResult Commit { get; init; }
+}
+
+public sealed class RepositoryBlameViewModel
+{
+    public required string RepositoryName { get; init; }
+
+    public required RepositoryBlameResult Blame { get; init; }
+}
+
+public sealed class RepositoryCompareViewModel
+{
+    public required string RepositoryName { get; init; }
+
+    public required RepositoryCompareResult Compare { get; init; }
 }
 
 public sealed class RepositoryDetailsViewModel

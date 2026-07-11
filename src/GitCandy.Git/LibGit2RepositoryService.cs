@@ -50,6 +50,8 @@ public sealed class LibGit2RepositoryService(IGitRepositoryPathResolver pathReso
         ArgumentException.ThrowIfNullOrWhiteSpace(repositoryName);
 
         var normalizedName = repositoryName.Trim();
+        Directory.CreateDirectory(_pathResolver.RepositoryRootPath);
+        EnsureResolvedPathWithinRoot(_pathResolver.RepositoryRootPath);
         var legacyPath = _pathResolver.ResolveRepositoryPath(normalizedName);
         var repositoryPath = _pathResolver.ResolveRepositoryPath($"{normalizedName}.git");
         if (Directory.Exists(legacyPath) || Directory.Exists(repositoryPath))
@@ -57,9 +59,83 @@ public sealed class LibGit2RepositoryService(IGitRepositoryPathResolver pathReso
             throw new InvalidOperationException("A repository directory with the same name already exists.");
         }
 
-        EnsureResolvedPathWithinRoot(_pathResolver.RepositoryRootPath);
         Repository.Init(repositoryPath, isBare: true);
         return new GitRepositoryContext(normalizedName, repositoryPath);
+    }
+
+    /// <inheritdoc />
+    public GitRepositoryContext CloneBare(
+        string source,
+        string repositoryName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        ArgumentException.ThrowIfNullOrWhiteSpace(repositoryName);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var normalizedName = repositoryName.Trim();
+        Directory.CreateDirectory(_pathResolver.RepositoryRootPath);
+        EnsureResolvedPathWithinRoot(_pathResolver.RepositoryRootPath);
+        var legacyPath = _pathResolver.ResolveRepositoryPath(normalizedName);
+        var repositoryPath = _pathResolver.ResolveRepositoryPath($"{normalizedName}.git");
+        if (Directory.Exists(legacyPath) || Directory.Exists(repositoryPath))
+        {
+            throw new InvalidOperationException("A repository directory with the same name already exists.");
+        }
+
+        var fetchOptions = new FetchOptions
+        {
+            OnTransferProgress = _ => !cancellationToken.IsCancellationRequested
+        };
+        var cloneOptions = new CloneOptions(fetchOptions)
+        {
+            IsBare = true,
+            Checkout = false,
+            RecurseSubmodules = false
+        };
+        try
+        {
+            Repository.Clone(source.Trim(), repositoryPath, cloneOptions);
+            cancellationToken.ThrowIfCancellationRequested();
+            return new GitRepositoryContext(normalizedName, repositoryPath);
+        }
+        catch
+        {
+            if (Directory.Exists(repositoryPath))
+            {
+                EnsureResolvedPathWithinRoot(repositoryPath);
+                SafeDirectoryDeletion.Delete(repositoryPath);
+            }
+
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
+    public bool SetDefaultBranch(
+        GitRepositoryContext repository,
+        string branchName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(branchName);
+        cancellationToken.ThrowIfCancellationRequested();
+        var normalizedBranch = branchName.Trim();
+        if (normalizedBranch.StartsWith("refs/", StringComparison.Ordinal)
+            || normalizedBranch.Contains("..", StringComparison.Ordinal)
+            || normalizedBranch.Any(char.IsControl))
+        {
+            throw new ArgumentException("A short local branch name is required.", nameof(branchName));
+        }
+
+        using var gitRepository = new Repository(ResolveExistingPath(repository));
+        var canonicalName = $"refs/heads/{normalizedBranch}";
+        if (gitRepository.Refs[canonicalName] is null)
+        {
+            return false;
+        }
+
+        gitRepository.Refs.UpdateTarget(gitRepository.Refs.Head, canonicalName);
+        return true;
     }
 
     /// <inheritdoc />

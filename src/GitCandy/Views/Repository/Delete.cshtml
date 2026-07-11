@@ -4,8 +4,8 @@
 }
 <header class="page-heading"><div><h1>Delete @Model</h1><p>This destructive action cannot be undone.</p></div></header>
 <div class="alert alert-danger" role="alert">
-    <strong>Repository metadata will be deleted.</strong>
-    The Git backend remains responsible for repository filesystem deletion.
+    <strong>Repository metadata, Git objects, and LFS objects will be deleted.</strong>
+    The physical repository is quarantined inside the configured repository root before recursive deletion.
 </div>
 <form asp-action="Delete" asp-route-name="@Model" method="post" class="form-actions" data-confirm="Delete repository @Model?">
     <a asp-action="Detail" asp-route-name="@Model" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a>

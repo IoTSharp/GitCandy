@@ -46,6 +46,16 @@ public sealed class GitCandyRepository
     public bool AllowAnonymousWrite { get; set; }
 
     /// <summary>
+    /// 直接 fork 来源仓库名称；非 fork 仓库为空。
+    /// </summary>
+    public string? ForkedFromRepository { get; set; }
+
+    /// <summary>
+    /// fork network 根仓库名称；非 fork 仓库为空。
+    /// </summary>
+    public string? ForkNetworkRoot { get; set; }
+
+    /// <summary>
     /// 用户仓库角色。
     /// </summary>
     public ICollection<GitCandyUserRepositoryRole> UserRoles { get; } = [];

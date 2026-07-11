@@ -1,0 +1,83 @@
+@model RepositoryTreeViewModel
+@{
+    ViewData["Title"] = $"{Model.RepositoryName} code";
+    var tree = Model.Tree;
+    var pathParts = tree?.Path.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
+}
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><strong>@Model.RepositoryName</strong></nav>
+<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<header class="page-heading">
+    <div><h1>@Model.RepositoryName</h1><p>@(tree?.Revision.DisplayName ?? "Empty repository")</p></div>
+    @if (tree is not null)
+    {
+        <div class="page-actions">
+            <a class="btn" asp-action="Archive" asp-route-name="@Model.RepositoryName" asp-route-revision="@tree.Revision.CommitId"><i data-lucide="archive"></i> Archive</a>
+            <a class="btn" asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@tree.Path" asp-route-revision="@tree.Revision.CommitId"><i data-lucide="link"></i> Permalink</a>
+        </div>
+    }
+</header>
+@if (tree is null)
+{
+    <div class="empty-state"><div><i data-lucide="folder-git-2"></i><p>No commits are available.</p></div></div>
+}
+else
+{
+    <div class="repository-toolbar">
+        <form asp-action="Tree" method="get" class="revision-selector">
+            <input type="hidden" name="name" value="@Model.RepositoryName" />
+            <input type="hidden" name="path" value="@tree.Path" />
+            <label for="revision">Revision</label>
+            <select id="revision" name="revision" onchange="this.form.submit()">
+                <optgroup label="Branches">
+                    @foreach (var branch in tree.Branches)
+                    {
+                        <option value="@branch.CanonicalName" selected="@(tree.Revision.RequestedRevision == branch.CanonicalName)">@branch.CanonicalName</option>
+                    }
+                </optgroup>
+                <optgroup label="Tags">
+                    @foreach (var tag in tree.Tags)
+                    {
+                        <option value="@tag.CanonicalName" selected="@(tree.Revision.RequestedRevision == tag.CanonicalName)">@tag.CanonicalName</option>
+                    }
+                </optgroup>
+            </select>
+        </form>
+        <code class="commit-id">@tree.Revision.CommitId[..12]</code>
+    </div>
+    <nav class="path-breadcrumb" aria-label="Code path">
+        <a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-revision="@tree.Revision.RequestedRevision">@Model.RepositoryName</a>
+        @for (var index = 0; index < pathParts.Length; index++)
+        {
+            var partPath = string.Join('/', pathParts.Take(index + 1));
+            <span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@partPath" asp-route-revision="@tree.Revision.RequestedRevision">@pathParts[index]</a>
+        }
+    </nav>
+    <div class="table-responsive">
+        <table class="repository-tree">
+            <thead><tr><th>Name</th><th>Type</th><th class="text-right">Size</th></tr></thead>
+            <tbody>
+            @foreach (var entry in tree.Entries)
+            {
+                <tr>
+                    <td>
+                        @if (entry.Kind == RepositoryTreeEntryKind.Tree)
+                        {
+                            <a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@entry.Path" asp-route-revision="@tree.Revision.RequestedRevision"><i data-lucide="folder"></i> @entry.Name</a>
+                        }
+                        else if (entry.Kind == RepositoryTreeEntryKind.Submodule)
+                        {
+                            <span><i data-lucide="box"></i> @entry.Name</span>
+                        }
+                        else
+                        {
+                            <a asp-action="Blob" asp-route-name="@Model.RepositoryName" asp-route-path="@entry.Path" asp-route-revision="@tree.Revision.RequestedRevision"><i data-lucide="file-code-2"></i> @entry.Name</a>
+                        }
+                    </td>
+                    <td><span class="entity-meta">@entry.Kind</span></td>
+                    <td class="text-right entity-meta">@(entry.Size?.ToString("N0") ?? "-")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,16 @@
+@model RepositoryCommitViewModel
+@{ ViewData["Title"] = Model.Commit.Commit.MessageShort; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><a asp-action="Commits" asp-route-name="@Model.RepositoryName">Commits</a><span>/</span><span>@Model.Commit.Commit.Id[..12]</span></nav>
+<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<header class="page-heading"><div><h1>@Model.Commit.Commit.MessageShort</h1><p>@Model.Commit.Commit.AuthorName · @Model.Commit.Commit.AuthoredAt.ToString("u")</p></div><code>@Model.Commit.Commit.Id</code></header>
+<pre class="commit-message">@Model.Commit.Commit.Message</pre>
+@if (Model.Commit.DiffTruncated) { <div class="alert alert-warning">The diff reached a configured display limit; omitted patches remain available through Git.</div> }
+@foreach (var file in Model.Commit.Files)
+{
+    <section class="diff-file">
+        <header><strong>@file.Path</strong><span class="diff-stat">+@file.LinesAdded -@file.LinesDeleted · @file.Status</span></header>
+        @if (file.IsBinary) { <p class="binary-diff">Binary file changed.</p> }
+        else if (file.Patch is null) { <p class="binary-diff">Patch omitted by the configured diff limit.</p> }
+        else { <pre><code class="language-diff" data-highlight>@file.Patch</code></pre> }
+    </section>
+}
