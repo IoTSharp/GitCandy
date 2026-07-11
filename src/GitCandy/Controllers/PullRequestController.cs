@@ -55,7 +55,7 @@ public sealed class PullRequestController(
                 query,
                 cancellationToken),
             Query = query,
-            CanCreate = _currentUser.IsAuthenticated && access.Value.CanWrite
+            CanCreate = _currentUser.IsAuthenticated
         });
     }
 
@@ -89,11 +89,6 @@ public sealed class PullRequestController(
             return NotFound();
         }
 
-        if (!access.Value.CanWrite)
-        {
-            return Forbid();
-        }
-
         var model = new PullRequestFormViewModel
         {
             SourceBranch = source ?? string.Empty,
@@ -118,11 +113,6 @@ public sealed class PullRequestController(
             return NotFound();
         }
 
-        if (!access.Value.CanWrite)
-        {
-            return Forbid();
-        }
-
         if (ModelState.IsValid)
         {
             try
@@ -135,7 +125,8 @@ public sealed class PullRequestController(
                         _currentUser.UserId,
                         model.SourceBranch,
                         model.TargetBranch,
-                        model.IsDraft),
+                        model.IsDraft,
+                        model.SourceRepositoryId),
                     cancellationToken);
                 return RedirectToAction(
                     nameof(Detail),
@@ -169,10 +160,14 @@ public sealed class PullRequestController(
             return NotFound();
         }
 
-        await _pullRequestService.RefreshPullRequestAsync(
+        var mergeability = await _pullRequestService.GetMergeabilityAsync(
             access.Value.Address.RepositoryId,
             number,
             cancellationToken);
+        if (mergeability is null)
+        {
+            return NotFound();
+        }
 
         var pullRequest = await _pullRequestService.GetPullRequestAsync(
             access.Value.Address.RepositoryId,
@@ -203,12 +198,65 @@ public sealed class PullRequestController(
             CanEdit = access.Value.IsOwner || ownsPullRequest,
             CanChangeState = access.Value.IsOwner || ownsPullRequest,
             ReviewOverview = reviewOverview,
+            Mergeability = mergeability,
             CanManageReviewers = access.Value.IsOwner || ownsPullRequest,
             CanSubmitReview = _currentUser.IsAuthenticated
                 && reviewOverview.Reviewers.Any(item => string.Equals(item.UserId, _currentUser.UserId, StringComparison.Ordinal)),
+            CanMerge = access.Value.CanWrite && _currentUser.IsAuthenticated,
             IsOwner = access.Value.IsOwner,
             CurrentUserId = _currentUser.UserId
         });
+    }
+
+    [HttpPost("{number:long}/merge")]
+    [Authorize]
+    public async Task<IActionResult> Merge(
+        string namespaceSlug,
+        string project,
+        long number,
+        PullRequestMergeFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var access = await ResolveAccessAsync(namespaceSlug, project, cancellationToken);
+        if (access is null || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return NotFound();
+        }
+
+        if (!access.Value.CanWrite)
+        {
+            return Forbid();
+        }
+
+        if (!ModelState.IsValid)
+        {
+            TempData["PullRequestError"] = "A merge message is required.";
+            return RedirectToAction(nameof(Detail), new { namespaceSlug, project, number });
+        }
+
+        var result = await _pullRequestService.MergePullRequestAsync(
+            access.Value.Address.RepositoryId,
+            number,
+            new MergePullRequestCommand(
+                model.Method,
+                _currentUser.UserId,
+                _currentUser.UserName ?? "GitCandy User",
+                $"{_currentUser.UserId}@users.gitcandy.local",
+                model.Message,
+                model.Version),
+            cancellationToken);
+        if (result.Result != PullRequestMutationResult.Succeeded)
+        {
+            TempData["PullRequestError"] = MutationMessage(result.Result);
+        }
+        else
+        {
+            TempData["PullRequestSuccess"] = result.ClosedIssueCount > 0
+                ? $"Merged as {result.CommitSha}; closed {result.ClosedIssueCount} issue(s)."
+                : $"Merged as {result.CommitSha}.";
+        }
+
+        return RedirectToAction(nameof(Detail), new { namespaceSlug, project, number });
     }
 
     [HttpGet("{number:long}/commits")]
@@ -653,21 +701,45 @@ public sealed class PullRequestController(
         PullRequestFormViewModel model,
         CancellationToken cancellationToken)
     {
-        model.Branches = await _pullRequestService.GetBranchesAsync(repositoryId, cancellationToken);
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            model.SourceRepositories = [];
+            model.Branches = [];
+            return;
+        }
+
+        model.SourceRepositories = await _pullRequestService.GetSourceRepositoriesAsync(
+            repositoryId,
+            _currentUser.UserId,
+            cancellationToken);
+        if (model.SourceRepositoryId == 0)
+        {
+            model.SourceRepositoryId = model.SourceRepositories
+                .FirstOrDefault(item => item.RepositoryId == repositoryId)?.RepositoryId
+                ?? model.SourceRepositories.FirstOrDefault()?.RepositoryId
+                ?? 0;
+        }
+
+        model.Branches = model.SourceRepositories
+            .SelectMany(item => item.Branches)
+            .DistinctBy(item => item.Name, StringComparer.Ordinal)
+            .OrderBy(item => item.Name, StringComparer.Ordinal)
+            .ToArray();
+        model.TargetBranches = await _pullRequestService.GetBranchesAsync(repositoryId, cancellationToken);
     }
 
     private static void SelectDefaultBranches(PullRequestFormViewModel model)
     {
-        if (model.Branches.Count == 0)
+        if (model.Branches.Count == 0 || model.TargetBranches.Count == 0)
         {
             return;
         }
 
         if (string.IsNullOrWhiteSpace(model.TargetBranch))
         {
-            model.TargetBranch = model.Branches.Any(branch => branch.Name == "main")
+            model.TargetBranch = model.TargetBranches.Any(branch => branch.Name == "main")
                 ? "main"
-                : model.Branches[0].Name;
+                : model.TargetBranches[0].Name;
         }
 
         if (string.IsNullOrWhiteSpace(model.SourceBranch))
@@ -725,6 +797,7 @@ public sealed class PullRequestController(
         PullRequestMutationResult.Duplicate => "An open Pull Request already exists for these branches.",
         PullRequestMutationResult.NoChanges => "The source branch has no commits to merge.",
         PullRequestMutationResult.BranchNotFound => "The source or target branch does not exist.",
+        PullRequestMutationResult.HookRejected => "A repository merge policy rejected this merge.",
         PullRequestMutationResult.Invalid => "The supplied Pull Request data is invalid.",
         _ => "The Pull Request could not be updated."
     };

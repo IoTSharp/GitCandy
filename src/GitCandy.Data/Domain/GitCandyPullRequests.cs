@@ -7,6 +7,9 @@ public sealed class GitCandyPullRequest
 {
     public long Id { get; set; }
     public long RepositoryId { get; set; }
+    public long? SourceRepositoryId { get; set; }
+    public string SourceNamespaceSnapshot { get; set; } = string.Empty;
+    public string SourceRepositorySnapshot { get; set; } = string.Empty;
     public long Number { get; set; }
     public string Title { get; set; } = string.Empty;
     public string BodyMarkdown { get; set; } = string.Empty;
@@ -30,6 +33,7 @@ public sealed class GitCandyPullRequest
     public DateTime? MergedAtUtc { get; set; }
     public long Version { get; set; }
     public GitCandyRepository? Repository { get; set; }
+    public GitCandyRepository? SourceRepository { get; set; }
     public GitCandyUser? Author { get; set; }
     public GitCandyUser? Assignee { get; set; }
     public GitCandyUser? MergedBy { get; set; }

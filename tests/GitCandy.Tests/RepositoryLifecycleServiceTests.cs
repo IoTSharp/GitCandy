@@ -48,6 +48,8 @@ public sealed class RepositoryLifecycleServiceTests
             Assert.IsNotNull(details);
             Assert.AreEqual("upstream", details.ForkedFromRepository);
             Assert.AreEqual("upstream", details.ForkNetworkRoot);
+            Assert.AreEqual(1L, details.ForkedFromRepositoryId);
+            Assert.AreEqual(1L, details.ForkNetworkRootRepositoryId);
             var forkPath = Path.Combine(repositoryRoot, $"{details.StorageName}.git");
             Assert.IsTrue(Repository.IsValid(forkPath));
             using (var fork = new Repository(forkPath))
@@ -171,7 +173,9 @@ public sealed class RepositoryLifecycleServiceTests
                 command.ForkedFromRepository,
                 command.ForkNetworkRoot,
                 [],
-                []));
+                [],
+                command.ForkedFromRepositoryId,
+                command.ForkNetworkRootRepositoryId));
             return Task.FromResult(true);
         }
 

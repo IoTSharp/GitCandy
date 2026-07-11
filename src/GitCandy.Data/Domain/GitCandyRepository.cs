@@ -61,6 +61,18 @@ public sealed class GitCandyRepository
     /// </summary>
     public string? ForkNetworkRoot { get; set; }
 
+    /// <summary>直接 fork 来源的稳定仓库 ID。</summary>
+    public long? ForkedFromRepositoryId { get; set; }
+
+    /// <summary>fork network 根的稳定仓库 ID。</summary>
+    public long? ForkNetworkRootRepositoryId { get; set; }
+
+    /// <summary>直接 fork 来源仓库。</summary>
+    public GitCandyRepository? ForkedFrom { get; set; }
+
+    /// <summary>fork network 根仓库。</summary>
+    public GitCandyRepository? ForkNetworkRootEntity { get; set; }
+
     /// <summary>仓库所属稳定 namespace。</summary>
     public GitCandyNamespace? Namespace { get; set; }
 

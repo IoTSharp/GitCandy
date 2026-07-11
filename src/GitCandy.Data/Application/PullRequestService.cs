@@ -7,6 +7,7 @@ using GitCandy.Issues;
 using GitCandy.PullRequests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 namespace GitCandy.Application;
 
@@ -14,15 +15,21 @@ namespace GitCandy.Application;
 internal sealed partial class PullRequestService(
     GitCandyDbContext dbContext,
     IIssueMarkdownRenderer markdownRenderer,
+    IIssueService issueService,
     IGitCandyRepositoryPermissionQuery permissionQuery,
     IPullRequestGitRepository gitRepository,
+    IEnumerable<IPullRequestMergeHook> mergeHooks,
+    ILogger<PullRequestService> logger,
     TimeProvider timeProvider,
     IOptions<GitCandyApplicationOptions> applicationOptions) : IPullRequestService
 {
     private readonly GitCandyDbContext _dbContext = dbContext;
     private readonly IIssueMarkdownRenderer _markdownRenderer = markdownRenderer;
+    private readonly IIssueService _issueService = issueService;
     private readonly IGitCandyRepositoryPermissionQuery _permissionQuery = permissionQuery;
     private readonly IPullRequestGitRepository _gitRepository = gitRepository;
+    private readonly IReadOnlyList<IPullRequestMergeHook> _mergeHooks = mergeHooks.ToArray();
+    private readonly ILogger<PullRequestService> _logger = logger;
     private readonly TimeProvider _timeProvider = timeProvider;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
 
@@ -53,7 +60,10 @@ internal sealed partial class PullRequestService(
                 item.TargetBranch,
                 item.CurrentHeadSha,
                 item.CreatedAtUtc,
-                item.UpdatedAtUtc))
+                item.UpdatedAtUtc,
+                item.SourceRepositoryId,
+                item.SourceNamespaceSnapshot,
+                item.SourceRepositorySnapshot))
             .ToArrayAsync(cancellationToken);
         return new PullRequestPage(page, pageSize, totalCount, items);
     }
@@ -65,6 +75,7 @@ internal sealed partial class PullRequestService(
     {
         var pullRequest = await _dbContext.PullRequests.AsNoTracking()
             .Include(item => item.Author)
+            .Include(item => item.SourceRepository).ThenInclude(item => item!.Namespace)
             .SingleOrDefaultAsync(
                 item => item.RepositoryId == repositoryId && item.Number == number,
                 cancellationToken);
@@ -96,6 +107,54 @@ internal sealed partial class PullRequestService(
         return storageName is null
             ? []
             : _gitRepository.GetBranches(storageName, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PullRequestSourceRepository>> GetSourceRepositoriesAsync(
+        long targetRepositoryId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var target = await _dbContext.Repositories.AsNoTracking()
+            .Where(item => item.Id == targetRepositoryId)
+            .Select(item => new
+            {
+                item.Id,
+                NetworkRootId = item.ForkNetworkRootRepositoryId ?? item.Id
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (target is null)
+        {
+            return [];
+        }
+
+        var candidates = await _dbContext.Repositories.AsNoTracking()
+            .Where(item => (item.ForkNetworkRootRepositoryId ?? item.Id) == target.NetworkRootId)
+            .Select(item => new
+            {
+                item.Id,
+                Namespace = item.Namespace!.Slug,
+                Repository = item.Name,
+                item.StorageName
+            })
+            .OrderBy(item => item.Namespace)
+            .ThenBy(item => item.Repository)
+            .ToArrayAsync(cancellationToken);
+        var result = new List<PullRequestSourceRepository>(candidates.Length);
+        foreach (var candidate in candidates)
+        {
+            if (!await CanWriteAsUserAsync(candidate.Id, userId, cancellationToken))
+            {
+                continue;
+            }
+
+            result.Add(new PullRequestSourceRepository(
+                candidate.Id,
+                candidate.Namespace,
+                candidate.Repository,
+                _gitRepository.GetBranches(candidate.StorageName, cancellationToken)));
+        }
+
+        return result;
     }
 
     public async Task<PullRequestChangeSet?> GetPullRequestChangesAsync(
@@ -236,12 +295,18 @@ internal sealed partial class PullRequestService(
     public async Task<PullRequestMutationResult> RefreshPullRequestAsync(long repositoryId, long number, CancellationToken cancellationToken = default)
     {
         var pullRequest = await _dbContext.PullRequests.Include(item => item.Repository).Include(item => item.ReviewThreads)
+            .Include(item => item.SourceRepository)
             .SingleOrDefaultAsync(item => item.RepositoryId == repositoryId && item.Number == number, cancellationToken);
         if (pullRequest is null) return PullRequestMutationResult.NotFound;
         if (pullRequest.State != PullRequestState.Open || pullRequest.Repository is null) return PullRequestMutationResult.Succeeded;
 
+        if (pullRequest.SourceRepository is null) return PullRequestMutationResult.BranchNotFound;
         var comparison = _gitRepository.CompareBranches(
-            pullRequest.Repository.StorageName, pullRequest.SourceBranch, pullRequest.TargetBranch, cancellationToken);
+            pullRequest.SourceRepository.StorageName,
+            pullRequest.SourceBranch,
+            pullRequest.Repository.StorageName,
+            pullRequest.TargetBranch,
+            cancellationToken);
         if (comparison is null) return PullRequestMutationResult.BranchNotFound;
         if (string.Equals(comparison.BaseSha, pullRequest.CurrentBaseSha, StringComparison.Ordinal)
             && string.Equals(comparison.HeadSha, pullRequest.CurrentHeadSha, StringComparison.Ordinal))
@@ -266,7 +331,13 @@ internal sealed partial class PullRequestService(
         pullRequest.CurrentBaseSha = comparison.BaseSha;
         pullRequest.CurrentHeadSha = comparison.HeadSha;
         Touch(pullRequest);
-        _gitRepository.UpdatePullRequestHead(pullRequest.Repository.StorageName, pullRequest.Number, comparison.HeadSha, cancellationToken);
+        _gitRepository.UpdatePullRequestHead(
+            pullRequest.SourceRepository.StorageName,
+            pullRequest.SourceBranch,
+            pullRequest.Repository.StorageName,
+            pullRequest.Number,
+            comparison.HeadSha,
+            cancellationToken);
         var result = await SaveMutationAsync(cancellationToken);
         if (result != PullRequestMutationResult.Succeeded)
             _gitRepository.UpdatePullRequestHead(pullRequest.Repository.StorageName, pullRequest.Number, previousHeadSha, CancellationToken.None);
@@ -300,33 +371,57 @@ internal sealed partial class PullRequestService(
         ValidateTitleAndBody(command.Title, command.Body);
         var sourceBranch = NormalizeBranch(command.SourceBranch);
         var targetBranch = NormalizeBranch(command.TargetBranch);
-        if (string.Equals(sourceBranch, targetBranch, StringComparison.Ordinal))
+        var sourceRepositoryId = command.SourceRepositoryId is > 0
+            ? command.SourceRepositoryId.Value
+            : repositoryId;
+        if (sourceRepositoryId == repositoryId
+            && string.Equals(sourceBranch, targetBranch, StringComparison.Ordinal))
         {
             throw new PullRequestValidationException(
                 PullRequestMutationResult.Invalid,
                 "Source and target branches must be different.");
         }
 
-        if (!await CanWriteAsUserAsync(repositoryId, command.AuthorUserId, cancellationToken))
+        if (!await CanReadAsUserAsync(repositoryId, command.AuthorUserId, cancellationToken)
+            || !await CanWriteAsUserAsync(sourceRepositoryId, command.AuthorUserId, cancellationToken))
         {
             throw new PullRequestValidationException(
                 PullRequestMutationResult.Forbidden,
-                "Write access to the repository is required.");
+                "Read access to the target and write access to the source repository are required.");
         }
 
-        var address = await _dbContext.Repositories.AsNoTracking()
-            .Where(item => item.Id == repositoryId)
-            .Select(item => new { item.StorageName, NamespaceSlug = item.Namespace!.Slug, RepositorySlug = item.Name })
-            .SingleOrDefaultAsync(cancellationToken)
+        var repositories = await _dbContext.Repositories.AsNoTracking()
+            .Where(item => item.Id == repositoryId || item.Id == sourceRepositoryId)
+            .Select(item => new
+            {
+                item.Id,
+                item.StorageName,
+                NamespaceSlug = item.Namespace!.Slug,
+                RepositorySlug = item.Name,
+                NetworkRootId = item.ForkNetworkRootRepositoryId ?? item.Id
+            })
+            .ToArrayAsync(cancellationToken);
+        var address = repositories.SingleOrDefault(item => item.Id == repositoryId)
             ?? throw new PullRequestValidationException(
                 PullRequestMutationResult.NotFound,
                 "The repository does not exist.");
+        var sourceAddress = repositories.SingleOrDefault(item => item.Id == sourceRepositoryId)
+            ?? throw new PullRequestValidationException(
+                PullRequestMutationResult.NotFound,
+                "The source repository does not exist.");
+        if (sourceAddress.NetworkRootId != address.NetworkRootId)
+        {
+            throw new PullRequestValidationException(
+                PullRequestMutationResult.Invalid,
+                "Source and target repositories must belong to the same fork network.");
+        }
         PullRequestBranchComparison? comparison;
         try
         {
             comparison = _gitRepository.CompareBranches(
-                address.StorageName,
+                sourceAddress.StorageName,
                 sourceBranch,
+                address.StorageName,
                 targetBranch,
                 cancellationToken);
         }
@@ -351,7 +446,7 @@ internal sealed partial class PullRequestService(
                 "The source branch has no commits to merge into the target branch.");
         }
 
-        var openPairKey = BuildOpenPairKey(sourceBranch, targetBranch);
+        var openPairKey = BuildOpenPairKey(sourceRepositoryId, sourceBranch, targetBranch);
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(
             IsolationLevel.Serializable,
             cancellationToken);
@@ -377,6 +472,9 @@ internal sealed partial class PullRequestService(
         var pullRequest = new GitCandyPullRequest
         {
             RepositoryId = repositoryId,
+            SourceRepositoryId = sourceRepositoryId,
+            SourceNamespaceSnapshot = sourceAddress.NamespaceSlug,
+            SourceRepositorySnapshot = sourceAddress.RepositorySlug,
             Number = sequence.NextNumber,
             Title = command.Title.Trim(),
             BodyMarkdown = command.Body.Trim(),
@@ -399,7 +497,7 @@ internal sealed partial class PullRequestService(
             PullRequestEventType.Created,
             command.AuthorUserId,
             now,
-            $"{sourceBranch} into {targetBranch}"));
+            $"{sourceAddress.NamespaceSlug}/{sourceAddress.RepositorySlug}:{sourceBranch} into {targetBranch}"));
         sequence.NextNumber++;
         sequence.Version++;
         _dbContext.PullRequests.Add(pullRequest);
@@ -409,6 +507,8 @@ internal sealed partial class PullRequestService(
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
             _gitRepository.UpdatePullRequestHead(
+                sourceAddress.StorageName,
+                sourceBranch,
                 address.StorageName,
                 pullRequest.Number,
                 comparison.HeadSha,
@@ -559,7 +659,15 @@ internal sealed partial class PullRequestService(
 
         if (state == PullRequestState.Open)
         {
-            var openPairKey = BuildOpenPairKey(pullRequest.SourceBranch, pullRequest.TargetBranch);
+            if (pullRequest.SourceRepositoryId is null)
+            {
+                return PullRequestMutationResult.BranchNotFound;
+            }
+
+            var openPairKey = BuildOpenPairKey(
+                pullRequest.SourceRepositoryId.Value,
+                pullRequest.SourceBranch,
+                pullRequest.TargetBranch);
             if (await _dbContext.PullRequests.AsNoTracking().AnyAsync(
                 item => item.RepositoryId == repositoryId
                     && item.Id != pullRequest.Id
@@ -698,6 +806,9 @@ internal sealed partial class PullRequestService(
             item.IsDraft,
             item.AuthorUserId,
             item.Author?.UserName ?? string.Empty,
+            item.SourceRepositoryId,
+            item.SourceNamespaceSnapshot,
+            item.SourceRepositorySnapshot,
             item.SourceBranch,
             item.TargetBranch,
             item.OriginalBaseSha,
@@ -737,8 +848,8 @@ internal sealed partial class PullRequestService(
         return branch.Trim();
     }
 
-    private static string BuildOpenPairKey(string sourceBranch, string targetBranch) =>
-        $"open:{sourceBranch.Length}:{sourceBranch}{targetBranch}";
+    private static string BuildOpenPairKey(long sourceRepositoryId, string sourceBranch, string targetBranch) =>
+        $"open:{sourceRepositoryId}:{sourceBranch.Length}:{sourceBranch}{targetBranch}";
 
     private static void ValidateTitleAndBody(string title, string body)
     {

@@ -29,7 +29,10 @@ public sealed class PullRequestFormViewModel
 
     public bool IsDraft { get; set; }
     public long Version { get; set; }
+    public long SourceRepositoryId { get; set; }
     public IReadOnlyList<PullRequestBranch> Branches { get; set; } = [];
+    public IReadOnlyList<PullRequestBranch> TargetBranches { get; set; } = [];
+    public IReadOnlyList<PullRequestSourceRepository> SourceRepositories { get; set; } = [];
 }
 
 public sealed class PullRequestDetailViewModel
@@ -39,10 +42,22 @@ public sealed class PullRequestDetailViewModel
     public bool CanEdit { get; init; }
     public bool CanChangeState { get; init; }
     public required PullRequestReviewOverview ReviewOverview { get; init; }
+    public required PullRequestMergeability Mergeability { get; init; }
     public bool CanManageReviewers { get; init; }
     public bool CanSubmitReview { get; init; }
+    public bool CanMerge { get; init; }
     public bool IsOwner { get; init; }
     public string? CurrentUserId { get; init; }
+}
+
+public sealed class PullRequestMergeFormViewModel
+{
+    public PullRequestMergeMethod Method { get; set; } = PullRequestMergeMethod.MergeCommit;
+
+    [Required, StringLength(65536)]
+    public string Message { get; set; } = string.Empty;
+
+    public long Version { get; set; }
 }
 
 public sealed class PullRequestReviewFormViewModel

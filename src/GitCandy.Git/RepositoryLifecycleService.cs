@@ -72,7 +72,9 @@ public sealed class RepositoryLifecycleService(
                     metadata = metadata with
                     {
                         ForkedFromRepository = sourceDetails.Name,
-                        ForkNetworkRoot = sourceDetails.ForkNetworkRoot ?? sourceDetails.Name
+                        ForkNetworkRoot = sourceDetails.ForkNetworkRoot ?? sourceDetails.Name,
+                        ForkedFromRepositoryId = sourceDetails.Id,
+                        ForkNetworkRootRepositoryId = sourceDetails.ForkNetworkRootRepositoryId ?? sourceDetails.Id
                     };
                     break;
                 default:

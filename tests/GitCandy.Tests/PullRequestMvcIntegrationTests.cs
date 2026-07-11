@@ -119,6 +119,44 @@ public sealed partial class PullRequestMvcIntegrationTests
         StringAssert.Contains(approvedHtml, "Approved");
         StringAssert.Contains(approvedHtml, "Reviewed through MVC.");
 
+        var authorToken = await fixture.GetAntiforgeryTokenAsync("/review-author/reviews/pulls/1/files");
+        using var resolve = await fixture.Client.PostAsync(
+            "/review-author/reviews/pulls/1/review-threads/1/resolved",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = authorToken,
+                ["resolved"] = "true"
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, resolve.StatusCode);
+        authorToken = await fixture.GetAntiforgeryTokenAsync("/review-author/reviews/pulls/1");
+        using var ready = await fixture.Client.PostAsync(
+            "/review-author/reviews/pulls/1/draft",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = authorToken,
+                ["isDraft"] = "false"
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, ready.StatusCode);
+        using var mergePage = await fixture.Client.GetAsync("/review-author/reviews/pulls/1");
+        var mergeHtml = await mergePage.Content.ReadAsStringAsync();
+        StringAssert.Contains(mergeHtml, "Mergeable");
+        var version = PullRequestVersionRegex().Match(mergeHtml);
+        Assert.IsTrue(version.Success);
+        authorToken = AntiforgeryTokenRegex().Match(mergeHtml).Groups[1].Value;
+        using var merge = await fixture.Client.PostAsync(
+            "/review-author/reviews/pulls/1/merge",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = authorToken,
+                ["Method"] = "Squash",
+                ["Message"] = "Squash reviewed feature",
+                ["Version"] = version.Groups[1].Value
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, merge.StatusCode);
+        using var mergedDetail = await fixture.Client.GetAsync("/review-author/reviews/pulls/1");
+        StringAssert.Contains(await mergedDetail.Content.ReadAsStringAsync(), "Merged");
+        fixture.AssertTargetBranchMerged(expectedParentCount: 1);
+
         await fixture.MakeRepositoryPrivateAsync();
         using var anonymousClient = fixture.CreateClient();
         using var denied = await anonymousClient.GetAsync("/review-author/reviews/pulls/1");
@@ -243,6 +281,15 @@ public sealed partial class PullRequestMvcIntegrationTests
             Assert.AreEqual(
                 "refs/pull/",
                 repository.Config.Get<string>("receive.hideRefs")?.Value);
+        }
+
+        public void AssertTargetBranchMerged(int expectedParentCount)
+        {
+            using var repository = new Repository(RepositoryPath);
+            var commit = repository.Branches["main"]?.Tip;
+            Assert.IsNotNull(commit);
+            Assert.AreEqual(expectedParentCount, commit.Parents.Count());
+            StringAssert.Contains(commit.Message, "Squash reviewed feature");
         }
 
         public async Task MakeRepositoryPrivateAsync()
@@ -429,4 +476,7 @@ public sealed partial class PullRequestMvcIntegrationTests
 
     [GeneratedRegex("href=\"([^\"]+/pulls/1/commits/[0-9a-f]{40})\"", RegexOptions.CultureInvariant)]
     private static partial Regex PullRequestCommitLinkRegex();
+
+    [GeneratedRegex("name=\"Version\" value=\"([0-9]+)\"", RegexOptions.CultureInvariant)]
+    private static partial Regex PullRequestVersionRegex();
 }

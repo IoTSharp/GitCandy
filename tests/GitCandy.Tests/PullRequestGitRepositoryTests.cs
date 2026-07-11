@@ -11,6 +11,73 @@ namespace GitCandy.Tests;
 public sealed class PullRequestGitRepositoryTests
 {
     [TestMethod]
+    public void Merge_WithMergeCommitAndSquash_UpdatesTargetWithExpectedParents()
+    {
+        VerifyMerge(PullRequestMergeMethod.MergeCommit, expectedParentCount: 2);
+        VerifyMerge(PullRequestMergeMethod.Squash, expectedParentCount: 1);
+    }
+
+    [TestMethod]
+    public void Mergeability_WithConflictingBranches_BlocksMerge()
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            CreateBareRepository(rootPath);
+            var service = CreateService(rootPath);
+            var comparison = service.CompareBranches("reviews", "conflict-source", "conflict-target");
+            Assert.IsNotNull(comparison);
+            service.UpdatePullRequestHead("reviews", 9, comparison.HeadSha);
+
+            var mergeability = service.EvaluateMergeability(
+                "reviews", "conflict-source", "reviews", "conflict-target", 9,
+                comparison.BaseSha, comparison.HeadSha);
+
+            Assert.IsTrue(mergeability.HasConflicts);
+            var merge = service.Merge(
+                "reviews", "conflict-source", "reviews", "conflict-target", 9,
+                comparison.BaseSha, comparison.HeadSha, PullRequestMergeMethod.MergeCommit,
+                "Conflicting merge", "Reviewer", "reviewer@example.com", DateTimeOffset.UtcNow);
+            Assert.AreEqual(PullRequestMutationResult.Conflict, merge.Result);
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
+    }
+
+    [TestMethod]
+    public void PullRequestHead_WithForkSource_ImportsObjectsIntoTargetRepository()
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            var targetPath = CreateBareRepository(rootPath);
+            var sourcePath = Path.Combine(rootPath, "fork.git");
+            Repository.Clone(targetPath, sourcePath, new CloneOptions { IsBare = true });
+            using (var targetRepository = new Repository(targetPath))
+            using (var sourceRepository = new Repository(sourcePath))
+            {
+                SetReference(sourceRepository, "refs/heads/main", targetRepository.Refs["refs/heads/main"].TargetIdentifier);
+                SetReference(sourceRepository, "refs/heads/feature", targetRepository.Refs["refs/heads/feature"].TargetIdentifier);
+            }
+            var service = CreateService(rootPath);
+            var comparison = service.CompareBranches("fork", "feature", "reviews", "main");
+            Assert.IsNotNull(comparison);
+
+            service.UpdatePullRequestHead("fork", "feature", "reviews", 11, comparison.HeadSha);
+
+            using var target = new Repository(targetPath);
+            Assert.AreEqual(comparison.HeadSha, target.Refs["refs/pull/11/head"]?.TargetIdentifier);
+            Assert.IsNotNull(target.Lookup<Commit>(comparison.HeadSha));
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
+    }
+
+    [TestMethod]
     public void PullRequestHead_WithBareRepository_IsFetchableAndHiddenFromReceivePack()
     {
         var rootPath = TestDirectory.Create();
@@ -192,6 +259,8 @@ public sealed class PullRequestGitRepositoryTests
         string renameSha;
         string multiSha;
         string binarySha;
+        string conflictTargetSha;
+        string conflictSourceSha;
         using (var repository = new Repository(workPath))
         {
             var signature = new Signature(
@@ -232,6 +301,18 @@ public sealed class PullRequestGitRepositoryTests
             File.WriteAllBytes(Path.Combine(workPath, "binary.dat"), [0, 1, 2, 3]);
             Commands.Stage(repository, "binary.dat");
             binarySha = repository.Commit("Add binary", signature, signature).Id.Sha;
+            Commands.Checkout(repository, main);
+            var conflictTarget = repository.CreateBranch("conflict-target", initial);
+            Commands.Checkout(repository, conflictTarget);
+            File.WriteAllText(Path.Combine(workPath, "README.md"), "target\n", Encoding.UTF8);
+            Commands.Stage(repository, "README.md");
+            conflictTargetSha = repository.Commit("Target conflict", signature, signature).Id.Sha;
+            Commands.Checkout(repository, main);
+            var conflictSource = repository.CreateBranch("conflict-source", initial);
+            Commands.Checkout(repository, conflictSource);
+            File.WriteAllText(Path.Combine(workPath, "README.md"), "source\n", Encoding.UTF8);
+            Commands.Stage(repository, "README.md");
+            conflictSourceSha = repository.Commit("Source conflict", signature, signature).Id.Sha;
         }
 
         var barePath = Path.Combine(rootPath, "reviews.git");
@@ -243,10 +324,59 @@ public sealed class PullRequestGitRepositoryTests
             SetReference(bare, "refs/heads/rename", renameSha);
             SetReference(bare, "refs/heads/multi", multiSha);
             SetReference(bare, "refs/heads/binary", binarySha);
+            SetReference(bare, "refs/heads/conflict-target", conflictTargetSha);
+            SetReference(bare, "refs/heads/conflict-source", conflictSourceSha);
             bare.Refs.UpdateTarget(bare.Refs.Head, "refs/heads/main");
         }
 
         return barePath;
+    }
+
+    private static PullRequestGitRepository CreateService(string rootPath)
+    {
+        var pathResolver = new PullRequestPathResolver(rootPath);
+        return new PullRequestGitRepository(
+            new GitServiceFactory(pathResolver),
+            new LibGit2RepositoryService(pathResolver),
+            Options.Create(new RepositoryBrowserOptions()));
+    }
+
+    private static void VerifyMerge(PullRequestMergeMethod method, int expectedParentCount)
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            var repositoryPath = CreateBareRepository(rootPath);
+            var service = CreateService(rootPath);
+            var comparison = service.CompareBranches("reviews", "feature", "main");
+            Assert.IsNotNull(comparison);
+            service.UpdatePullRequestHead("reviews", 7, comparison.HeadSha);
+            var mergeability = service.EvaluateMergeability(
+                "reviews", "feature", "reviews", "main", 7,
+                comparison.BaseSha, comparison.HeadSha);
+            Assert.IsFalse(mergeability.HasConflicts);
+            Assert.IsTrue(mergeability.SourceMatches);
+            Assert.IsTrue(mergeability.TargetMatches);
+
+            var result = service.Merge(
+                "reviews", "feature", "reviews", "main", 7,
+                comparison.BaseSha, comparison.HeadSha, method,
+                $"{method} feature", "Reviewer", "reviewer@example.com",
+                new DateTimeOffset(2026, 7, 11, 16, 0, 0, TimeSpan.Zero));
+
+            Assert.AreEqual(PullRequestMutationResult.Succeeded, result.Result);
+            Assert.IsNotNull(result.CommitSha);
+            using var repository = new Repository(repositoryPath);
+            Assert.AreEqual(result.CommitSha, repository.Refs["refs/heads/main"]?.TargetIdentifier);
+            var commit = repository.Lookup<Commit>(result.CommitSha);
+            Assert.IsNotNull(commit);
+            Assert.AreEqual(expectedParentCount, commit.Parents.Count());
+            Assert.IsNotNull(commit.Tree["README.md"]);
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
     }
 
     private static void SetReference(Repository repository, string name, string targetSha)

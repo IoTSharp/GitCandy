@@ -59,7 +59,9 @@ public sealed record RepositoryEdit(
     string? ForkedFromRepository = null,
     string? ForkNetworkRoot = null,
     string? NamespaceSlug = null,
-    string? StorageName = null);
+    string? StorageName = null,
+    long? ForkedFromRepositoryId = null,
+    long? ForkNetworkRootRepositoryId = null);
 
 /// <summary>用户仓库角色摘要。</summary>
 public sealed record RepositoryUserRoleSummary(
@@ -86,7 +88,9 @@ public sealed record RepositoryDetails(
     string? ForkedFromRepository,
     string? ForkNetworkRoot,
     IReadOnlyList<RepositoryUserRoleSummary> Users,
-    IReadOnlyList<RepositoryTeamRoleSummary> Teams);
+    IReadOnlyList<RepositoryTeamRoleSummary> Teams,
+    long? ForkedFromRepositoryId = null,
+    long? ForkNetworkRootRepositoryId = null);
 
 /// <summary>用户仓库角色变更动作。</summary>
 public enum RepositoryUserRoleAction

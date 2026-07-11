@@ -54,9 +54,21 @@ public interface IPullRequestService
     /// <summary>刷新 source/target tip，并以保存的 hunk context 重映射 review anchors。</summary>
     Task<PullRequestMutationResult> RefreshPullRequestAsync(long repositoryId, long number, CancellationToken cancellationToken = default);
 
+    /// <summary>同步复核分支 tip、冲突、review、thread 和当前治理门禁。</summary>
+    Task<PullRequestMergeability?> GetMergeabilityAsync(long repositoryId, long number, CancellationToken cancellationToken = default);
+
+    /// <summary>在重新授权和重新计算 mergeability 后执行 merge commit 或 squash。</summary>
+    Task<PullRequestMergeResult> MergePullRequestAsync(long repositoryId, long number, MergePullRequestCommand command, CancellationToken cancellationToken = default);
+
     /// <summary>读取可用于同仓库 Pull Request 的本地分支。</summary>
     Task<IReadOnlyList<PullRequestBranch>> GetBranchesAsync(
         long repositoryId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>读取当前用户可写且与 target 位于同一 fork network 的 source 仓库。</summary>
+    Task<IReadOnlyList<PullRequestSourceRepository>> GetSourceRepositoriesAsync(
+        long targetRepositoryId,
+        string userId,
         CancellationToken cancellationToken = default);
 
     /// <summary>创建 Pull Request 并维护服务端只读 head ref。</summary>
@@ -93,6 +105,20 @@ public interface IPullRequestService
         CancellationToken cancellationToken = default);
 }
 
+/// <summary>保护分支、审计、webhook 和索引入队共享的 Web merge 扩展点。</summary>
+public interface IPullRequestMergeHook
+{
+    /// <summary>写入 Git ref 前验证；返回非成功结果会阻止合并。</summary>
+    Task<PullRequestMutationResult> ValidateAsync(
+        PullRequestMergeContext context,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Git ref 与数据库成功提交后发布；失败不得回滚已完成的合并。</summary>
+    Task OnMergedAsync(
+        PullRequestMergedEvent mergedEvent,
+        CancellationToken cancellationToken = default);
+}
+
 /// <summary>PR 应用服务使用的受控 Git 分支和内部 ref 能力。</summary>
 public interface IPullRequestGitRepository
 {
@@ -105,6 +131,14 @@ public interface IPullRequestGitRepository
     PullRequestBranchComparison? CompareBranches(
         string repositoryStorageName,
         string sourceBranch,
+        string targetBranch,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>比较同一 fork network 内两个仓库的 source 与 target 分支。</summary>
+    PullRequestBranchComparison? CompareBranches(
+        string sourceRepositoryStorageName,
+        string sourceBranch,
+        string targetRepositoryStorageName,
         string targetBranch,
         CancellationToken cancellationToken = default);
 
@@ -129,6 +163,50 @@ public interface IPullRequestGitRepository
         string repositoryStorageName,
         long number,
         string headSha,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>从 source 仓库导入已验证的 head，并更新 target 仓库只读 PR ref。</summary>
+    void UpdatePullRequestHead(
+        string sourceRepositoryStorageName,
+        string sourceBranch,
+        string targetRepositoryStorageName,
+        long number,
+        string expectedHeadSha,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>基于 source/target 当前 ref 和保存快照同步计算冲突与 tip 变化。</summary>
+    PullRequestGitMergeability EvaluateMergeability(
+        string sourceRepositoryStorageName,
+        string sourceBranch,
+        string targetRepositoryStorageName,
+        string targetBranch,
+        long number,
+        string expectedBaseSha,
+        string expectedHeadSha,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>在仓库级锁内复核 ref 后创建提交并更新 target branch。</summary>
+    PullRequestGitMergeResult Merge(
+        string sourceRepositoryStorageName,
+        string sourceBranch,
+        string targetRepositoryStorageName,
+        string targetBranch,
+        long number,
+        string expectedBaseSha,
+        string expectedHeadSha,
+        PullRequestMergeMethod method,
+        string message,
+        string actorName,
+        string actorEmail,
+        DateTimeOffset timestamp,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>仅当 target 仍指向本次 merge commit 时补偿恢复旧 tip。</summary>
+    bool RollbackMerge(
+        string targetRepositoryStorageName,
+        string targetBranch,
+        string mergeCommitSha,
+        string previousTargetSha,
         CancellationToken cancellationToken = default);
 
     /// <summary>在 PR 数据库事务失败时补偿删除尚未发布的内部 head ref。</summary>

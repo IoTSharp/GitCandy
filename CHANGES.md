@@ -3,6 +3,10 @@
 ---
 ### Unreleased
 #### Added
+ - Completed M12 #135-#139 with explainable mergeability, required approvals, unresolved-thread and conflict gates, server-side merge commit/squash, conditional ref rollback, and merge-result timeline records.
+ - Added stable cross-fork Pull Request source repository IDs, controlled local object import into read-only PR refs, and same-fork-network permission validation.
+ - Added idempotent Issue auto-close after successful PR merge plus real bare-repository and Kestrel review-to-squash integration coverage.
+ - Added SQLite and SQL Server `PullRequestMergeWorkflow` migrations that safely backfill existing same-repository PR sources and immutable source-address snapshots while allowing deleted forks to be diagnosed from retained PR refs.
  - Added M12 #134 separate Pull Request assignee and reviewer roles, request/re-request review, comment/approve/request-changes decisions, owner dismissal with audit history, and head-SHA-based stale review status.
  - Added explicit `AllowAuthorApproval` and `DismissStalePullRequestApprovals` policy settings plus SQLite and SQL Server review-status migrations and service/MVC lifecycle coverage.
  - Added M12 #133 inline Pull Request review threads with server-validated old/new line ranges, replies, resolve/reopen, immutable original anchors, and unique hunk-context remapping that explicitly marks missing or ambiguous matches as outdated.

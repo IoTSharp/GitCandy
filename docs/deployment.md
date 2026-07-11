@@ -122,6 +122,7 @@ Pull Request review 策略也位于 `GitCandy:Application`：
 | --- | --- | --- |
 | `AllowAuthorApproval` | `false` | 是否允许 PR 作者提交对本人 PR 的 approve；comment 和 request changes 不受此项影响 |
 | `DismissStalePullRequestApprovals` | `true` | source head 更新后，旧 head 上的 approve 是否不再作为有效批准；历史 review 始终保留 |
+| `RequiredPullRequestApprovals` | `1` | merge/squash 前所需的当前有效 approve 数；设为 `0` 可关闭该基础门禁，M13 branch policy 会在此基础上扩展 |
 
 `CachePath/lfs` 虽位于 cache 根，但保存不可重建的 LFS 内容寻址对象，必须纳入持久卷、备份/恢复和容量告警；其他普通 cache 仍可重建。
 

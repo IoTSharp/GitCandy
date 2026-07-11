@@ -86,6 +86,9 @@ public sealed class GitCandyApplicationOptions
     /// <summary>source branch 更新后是否令旧 head 上的批准失效。</summary>
     public bool DismissStalePullRequestApprovals { get; set; } = true;
 
+    /// <summary>允许合并 Pull Request 所需的有效批准数；M13 branch policy 可在此基线上扩展。</summary>
+    public int RequiredPullRequestApprovals { get; set; } = 1;
+
     /// <summary>
     /// 内置 SSH 服务监听端口。
     /// </summary>

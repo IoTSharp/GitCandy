@@ -238,6 +238,22 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.Property(repository => repository.ForkNetworkRoot)
                 .HasMaxLength(SchemaLimits.RepositoryName);
 
+            entity.HasOne(repository => repository.ForkedFrom)
+                .WithMany()
+                .HasForeignKey(repository => repository.ForkedFromRepositoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(repository => repository.ForkNetworkRootEntity)
+                .WithMany()
+                .HasForeignKey(repository => repository.ForkNetworkRootRepositoryId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(repository => repository.ForkedFromRepositoryId)
+                .HasDatabaseName("IX_Repositories_ForkedFromRepositoryId");
+
+            entity.HasIndex(repository => repository.ForkNetworkRootRepositoryId)
+                .HasDatabaseName("IX_Repositories_ForkNetworkRootRepositoryId");
+
             entity.HasOne(repository => repository.Namespace)
                 .WithMany(item => item.Repositories)
                 .HasForeignKey(repository => repository.NamespaceId)

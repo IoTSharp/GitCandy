@@ -326,6 +326,161 @@ public sealed class PullRequestServiceTests
         Assert.IsTrue(overview.Reviews.Single().IsEffectiveApproval);
     }
 
+    [TestMethod]
+    public async Task MergePullRequest_WithApproval_UpdatesStateAndClosesReferencedIssue()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync();
+        var issueService = fixture.Services.GetRequiredService<IIssueService>();
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+        var issue = await issueService.CreateIssueAsync(
+            fixture.RepositoryId,
+            new CreateIssueCommand("Close after merge", string.Empty, fixture.AuthorId));
+        var pullRequest = await service.CreatePullRequestAsync(
+            fixture.RepositoryId,
+            new CreatePullRequestCommand(
+                "Approved feature",
+                $"Closes #{issue.Number}",
+                fixture.AuthorId,
+                "feature",
+                "main",
+                IsDraft: false));
+        await service.RequestReviewAsync(
+            fixture.RepositoryId,
+            pullRequest.Number,
+            fixture.AuthorId,
+            isOwner: true,
+            fixture.ReviewerId);
+        await service.SubmitReviewAsync(
+            fixture.RepositoryId,
+            pullRequest.Number,
+            fixture.ReviewerId,
+            new SubmitPullRequestReviewCommand(PullRequestReviewState.Approved, "Approved."));
+
+        var mergeability = await service.GetMergeabilityAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.IsNotNull(mergeability);
+        Assert.IsTrue(mergeability.IsMergeable);
+        Assert.AreEqual(1, mergeability.EffectiveApprovals);
+        var current = await service.GetPullRequestAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.IsNotNull(current);
+
+        var result = await service.MergePullRequestAsync(
+            fixture.RepositoryId,
+            pullRequest.Number,
+            new MergePullRequestCommand(
+                PullRequestMergeMethod.Squash,
+                fixture.AuthorId,
+                "author",
+                "author@example.com",
+                "Squash approved feature",
+                current.Version));
+
+        Assert.AreEqual(PullRequestMutationResult.Succeeded, result.Result);
+        Assert.AreEqual(1, result.ClosedIssueCount);
+        current = await service.GetPullRequestAsync(fixture.RepositoryId, pullRequest.Number);
+        Assert.AreEqual(PullRequestState.Merged, current!.State);
+        Assert.AreEqual(result.CommitSha, current.MergeCommitSha);
+        Assert.IsTrue(current.Timeline.Any(item => item.Type == PullRequestEventType.Merged));
+        var closedIssue = await issueService.GetIssueAsync(
+            fixture.RepositoryId,
+            issue.Number,
+            fixture.AuthorId);
+        Assert.AreEqual(IssueState.Closed, closedIssue!.State);
+        Assert.IsTrue(closedIssue.Timeline.Any(item => item.Type == IssueEventType.AutoClosed));
+    }
+
+    [TestMethod]
+    public async Task CreatePullRequest_WithForkSource_UsesStableRepositoryRelationship()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync();
+        var dbContext = fixture.Services.GetRequiredService<GitCandyDbContext>();
+        var fork = new GitCandyRepository
+        {
+            NamespaceId = GitCandyNamespace.LegacyNamespaceId,
+            Name = "reviews-fork",
+            StorageName = "reviews-fork",
+            Description = string.Empty,
+            CreatedAtUtc = DateTime.UtcNow,
+            ForkedFromRepositoryId = fixture.RepositoryId,
+            ForkNetworkRootRepositoryId = fixture.RepositoryId,
+            ForkedFromRepository = "reviews",
+            ForkNetworkRoot = "reviews"
+        };
+        fork.UserRoles.Add(new GitCandyUserRepositoryRole
+        {
+            UserId = fixture.AuthorId,
+            AllowRead = true,
+            AllowWrite = true,
+            IsOwner = true
+        });
+        dbContext.Repositories.Add(fork);
+        await dbContext.SaveChangesAsync();
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+
+        var sources = await service.GetSourceRepositoriesAsync(
+            fixture.RepositoryId,
+            fixture.AuthorId);
+        Assert.IsTrue(sources.Any(item => item.RepositoryId == fixture.RepositoryId));
+        Assert.IsTrue(sources.Any(item => item.RepositoryId == fork.Id));
+
+        var pullRequest = await service.CreatePullRequestAsync(
+            fixture.RepositoryId,
+            new CreatePullRequestCommand(
+                "Fork feature",
+                "Cross repository change",
+                fixture.AuthorId,
+                "feature",
+                "main",
+                IsDraft: true,
+                SourceRepositoryId: fork.Id));
+
+        Assert.AreEqual(fork.Id, pullRequest.SourceRepositoryId);
+        Assert.AreEqual("reviews-fork", pullRequest.SourceRepository);
+        Assert.AreEqual(FakePullRequestGitRepository.FeatureSha, fixture.Git.HeadReferences[pullRequest.Number]);
+
+        dbContext.Repositories.Remove(fork);
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
+        pullRequest = (await service.GetPullRequestAsync(fixture.RepositoryId, pullRequest.Number))!;
+        Assert.IsNull(pullRequest.SourceRepositoryId);
+        Assert.AreEqual("legacy", pullRequest.SourceNamespace);
+        Assert.AreEqual("reviews-fork", pullRequest.SourceRepository);
+    }
+
+    [TestMethod]
+    public async Task MergePullRequest_WithRejectedPreMergeHook_DoesNotWriteGitOrDatabase()
+    {
+        await using var fixture = await PullRequestFixture.CreateAsync(rejectMerge: true);
+        var service = fixture.Services.GetRequiredService<IPullRequestService>();
+        var pullRequest = await service.CreatePullRequestAsync(
+            fixture.RepositoryId,
+            new CreatePullRequestCommand("Policy check", string.Empty, fixture.AuthorId, "feature", "main", IsDraft: false));
+        await service.RequestReviewAsync(
+            fixture.RepositoryId, pullRequest.Number, fixture.AuthorId, isOwner: true, fixture.ReviewerId);
+        await service.SubmitReviewAsync(
+            fixture.RepositoryId,
+            pullRequest.Number,
+            fixture.ReviewerId,
+            new SubmitPullRequestReviewCommand(PullRequestReviewState.Approved, string.Empty));
+        pullRequest = (await service.GetPullRequestAsync(fixture.RepositoryId, pullRequest.Number))!;
+
+        var result = await service.MergePullRequestAsync(
+            fixture.RepositoryId,
+            pullRequest.Number,
+            new MergePullRequestCommand(
+                PullRequestMergeMethod.MergeCommit,
+                fixture.AuthorId,
+                "author",
+                "author@example.com",
+                "Rejected merge",
+                pullRequest.Version));
+
+        Assert.AreEqual(PullRequestMutationResult.HookRejected, result.Result);
+        Assert.AreEqual(0, fixture.Git.MergeCallCount);
+        pullRequest = (await service.GetPullRequestAsync(fixture.RepositoryId, pullRequest.Number))!;
+        Assert.AreEqual(PullRequestState.Open, pullRequest.State);
+        Assert.IsNull(pullRequest.MergeCommitSha);
+    }
+
     private static CreatePullRequestCommand NewCommand(string authorId, string sourceBranch) =>
         new("PR title", "PR body", authorId, sourceBranch, "main", IsDraft: true);
 
@@ -360,7 +515,8 @@ public sealed class PullRequestServiceTests
 
         public static async Task<PullRequestFixture> CreateAsync(
             bool allowAuthorApproval = false,
-            bool dismissStaleApprovals = true)
+            bool dismissStaleApprovals = true,
+            bool rejectMerge = false)
         {
             var databasePath = Path.Combine(
                 Path.GetTempPath(),
@@ -384,6 +540,10 @@ public sealed class PullRequestServiceTests
                 options.DismissStalePullRequestApprovals = dismissStaleApprovals;
             });
             services.AddSingleton<IPullRequestGitRepository>(git);
+            if (rejectMerge)
+            {
+                services.AddSingleton<IPullRequestMergeHook, RejectingPullRequestMergeHook>();
+            }
             var provider = services.BuildServiceProvider(validateScopes: true);
             var scope = provider.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
@@ -467,6 +627,7 @@ public sealed class PullRequestServiceTests
         public string? LastStorageName { get; private set; }
         public string FeatureHeadSha { get; set; } = FeatureSha;
         public bool CanRemap { get; set; } = true;
+        public int MergeCallCount { get; private set; }
 
         public IReadOnlyList<PullRequestBranch> GetBranches(
             string repositoryStorageName,
@@ -496,6 +657,14 @@ public sealed class PullRequestServiceTests
                 _ => null
             };
         }
+
+        public PullRequestBranchComparison? CompareBranches(
+            string sourceRepositoryStorageName,
+            string sourceBranch,
+            string targetRepositoryStorageName,
+            string targetBranch,
+            CancellationToken cancellationToken = default) =>
+            CompareBranches(sourceRepositoryStorageName, sourceBranch, targetBranch, cancellationToken);
 
         public PullRequestChangeSet? ReadChangeSet(
             string repositoryStorageName,
@@ -537,6 +706,52 @@ public sealed class PullRequestServiceTests
             CancellationToken cancellationToken = default) =>
             HeadReferences[number] = headSha;
 
+        public void UpdatePullRequestHead(
+            string sourceRepositoryStorageName,
+            string sourceBranch,
+            string targetRepositoryStorageName,
+            long number,
+            string expectedHeadSha,
+            CancellationToken cancellationToken = default) =>
+            UpdatePullRequestHead(targetRepositoryStorageName, number, expectedHeadSha, cancellationToken);
+
+        public PullRequestGitMergeability EvaluateMergeability(
+            string sourceRepositoryStorageName,
+            string sourceBranch,
+            string targetRepositoryStorageName,
+            string targetBranch,
+            long number,
+            string expectedBaseSha,
+            string expectedHeadSha,
+            CancellationToken cancellationToken = default) =>
+            new(true, true, true, true, false, expectedHeadSha, expectedBaseSha);
+
+        public PullRequestGitMergeResult Merge(
+            string sourceRepositoryStorageName,
+            string sourceBranch,
+            string targetRepositoryStorageName,
+            string targetBranch,
+            long number,
+            string expectedBaseSha,
+            string expectedHeadSha,
+            PullRequestMergeMethod method,
+            string message,
+            string actorName,
+            string actorEmail,
+            DateTimeOffset timestamp,
+            CancellationToken cancellationToken = default)
+        {
+            MergeCallCount++;
+            return new(PullRequestMutationResult.Succeeded, "cccccccccccccccccccccccccccccccccccccccc");
+        }
+
+        public bool RollbackMerge(
+            string targetRepositoryStorageName,
+            string targetBranch,
+            string mergeCommitSha,
+            string previousTargetSha,
+            CancellationToken cancellationToken = default) => true;
+
         public PullRequestReviewAnchor? CaptureReviewAnchor(
             string repositoryStorageName,
             string baseSha,
@@ -564,5 +779,17 @@ public sealed class PullRequestServiceTests
             long number,
             CancellationToken cancellationToken = default) =>
             HeadReferences.Remove(number);
+    }
+
+    private sealed class RejectingPullRequestMergeHook : IPullRequestMergeHook
+    {
+        public Task<PullRequestMutationResult> ValidateAsync(
+            PullRequestMergeContext context,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(PullRequestMutationResult.Forbidden);
+
+        public Task OnMergedAsync(
+            PullRequestMergedEvent mergedEvent,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

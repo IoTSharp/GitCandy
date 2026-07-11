@@ -90,7 +90,9 @@ internal sealed class RepositoryManagementService(
             repository.ForkedFromRepository,
             repository.ForkNetworkRoot,
             users,
-            teams);
+            teams,
+            repository.ForkedFromRepositoryId,
+            repository.ForkNetworkRootRepositoryId);
     }
 
     /// <inheritdoc />
@@ -350,7 +352,9 @@ internal sealed class RepositoryManagementService(
             Description = command.Description.Trim(),
             CreatedAtUtc = DateTime.UtcNow,
             ForkedFromRepository = NormalizeOptionalName(command.ForkedFromRepository),
-            ForkNetworkRoot = NormalizeOptionalName(command.ForkNetworkRoot)
+            ForkNetworkRoot = NormalizeOptionalName(command.ForkNetworkRoot),
+            ForkedFromRepositoryId = command.ForkedFromRepositoryId,
+            ForkNetworkRootRepositoryId = command.ForkNetworkRootRepositoryId
         };
         ApplyVisibility(repository, command);
         return repository;

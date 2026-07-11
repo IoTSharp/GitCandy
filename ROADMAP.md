@@ -692,7 +692,7 @@ ASP.NET Core 中间件和后台能力：
 - labels、milestones、assignees、relations 和 timeline 在并发编辑、元数据删除/归档后保持一致。
 - 私有仓库 Issue 不通过引用、通知、搜索、全局计数或 403/404 差异泄漏。
 
-### 🚧 Milestone 12：Pull Request、代码评审与合并
+### ✅ Milestone 12：Pull Request、代码评审与合并
 
 目标：在 GitCandy 内完成从分支变更提议、diff 评审、修改迭代、批准到安全合并的日常协作闭环。
 
@@ -704,7 +704,7 @@ ASP.NET Core 中间件和后台能力：
 - 合并前必须重新读取 source/target tip、冲突、approval/check、draft 和权限，并用 repository 级锁或等价乐观并发避免合并过期 head。
 - 第一版提供 merge commit 和 squash；rebase merge、merge queue/train、批量 suggestion apply 和在线解决冲突延后。
 
-#### 🚧 M12 拆分
+#### ✅ M12 拆分
 
 | 编号 | 主题 | 验收重点 |
 | --- | --- | --- |
@@ -713,11 +713,11 @@ ASP.NET Core 中间件和后台能力：
 | ✅ #132 | Conversation、Commits、Files changed | 展示 description/timeline、提交列表、merge-base diff、renames/binary/large diff 降级、分页/折叠和固定 commit 链接 |
 | ✅ #133 | 行内 Review threads | 支持单行/范围评论、reply、resolve/unresolve 和 outdated；新 push 后基于 hunk context 重映射，不能把评论静默挂到错误代码 |
 | ✅ #134 | Reviewer 与 Review 状态 | author/assignee/reviewer 分离，支持 request review、comment、approve、request changes、dismiss/re-request；本人批准和过期批准策略显式配置 |
-| ⬜ #135 | Mergeability 与冲突检测 | 汇总 draft、source/target 变化、conflict、required approval/check 和 branch policy；状态异步刷新但合并时必须同步复核 |
-| ⬜ #136 | Merge commit 与 Squash 服务 | 所有 ref 写入收敛到受控 merge service，生成可审阅 message，校验目标未变化，写入失败不留下半完成状态，并触发 hook/audit/index queue |
-| ⬜ #137 | Issue 关联与自动关闭 | PR 显示 related Issue，merge 成功后按 closing keywords 幂等关闭目标 Issue；close/reopen 未合并 PR 不关闭 Issue |
-| ⬜ #138 | Fork 与跨仓库 PR | 在 M10 namespace 和 #106 fork 生命周期上支持同 fork network 的 source repository，删除 fork/source branch 后保留审计和可诊断状态 |
-| ⬜ #139 | PR/Review/Merge 集成验证 | 覆盖并发 push/merge、outdated thread、冲突、权限撤销、branch 删除、merge/squash、hook 失败、大 diff 和真实 Git fetch/push 后 ref 结果 |
+| ✅ #135 | Mergeability 与冲突检测 | 汇总 draft、source/target 变化、conflict、required approval/check 和 branch policy；状态异步刷新但合并时必须同步复核 |
+| ✅ #136 | Merge commit 与 Squash 服务 | 所有 ref 写入收敛到受控 merge service，生成可审阅 message，校验目标未变化，写入失败不留下半完成状态，并触发 hook/audit/index queue |
+| ✅ #137 | Issue 关联与自动关闭 | PR 显示 related Issue，merge 成功后按 closing keywords 幂等关闭目标 Issue；close/reopen 未合并 PR 不关闭 Issue |
+| ✅ #138 | Fork 与跨仓库 PR | 在 M10 namespace 和 #106 fork 生命周期上支持同 fork network 的 source repository，删除 fork/source branch 后保留审计和可诊断状态 |
+| ✅ #139 | PR/Review/Merge 集成验证 | 覆盖并发 push/merge、outdated thread、冲突、权限撤销、branch 删除、merge/squash、hook 失败、大 diff 和真实 Git fetch/push 后 ref 结果 |
 
 验收：
 
@@ -907,7 +907,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ M9 | 迁移后改进池 | 仓库工作区、生命周期、代码浏览与 Git LFS 均已完成可验证闭环 |
 | ✅ M10 | 稳定命名空间 | `/{namespace}/{repository}[.git]`、改名限频、历史 alias、Web/Git HTTP/SSH 兼容与提示闭环 |
 | ✅ M11 | Issues | Issue、评论、代码块、labels、milestones、assignees、references、notifications 和权限闭环 |
-| ⬜ M12 | Pull Request 与 Review | draft、commits、files changed、行内 review、approval、merge/squash 和并发/权限闭环 |
+| ✅ M12 | Pull Request 与 Review | draft、commits、files changed、行内 review、approval、merge/squash 和并发/权限闭环 |
 | ⬜ M13 | 合并治理与集成 | PAT、webhook、status/check、branch protection、CODEOWNERS、审计、release 和外部 CI 闭环 |
 | ⬜ M14 | 企业组织与身份 | 四级团队角色、Microsoft Entra ID、企业微信、飞书、钉钉登录/目录同步和管理员连接界面闭环 |
 | ⬜ M15 | 远程仓库连接 | GitHub/GitLab/Gitee 账号绑定、导入、Pull/Push mirror、持久化 job、webhook 和故障诊断闭环 |

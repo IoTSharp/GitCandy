@@ -25,6 +25,10 @@ public sealed class GitCandyApplicationOptionsValidator : IValidateOptions<GitCa
         ValidatePositive(options.NumberOfCommitsPerPage, nameof(options.NumberOfCommitsPerPage), failures);
         ValidatePositive(options.NumberOfItemsPerList, nameof(options.NumberOfItemsPerList), failures);
         ValidatePositive(options.NumberOfRepositoryContributors, nameof(options.NumberOfRepositoryContributors), failures);
+        if (options.RequiredPullRequestApprovals is < 0 or > 100)
+        {
+            failures.Add($"{nameof(options.RequiredPullRequestApprovals)} must be between 0 and 100.");
+        }
 
         return failures.Count == 0
             ? ValidateOptionsResult.Success

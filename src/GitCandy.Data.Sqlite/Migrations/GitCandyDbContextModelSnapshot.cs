@@ -798,6 +798,19 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("SourceNamespaceSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("SourceRepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceRepositorySnapshot")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -828,6 +841,9 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.HasIndex("AuthorUserId");
 
                     b.HasIndex("MergedByUserId");
+
+                    b.HasIndex("SourceRepositoryId")
+                        .HasDatabaseName("IX_PullRequests_SourceRepositoryId");
 
                     b.HasIndex("RepositoryId", "ActivePairKey")
                         .IsUnique()
@@ -1194,9 +1210,15 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<long?>("ForkNetworkRootRepositoryId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("ForkedFromRepository")
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
+
+                    b.Property<long?>("ForkedFromRepositoryId")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsPrivate")
                         .HasColumnType("INTEGER");
@@ -1220,6 +1242,12 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ForkNetworkRootRepositoryId")
+                        .HasDatabaseName("IX_Repositories_ForkNetworkRootRepositoryId");
+
+                    b.HasIndex("ForkedFromRepositoryId")
+                        .HasDatabaseName("IX_Repositories_ForkedFromRepositoryId");
 
                     b.HasIndex("StorageName")
                         .IsUnique()
@@ -1984,6 +2012,11 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "SourceRepository")
+                        .WithMany()
+                        .HasForeignKey("SourceRepositoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Assignee");
 
                     b.Navigation("Author");
@@ -1991,6 +2024,8 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("MergedBy");
 
                     b.Navigation("Repository");
+
+                    b.Navigation("SourceRepository");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReview", b =>
@@ -2111,11 +2146,25 @@ namespace GitCandy.Data.Sqlite.Migrations
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
                 {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "ForkNetworkRootEntity")
+                        .WithMany()
+                        .HasForeignKey("ForkNetworkRootRepositoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "ForkedFrom")
+                        .WithMany()
+                        .HasForeignKey("ForkedFromRepositoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("GitCandy.Data.Domain.GitCandyNamespace", "Namespace")
                         .WithMany("Repositories")
                         .HasForeignKey("NamespaceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ForkNetworkRootEntity");
+
+                    b.Navigation("ForkedFrom");
 
                     b.Navigation("Namespace");
                 });

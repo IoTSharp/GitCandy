@@ -9,6 +9,7 @@
     @if (Model.CanEdit) { <div class="page-actions"><a class="btn" asp-action="Edit" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="pencil"></i> Edit</a></div> }
 </header>
 @if (TempData["PullRequestError"] is string error) { <div class="alert alert-warning" role="alert">@error</div> }
+@if (TempData["PullRequestSuccess"] is string success) { <div class="alert alert-success" role="status">@success</div> }
 <nav class="repository-navigation" aria-label="Pull Request views">
     <a class="is-active" asp-action="Detail" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="message-square"></i> Conversation</a>
     <a asp-action="Commits" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number"><i data-lucide="list-ordered"></i> Commits</a>
@@ -65,7 +66,7 @@
         }
     </div>
     <aside class="issue-sidebar">
-        <section><h2>Source</h2><p>@Model.PullRequest.SourceBranch</p><code>@Model.PullRequest.CurrentHeadSha[..Math.Min(12, Model.PullRequest.CurrentHeadSha.Length)]</code></section>
+        <section><h2>Source</h2><p>@Model.PullRequest.SourceNamespace/@Model.PullRequest.SourceRepository:@Model.PullRequest.SourceBranch</p><code>@Model.PullRequest.CurrentHeadSha[..Math.Min(12, Model.PullRequest.CurrentHeadSha.Length)]</code></section>
         <section><h2>Target</h2><p>@Model.PullRequest.TargetBranch</p><code>@Model.PullRequest.CurrentBaseSha[..Math.Min(12, Model.PullRequest.CurrentBaseSha.Length)]</code></section>
         <section>
             <h2>Assignee</h2>
@@ -105,6 +106,21 @@
             <h2>Review policy</h2>
             <p>@(Model.ReviewOverview.Policy.AllowAuthorApproval ? "Author approval allowed" : "Author approval disabled")</p>
             <p>@(Model.ReviewOverview.Policy.DismissStaleApprovals ? "Stale approvals dismissed" : "Stale approvals retained")</p>
+        </section>
+        <section>
+            <h2>Mergeability</h2>
+            <p><span class="status-badge @(Model.Mergeability.IsMergeable ? "status-public" : "status-private")">@Model.Mergeability.State</span></p>
+            <p>@Model.Mergeability.EffectiveApprovals / @Model.Mergeability.RequiredApprovals approvals</p>
+            @foreach (var reason in Model.Mergeability.BlockingReasons) { <p>@reason</p> }
+            @if (Model.CanMerge && Model.PullRequest.State == PullRequestState.Open)
+            {
+                <form asp-action="Merge" asp-route-namespaceSlug="@Model.Repository.NamespaceSlug" asp-route-project="@Model.Repository.RepositorySlug" asp-route-number="@Model.PullRequest.Number" method="post">
+                    <input type="hidden" name="Version" value="@Model.PullRequest.Version" />
+                    <label>Method<select name="Method"><option value="MergeCommit">Create merge commit</option><option value="Squash">Squash and merge</option></select></label>
+                    <label>Message<textarea name="Message" rows="4" maxlength="65536" required>Merge pull request #@Model.PullRequest.Number: @Model.PullRequest.Title</textarea></label>
+                    <button class="btn btn-primary" type="submit" disabled="@(!Model.Mergeability.IsMergeable ? "disabled" : null)"><i data-lucide="git-merge"></i> Merge</button>
+                </form>
+            }
         </section>
         @if (Model.CanEdit && Model.PullRequest.State == PullRequestState.Open)
         {
