@@ -36,6 +36,5 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.16.0" />
     <PackageVersion Include="Quartz.Extensions.Hosting" Version="3.18.2" />
     <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
-    <PackageVersion Include="SonnetDB.EntityFrameworkCore" Version="3.0.1" />
   </ItemGroup>
 </Project>

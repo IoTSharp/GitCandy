@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/external/SonnetDB/">
+    <Project Path="external/SonnetDB/src/SonnetDB.Core/SonnetDB.Core.csproj" />
+    <Project Path="external/SonnetDB/src/SonnetDB.Data/SonnetDB.Data.csproj" />
+    <Project Path="external/SonnetDB/src/SonnetDB.EntityFrameworkCore/SonnetDB.EntityFrameworkCore.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/GitCandy.Core/GitCandy.Core.csproj" />
     <Project Path="src/GitCandy.Ssh/GitCandy.Ssh.csproj" />

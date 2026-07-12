@@ -7,6 +7,7 @@ using GitCandy.Caching;
 using GitCandy.Data;
 using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
+using GitCandy.Data.SonnetDB;
 using GitCandy.Data.Sqlite;
 using GitCandy.Diagnostics;
 using GitCandy.Git;
@@ -83,7 +84,7 @@ public static class WebServiceCollectionExtensions
             ServiceDescriptor.Singleton<IHostedService, GitCandyApplicationPathValidationHostedService>());
         services.TryAddSingleton<IRequestProfilerAccessor, HttpContextRequestProfilerAccessor>();
 
-        services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+        services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
         services.AddGitCandyGit();
         services.AddGitCandyHealthChecks();
@@ -226,7 +227,7 @@ public static class WebServiceCollectionExtensions
         services.AddGitCandyOpenSshOptions(configuration);
         services.AddGitSmartHttpOptions(configuration);
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
-        services.AddGitCandyData(configuration, builder => builder.AddSqlite());
+        services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
         services.AddGitCandyGit();
         services.AddGitCandyOpenSshAdapter();
@@ -260,6 +261,28 @@ public static class WebServiceCollectionExtensions
         });
 
         return services;
+    }
+
+    private static IServiceCollection AddConfiguredGitCandyData(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var provider = GitCandyDatabaseOptionsReader.Read(configuration).Provider;
+        return services.AddGitCandyData(configuration, builder =>
+        {
+            switch (provider)
+            {
+                case GitCandyDatabaseProvider.Sqlite:
+                    builder.AddSqlite();
+                    break;
+                case GitCandyDatabaseProvider.SonnetDB:
+                    builder.AddSonnetDB();
+                    break;
+                default:
+                    throw new NotSupportedException(
+                        $"GitCandy database provider '{provider}' is not available in this host.");
+            }
+        });
     }
 
     private static IServiceCollection AddGitCandyApplicationOptions(

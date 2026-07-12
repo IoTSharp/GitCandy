@@ -53,6 +53,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -84,6 +86,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
@@ -117,6 +121,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Create representative recovery set
         shell: pwsh
         run: |
@@ -134,6 +140,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Validate Compose
         run: |

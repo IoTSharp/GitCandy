@@ -1,6 +1,6 @@
 # GitCandy EF Core Database Providers
 
-GitCandy's ASP.NET Core migration uses SQLite first while the main Web, Identity, repository, Git HTTP, SSH, and scheduler slices are still being brought up. SQL Server has a separate provider and initial migration so its schema SQL can be generated and reviewed. PostgreSQL/pgsql and SonnetDB remain visible in the provider plan, but their migration SQL, schema differences, and deployment validation are handled after the main migration path works end to end.
+GitCandy defaults to SQLite. The Web host can also select SonnetDB explicitly for the M12.6 production profile; the composition root registers only the configured provider. SQL Server remains a migration validation provider, while PostgreSQL stays an optional extension without production migration validation.
 
 The design still mirrors IoTSharp's provider-neutral direction: keep the base `DbContext` provider-neutral, while the active host registration and business implementation stay on SQLite for the current vertical slices.
 
@@ -11,7 +11,7 @@ Current implementation status:
 | SQLite | Active implementation provider | Default local provider and current smoke-test target |
 | SQL Server | Migration validation provider | Independent provider/migrations assembly; idempotent Identity/domain SQL is covered without requiring a live server |
 | PostgreSQL | Optional implemented extension | Existing optional provider work stays visible but is not expanded during the first vertical slices |
-| SonnetDB | Optional implemented extension | Existing optional provider work stays visible but is not expanded during the first vertical slices |
+| SonnetDB | Production-profile provider | Independent migration assembly, Identity/repository smoke coverage, and the `gitcandy.com` deployment profile |
 
 ## Configuration
 
@@ -75,7 +75,8 @@ Supported provider aliases:
 | `GitCandy.Data.Sqlite` | SQLite `UseSqlite` registration and future SQLite migrations |
 | `GitCandy.Data.SqlServer` | SQL Server `UseSqlServer` registration and SQL Server migrations |
 | `GitCandy.Data.PostgreSql` | Optional PostgreSQL `UseNpgsql` registration and future PostgreSQL migrations |
-| `GitCandy.Data.SonnetDB` | Optional SonnetDB `UseSonnetDB` registration and future SonnetDB migrations |
+| `GitCandy.Data.SonnetDB` | SonnetDB `UseSonnetDB` registration and independent migrations |
+| `external/SonnetDB` | Source submodule for the patched ADO.NET/EF provider and database engine |
 
 EF Core only scaffolds migrations for the active provider. Every first-stage schema change must add SQLite and SQL Server migrations. Optional provider migrations are required only when that provider is included in the release scope.
 
@@ -106,10 +107,11 @@ Optional PostgreSQL:
 dotnet ef migrations add InitialCreate --project src/GitCandy.Data.PostgreSql --startup-project src/GitCandy.Data.PostgreSql --context GitCandyDbContext --output-dir Migrations
 ```
 
-Optional SonnetDB:
+SonnetDB:
 
 ```powershell
-dotnet ef migrations add InitialCreate --project src/GitCandy.Data.SonnetDB --startup-project src/GitCandy.Data.SonnetDB --context GitCandyDbContext --output-dir Migrations
+dotnet ef migrations has-pending-model-changes --project src/GitCandy.Data.SonnetDB --startup-project src/GitCandy.Data.SonnetDB --context GitCandyDbContext
+dotnet ef database update --project src/GitCandy.Data.SonnetDB --startup-project src/GitCandy.Data.SonnetDB --context GitCandyDbContext --connection "Data Source=path/to/test-database"
 ```
 
-Do not run production schema changes automatically on application startup. Generate and review migration SQL during release preparation, and do not commit generated `artifacts/` output. `EnsureCreated` is acceptable for early smoke tests only; it is not a release migration strategy.
+The GitCandy host checks pending migrations and applies them before Web, SSH, and background services start. A failed migration prevents the process from listening. Do not use `EnsureCreated` for production. Initialize submodules before restore/build because the SonnetDB project uses the pinned source submodule rather than the published package.

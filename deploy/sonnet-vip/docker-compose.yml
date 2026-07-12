@@ -1,0 +1,39 @@
+name: gitcandy
+
+services:
+  gitcandy:
+    image: ${GITCANDY_IMAGE:-gitcandy:sonnet-vip}
+    restart: unless-stopped
+    mem_limit: ${GITCANDY_MEMORY_LIMIT:-384m}
+    mem_reservation: ${GITCANDY_MEMORY_RESERVATION:-128m}
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      AllowedHosts: gitcandy.com
+      GitCandy__Database__Provider: SonnetDB
+      ConnectionStrings__GitCandy: Data Source=sonnetdb+http://sonnetdb:5080/gitcandy;Token=${GITCANDY_SONNETDB_TOKEN:?set GITCANDY_SONNETDB_TOKEN};Timeout=100
+      GitCandy__Proxy__Enabled: "true"
+      GitCandy__Proxy__ForwardLimit: "1"
+      GitCandy__Proxy__KnownProxies__0: 172.31.0.2
+      GitCandy__Application__SshPort: "2222"
+    ports:
+      - "127.0.0.1:${GITCANDY_LOCAL_HTTP_PORT:-18080}:8080"
+      - "${GITCANDY_SSH_PORT:-2222}:2222"
+    volumes:
+      - ./data:/var/lib/gitcandy
+    networks:
+      edge:
+        ipv4_address: 172.31.0.3
+        aliases:
+          - gitcandy
+      database:
+
+networks:
+  edge:
+    external: true
+    name: sonnet-gitcandy-edge
+  database:
+    external: true
+    name: sonnet-vip-sub2api_backend

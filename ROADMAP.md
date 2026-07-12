@@ -10,15 +10,15 @@
 - 🚧 进行中：已经开始实现，但验收尚未闭环。
 - ⬜ 未完成：尚未开始，或没有可验证的完成记录。
 
-编号规则：路线图编号按优先级和实施顺序排列；编号越小，越应优先推进。同一 Milestone 内按 `#` 任务编号顺序推进。M12.5 使用 `#139A-#139I` 表示插入 M12 与 M13 之间的收口任务，避免重编号尚未实施但已被文档引用的 M13-M16。当前没有验收记录的编号默认标为 ⬜。
+编号规则：路线图编号按优先级和实施顺序排列；编号越小，越应优先推进。同一 Milestone 内按 `#` 任务编号顺序推进。M12.5 使用 `#139A-#139I`，M12.6 使用 `#139J-#139L` 表示插入 M12 与 M13 之间的收口任务，避免重编号尚未实施但已被文档引用的 M13-M16。当前没有验收记录的编号默认标为 ⬜。
 
 校准说明：
 
 - 第一阶段迁移主线（M0-M8）和 M9 迁移后改进池已经完成：ASP.NET Core 10 host、EF Core + Identity、MVC、Git Smart HTTP/SSH、仓库代码工作区、Git LFS、部署与运维均有可验证闭环；后续路线转为“代码托管产品协作能力”。
 - M10-M12 已完成稳定命名空间、Issue、Pull Request、代码评审和 merge/squash 主链；当前不再扩张迁移范围，先收口已发现的稳定性、账号恢复、TLS 部署和 CI 门禁，再进入 M13 合并治理与外部集成。
-- 活动主线已具备 `GitCandyDbContext`、SQLite/SQL Server migration、ASP.NET Core Identity、MVC、Git HTTP/SSH、部署和迁移保护网；PostgreSQL/SonnetDB 仍是后续可选 provider 工作，不应与协作功能 schema 同批扩张。
+- 活动主线已具备 `GitCandyDbContext`、SQLite/SQL Server/SonnetDB migration、ASP.NET Core Identity、MVC、Git HTTP/SSH、部署和迁移保护网；SQLite 仍为默认 provider，SonnetDB 仅由 `gitcandy.com` 专用配置显式启用，PostgreSQL 仍是后续可选 provider 工作。
 - `GitCandy.slnx` 是唯一活动 solution；旧 `GitCandy.sln` 和 MVC5 源码已在迁移完成后退役，历史实现通过 Git 历史和 `docs/migration` 行为基线查阅。
-- 当前短期数据库策略为 SQLite-first：业务实现、Identity/领域 schema、登录/仓库列表等垂直切片先只以 SQLite 作为运行和验收 provider。M3 已补齐 SQL Server 独立 migration 与 SQL 生成审阅；SQL Server 真实部署验证、PostgreSQL/SonnetDB migration、schema 差异和部署兼容性等整体迁移跑通后再独立回补。
+- 当前数据库策略仍为 SQLite-first：通用业务实现和默认部署继续以 SQLite 为基线；M3 已补齐 SQL Server 独立 migration 与 SQL 生成审阅，M12.6 已补齐 SonnetDB 独立 migration、兼容性回归和 `gitcandy.com` 专用部署路径。SQL Server 真实部署验证与 PostgreSQL provider 仍需后续独立回补。
 
 ## 当前产品状态与下一步
 
@@ -28,7 +28,7 @@
 
 | 能力 | 当前状态 |
 | --- | --- |
-| 平台与数据 | ASP.NET Core 10、EF Core、Identity、SQLite 运行路径、SQL Server migration SQL、Nullable/Analyzer 门禁 |
+| 平台与数据 | ASP.NET Core 10、EF Core、Identity、SQLite 默认运行路径、SQL Server migration SQL、SonnetDB 专用生产路径、Nullable/Analyzer 门禁 |
 | Git 服务 | Smart HTTP、内置 SSH、clone/fetch/push、Git protocol v2、大 pack 流式传输、统一 transport backend |
 | 仓库能力 | 稳定 namespace/alias、创建/导入/fork/删除、tree/blob/raw/history/diff/blame/compare/archive、Git LFS basic transfer |
 | 账号与权限 | Identity cookie、独立 Git Basic、2FA、恢复码、可选 OIDC、用户 SSH key、仓库/团队/管理员权限 |
@@ -787,6 +787,23 @@ ASP.NET Core 中间件和后台能力：
 - Branch/Tag 删除不能删除默认分支或逃逸允许的 ref namespace，真实 Git 客户端能观察到正确结果；Contributors 在大仓库边界下可取消、限时且不暴露作者邮箱。
 - 覆盖率、浏览器 smoke test、发布启动和备份恢复结果进入 CI 或发布门禁，不只保留人工说明。
 
+### 🚧 Milestone 12.6：SonnetDB 生产部署垂直切片
+
+目标：在不改变 SQLite 默认部署的前提下，让配置明确选择 SonnetDB 的 GitCandy 实例具备独立 migration、Identity/领域读写保护网，并部署到 `gitcandy.com` 与现有 sonnet.vip Caddy/SonnetDB 栈协同运行。
+
+| 编号 | 主题 | 验收重点 |
+| --- | --- | --- |
+| ✅ #139J | Host 按配置选择 SonnetDB | Composition Root 读取 `GitCandy:Database:Provider` 后只注册 SQLite 或 SonnetDB 其中一个；Web 与 OpenSSH 命令路径一致，默认仍为 SQLite |
+| ✅ #139K | SonnetDB migration 与兼容修复 | 完整 Identity/领域 migration 可在远程空库执行；修复唯一索引 NULL 语义、Serializable 事务读取、savepoint 能力声明、EF `COALESCE` 投影和 Server 镜像构建；Identity 注册/登录、repository CRUD 与真实 Git HTTP smoke 通过 |
+| 🚧 #139L | `gitcandy.com` 生产部署 | 复用现有 Caddy 与内部 SonnetDB，固定代理信任边界，持久化 repository/LFS/host key/Data Protection 数据；DNS、TLS、Web 登录、HTTP/SSH clone/fetch/push 和备份恢复全部验证后完成 |
+
+验收：
+
+- SonnetDB 只在配置选择时加载，SQLite 现有测试和部署行为不回归。
+- SonnetDB migration、Identity、权限查询和领域 CRUD 在嵌入式测试与远程 Server profile 上均通过。
+- `gitcandy.com` 的 HTTP 自动跳转 HTTPS，Caddy 不缓冲 Git pack 响应，SSH 使用独立端口且 SonnetDB 不暴露公网。
+- 数据库、repositories、LFS、SSH host key 和 Data Protection keys 纳入同一备份/恢复与回滚演练。
+
 ### ⬜ Milestone 13：合并治理、外部集成与发布基础
 
 目标：让 Issue/PR 不只是页面功能，而能接入外部 CI、自动化和仓库治理，并形成可审计、可诊断的团队开发入口。
@@ -972,6 +989,7 @@ ASP.NET Core 中间件和后台能力：
 | ✅ M11 | Issues | Issue、评论、代码块、labels、milestones、assignees、references、notifications 和权限闭环 |
 | ✅ M12 | Pull Request 与 Review | draft、commits、files changed、行内 review、approval、merge/squash 和并发/权限闭环 |
 | ✅ M12.5 | 稳定性与基本面收口 | alias 协议稳定、原子限流、Branches/Tags/Contributors、密码恢复、TLS 快速部署、跨平台 CI、覆盖率和恢复演练闭环 |
+| 🚧 M12.6 | SonnetDB 生产部署 | provider 按配置选择、SonnetDB migration/兼容保护网已完成，`gitcandy.com` 已解析到目标主机；等待远程部署与 Web/Git HTTP/SSH/恢复验收 |
 | ⬜ M13 | 合并治理与集成 | PAT、webhook、status/check、branch protection、CODEOWNERS、审计、release 和外部 CI 闭环 |
 | ⬜ M14 | 企业组织与身份 | 四级团队角色、Microsoft Entra ID、企业微信、飞书、钉钉登录/目录同步和管理员连接界面闭环 |
 | ⬜ M15 | 远程仓库连接 | GitHub/GitLab/Gitee 账号绑定、导入、Pull/Push mirror、持久化 job、webhook 和故障诊断闭环 |
@@ -979,7 +997,7 @@ ASP.NET Core 中间件和后台能力：
 
 ## 当前实施顺序
 
-1. ✅ M12.5：已修 Git HTTP alias 间歇失败和 Issue 并发限流，按 `#139G -> #139H -> #139I` 补齐 Branches/Tags/Contributors，并完成密码恢复、TLS 快速部署、跨平台 CI、覆盖率与恢复演练。
+1. 🚧 M12.6：完成 `#139J/#139K` 与 DNS 解析，当前推进 `#139L` 的生产部署与协议/恢复验收。
 2. ⬜ M13 凭据与 push gate：按 `#140 -> #140A -> #143` 完成 PAT、deploy key 和基础保护分支。
 3. ⬜ M13 外部 CI：按 `#141/#142 -> #144-#149` 完成 webhook、status/check、required checks/CODEOWNERS、通知、审计、release 和搜索。
 4. ⬜ M14-M15：在 M13 的稳定 ID、凭据、通知和审计边界上推进企业身份与远程 mirror。

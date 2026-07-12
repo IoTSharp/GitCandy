@@ -5,6 +5,8 @@ using GitCandy.Profiling;
 using Microsoft.Extensions.Options;
 
 var openSshRequested = OpenSshCommandLine.IsRequested(args);
+var migrationOnlyRequested = args.Length == 1
+    && string.Equals(args[0], "--migrate", StringComparison.Ordinal);
 OpenSshInvocation? openSshInvocation = null;
 if (openSshRequested && !OpenSshCommandLine.TryParse(args, out openSshInvocation))
 {
@@ -69,6 +71,10 @@ if (openSshRequested)
 }
 
 await app.Services.MigrateGitCandyDatabaseAsync();
+if (migrationOnlyRequested)
+{
+    return 0;
+}
 
 if (app.Services.GetRequiredService<IOptions<GitCandyProxyOptions>>().Value.Enabled)
 {

@@ -1,0 +1,3 @@
+[submodule "external/SonnetDB"]
+	path = external/SonnetDB
+	url = https://github.com/IoTSharp/SonnetDB.git

@@ -63,6 +63,8 @@ curl --fail https://git.example.com/health/ready
 
 `GitCandy:Proxy` 默认关闭。overlay 只信任固定容器地址 `172.16.0.2`，`ForwardLimit=1`；自行更换网络时必须同步修改 `KnownProxies`，禁止清空 known proxies/networks 后信任任意来源。Forwarded Headers 在 HTTPS redirect、认证和链接生成之前执行，因此 clone URL 与 OIDC callback 使用外部 `https` scheme/host。
 
+`deploy/sonnet-vip` 提供 `gitcandy.com` 的服务器专用 profile：复用该主机已有 Caddy 和内部 SonnetDB，不启动第二个 Caddy，也不公开数据库端口。该 profile、DNS、固定代理地址、SSH `2222`、secret 注入和验证步骤见 [sonnet.vip 部署说明](../deploy/sonnet-vip/README.md)。
+
 密码恢复使用 `GitCandy:Identity:AccountRecovery`。启用时配置 SMTP `Host`、`Port`、`EnableSsl`、`UserName`、`Password` 和 `FromAddress`；密码应通过 secret store 或未提交的环境配置提供。默认 token 有效一小时，同一 IP/邮箱分区 15 分钟最多请求五次。未配置或投递失败不会在响应中泄漏账号是否存在，也不会记录 token 或邮箱。
 
 ## Linux systemd 服务

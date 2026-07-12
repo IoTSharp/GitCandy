@@ -154,6 +154,43 @@ public sealed class WebServiceCollectionExtensionsTests
     }
 
     [TestMethod]
+    public async Task AddGitCandyWebShell_WithSonnetDBProvider_RegistersOnlyConfiguredProvider()
+    {
+        var tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "GitCandy.Tests",
+            Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["GitCandy:Database:Provider"] = "sonnetdb",
+                    ["ConnectionStrings:GitCandy"] = $"Data Source={Path.Combine(tempRoot, "sonnetdb")}"
+                })
+                .Build();
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddSingleton<IWebHostEnvironment>(new TestWebHostEnvironment(tempRoot));
+
+            services.AddGitCandyWebShell(configuration);
+
+            await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            Assert.AreEqual("SonnetDB.EntityFrameworkCore", dbContext.Database.ProviderName);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [TestMethod]
     public async Task AddGitCandyWebShell_WithMefReplacementServices_ResolvesApplicationGitAndSchedulerServices()
     {
         var tempRoot = Path.Combine(

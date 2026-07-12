@@ -40,6 +40,7 @@ docker pull iotsharp/gitcandy:latest
 - 可选的仅迁移命令：`GitCandy --migrate`
 - 部署、配置、备份、恢复与回滚：[docs/deployment.md](docs/deployment.md)
 - 数据库 provider 说明：[docs/database-providers.md](docs/database-providers.md)
+- 复用 sonnet.vip 现有 Caddy/SonnetDB 部署 `gitcandy.com`：[deploy/sonnet-vip/README.md](deploy/sonnet-vip/README.md)
 - 迁移路线图：[ROADMAP.md](ROADMAP.md)
 - 变更记录：[CHANGES.md](CHANGES.md)
 
@@ -53,6 +54,10 @@ dotnet test GitCandy.slnx
 ```
 
 `GitCandy.slnx` 是当前唯一活动 solution。已退役的 MVC5 源码可通过 Git 历史查阅，行为基线继续保留在 `docs/migration`。
+
+## 鸣谢
+
+感谢 [sonnet.vip](https://sonnet.vip/) 为 GitCandy 部署提供服务器资源。
 
 ## 协议
 

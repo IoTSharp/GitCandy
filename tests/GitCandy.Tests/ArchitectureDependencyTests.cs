@@ -11,7 +11,7 @@ public sealed class ArchitectureDependencyTests
             ["GitCandy.Core"] = [],
             ["GitCandy.Data"] = ["GitCandy.Core"],
             ["GitCandy.Data.PostgreSql"] = ["GitCandy.Data"],
-            ["GitCandy.Data.SonnetDB"] = ["GitCandy.Data"],
+            ["GitCandy.Data.SonnetDB"] = ["GitCandy.Data", "SonnetDB.EntityFrameworkCore"],
             ["GitCandy.Data.Sqlite"] = ["GitCandy.Data"],
             ["GitCandy.Data.SqlServer"] = ["GitCandy.Data"],
             ["GitCandy.Git"] = ["GitCandy.Core"],
@@ -20,6 +20,7 @@ public sealed class ArchitectureDependencyTests
             [
                 "GitCandy.Core",
                 "GitCandy.Data",
+                "GitCandy.Data.SonnetDB",
                 "GitCandy.Data.Sqlite",
                 "GitCandy.Git",
                 "GitCandy.Ssh"

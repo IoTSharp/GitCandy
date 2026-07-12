@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -56,6 +58,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -159,6 +163,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
@@ -207,6 +213,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
