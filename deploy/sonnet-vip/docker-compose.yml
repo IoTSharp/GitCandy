@@ -11,7 +11,7 @@ services:
       - /tmp
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      AllowedHosts: gitcandy.com
+      AllowedHosts: "gitcandy.com;127.0.0.1"
       GitCandy__Database__Provider: SonnetDB
       ConnectionStrings__GitCandy: Data Source=sonnetdb+http://sonnetdb:5080/gitcandy;Token=${GITCANDY_SONNETDB_TOKEN:?set GITCANDY_SONNETDB_TOKEN};Timeout=100
       GitCandy__Proxy__Enabled: "true"

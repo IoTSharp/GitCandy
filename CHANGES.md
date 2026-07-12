@@ -14,6 +14,7 @@
  - Added `IoTSharp/SonnetDB` as a source submodule and fixed unique-index NULL semantics in the database engine so EF migration seed rows can contain multiple NULL values while duplicate non-NULL values remain rejected.
 
 #### Fixed
+ - Fixed the `gitcandy.com` production Compose health check by allowing the container-local loopback host alongside the public host name.
  - Fixed the documented `GitCandy --migrate` command so it exits successfully after applying migrations instead of continuing to start the Web, SSH, scheduler, and background host.
  - Fixed SonnetDB production compatibility for remote empty-database migrations, serializable EF transactions with transactional reads, unsupported savepoint reporting, EF-generated `COALESCE` projections, and clean recursive-checkout Server image builds.
  - Added M12.5 Branches, Tags, and Contributors pages on canonical repository URLs, including default-branch protection, controlled ref deletion, annotated-tag metadata, archives, and bounded statistics without exposing author email addresses.
