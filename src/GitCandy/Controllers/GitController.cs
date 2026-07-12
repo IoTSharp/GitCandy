@@ -55,7 +55,7 @@ public sealed class GitController(
     /// <returns>流式 Git Smart HTTP 响应。</returns>
     public async Task<IActionResult> Smart(
         string project,
-        string? namespaceSlug = null,
+        string namespaceSlug,
         string? verb = null,
         [FromQuery] string? service = null)
     {
@@ -95,16 +95,17 @@ public sealed class GitController(
         RepositoryAddressResolution? address;
         try
         {
-            address = string.IsNullOrWhiteSpace(namespaceSlug)
-                ? await _addressResolver.ResolveLegacyAsync(project, HttpContext.RequestAborted)
-                : await _addressResolver.ResolveAsync(namespaceSlug, project, HttpContext.RequestAborted);
+            address = await _addressResolver.ResolveAsync(
+                namespaceSlug,
+                project,
+                HttpContext.RequestAborted);
         }
         catch (ArgumentException)
         {
             return NotFound();
         }
 
-        if (address is null)
+        if (address is null || address.UsedAlias)
         {
             return NotFound();
         }
@@ -126,21 +127,6 @@ public sealed class GitController(
             return principal.Identity?.IsAuthenticated == true
                 ? StatusCode(StatusCodes.Status403Forbidden)
                 : await ChallengeGitClientAsync();
-        }
-
-        if (operation.AdvertiseRefs && address.UsedAlias)
-        {
-            var canonicalAddress = await _addressResolver.ResolveAsync(
-                address.NamespaceSlug,
-                address.RepositorySlug,
-                HttpContext.RequestAborted);
-            if (canonicalAddress is not null)
-            {
-                return RedirectPreservingQuery(
-                    $"{address.CanonicalPath}.git/{verb}",
-                    permanent: true,
-                    preserveMethod: true);
-            }
         }
 
         GitRepositoryContext repositoryContext;

@@ -49,31 +49,31 @@ public sealed class GitLfsIntegrationTests
         await fixture.RunGitAsync(["-C", workTree, "add", ".gitattributes", "payload.bin"]);
         await fixture.RunGitAsync(["-C", workTree, "commit", "-m", "Add LFS payload"]);
         await fixture.RunGitAsync([
-            "-C", workTree, "remote", "add", "origin", $"{fixture.BaseAddress}git/lfs-demo.git"]);
+            "-C", workTree, "remote", "add", "origin", $"{fixture.BaseAddress}legacy/lfs-demo.git"]);
         await fixture.RunGitAsync(["-C", workTree, "push", "-u", "origin", "main"], authenticate: true);
 
         var headCommit = await fixture.RunGitForOutputAsync(["-C", workTree, "rev-parse", "HEAD"]);
         var baseCommit = await fixture.RunGitForOutputAsync(["-C", workTree, "rev-parse", "HEAD~1"]);
         using (var client = new HttpClient { BaseAddress = new Uri(fixture.BaseAddress) })
         {
-            var treeHtml = await client.GetStringAsync("Repository/Tree/lfs-demo");
+            var treeHtml = await client.GetStringAsync("legacy/lfs-demo");
             StringAssert.Contains(treeHtml, "payload.bin");
-            StringAssert.Contains(treeHtml, "Repository/Commits/lfs-demo");
-            var blobHtml = await client.GetStringAsync("Repository/Blob/lfs-demo/.gitattributes");
+            StringAssert.Contains(treeHtml, "/legacy/lfs-demo/commits");
+            var blobHtml = await client.GetStringAsync("legacy/lfs-demo/blob/.gitattributes");
             StringAssert.Contains(blobHtml, "id=\"L1\"");
             StringAssert.Contains(blobHtml, headCommit);
-            var raw = await client.GetStringAsync("Repository/Raw/lfs-demo/.gitattributes");
+            var raw = await client.GetStringAsync("legacy/lfs-demo/raw/.gitattributes");
             StringAssert.Contains(raw, "filter=lfs");
-            var commitsHtml = await client.GetStringAsync("Repository/Commits/lfs-demo");
+            var commitsHtml = await client.GetStringAsync("legacy/lfs-demo/commits");
             StringAssert.Contains(commitsHtml, "Add LFS payload");
-            var commitHtml = await client.GetStringAsync($"Repository/Commit/lfs-demo/{headCommit}");
+            var commitHtml = await client.GetStringAsync($"legacy/lfs-demo/commit/{headCommit}");
             StringAssert.Contains(commitHtml, "payload.bin");
-            var blameHtml = await client.GetStringAsync("Repository/Blame/lfs-demo/.gitattributes");
+            var blameHtml = await client.GetStringAsync("legacy/lfs-demo/blame/.gitattributes");
             StringAssert.Contains(blameHtml, "Blame");
             var compareHtml = await client.GetStringAsync(
-                $"Repository/Compare/lfs-demo?baseRevision={baseCommit}&headRevision={headCommit}");
+                $"legacy/lfs-demo/compare?baseRevision={baseCommit}&headRevision={headCommit}");
             StringAssert.Contains(compareHtml, "1</strong> ahead");
-            using var archiveResponse = await client.GetAsync($"Repository/Archive/lfs-demo?revision={headCommit}");
+            using var archiveResponse = await client.GetAsync($"legacy/lfs-demo/archive?revision={headCommit}");
             Assert.AreEqual(System.Net.HttpStatusCode.OK, archiveResponse.StatusCode);
             Assert.AreEqual("application/zip", archiveResponse.Content.Headers.ContentType?.MediaType);
         }
@@ -90,14 +90,14 @@ public sealed class GitLfsIntegrationTests
         {
             using var headRequest = new HttpRequestMessage(
                 HttpMethod.Head,
-                $"git/lfs-demo.git/info/lfs/objects/{oid}");
+                $"legacy/lfs-demo.git/info/lfs/objects/{oid}");
             using var headResponse = await protocolClient.SendAsync(headRequest);
             Assert.AreEqual(HttpStatusCode.OK, headResponse.StatusCode);
             Assert.AreEqual(LfsObjectSize, headResponse.Content.Headers.ContentLength);
 
             using var rangeRequest = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"git/lfs-demo.git/info/lfs/objects/{oid}");
+                $"legacy/lfs-demo.git/info/lfs/objects/{oid}");
             rangeRequest.Headers.Range = new RangeHeaderValue(0, 31);
             using var rangeResponse = await protocolClient.SendAsync(rangeRequest);
             Assert.AreEqual(HttpStatusCode.PartialContent, rangeResponse.StatusCode);
@@ -108,7 +108,7 @@ public sealed class GitLfsIntegrationTests
                 Encoding.UTF8,
                 "application/vnd.git-lfs+json");
             using var privateResponse = await protocolClient.PostAsync(
-                "git/private-lfs.git/info/lfs/objects/batch",
+                "legacy/private-lfs.git/info/lfs/objects/batch",
                 privateBatch);
             Assert.AreEqual(HttpStatusCode.Unauthorized, privateResponse.StatusCode);
             Assert.IsTrue(privateResponse.Headers.WwwAuthenticate.Any(value =>
@@ -116,7 +116,7 @@ public sealed class GitLfsIntegrationTests
 
             using var verifyRequest = new HttpRequestMessage(
                 HttpMethod.Post,
-                $"git/lfs-demo.git/info/lfs/objects/{oid}/verify");
+                $"legacy/lfs-demo.git/info/lfs/objects/{oid}/verify");
             verifyRequest.Headers.Authorization = fixture.CreateAuthorizationHeader();
             verifyRequest.Content = new StringContent(
                 $"{{\"oid\":\"{oid}\",\"size\":1}}",
@@ -133,7 +133,7 @@ public sealed class GitLfsIntegrationTests
         CollectionAssert.AreEqual(content, await File.ReadAllBytesAsync(objectPath));
 
         await fixture.RunGitAsync([
-            "-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}git/lfs-demo.git", clonePath]);
+            "-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}legacy/lfs-demo.git", clonePath]);
         var clonedContent = await File.ReadAllBytesAsync(Path.Combine(clonePath, "payload.bin"));
         Assert.AreEqual(oid, Convert.ToHexString(SHA256.HashData(clonedContent)).ToLowerInvariant());
     }
@@ -243,6 +243,24 @@ public sealed class GitLfsIntegrationTests
                         IsOwner = true
                     });
                     dbContext.Repositories.Add(privateRepository);
+                    await dbContext.SaveChangesAsync();
+                    dbContext.RepositoryClaims.AddRange(
+                        new GitCandyRepositoryClaim
+                        {
+                            NamespaceId = GitCandyNamespace.LegacyNamespaceId,
+                            NormalizedSlug = "LFS-DEMO",
+                            Slug = repository.Name,
+                            ClaimType = NameClaimType.Current,
+                            RepositoryId = repository.Id
+                        },
+                        new GitCandyRepositoryClaim
+                        {
+                            NamespaceId = GitCandyNamespace.LegacyNamespaceId,
+                            NormalizedSlug = "PRIVATE-LFS",
+                            Slug = privateRepository.Name,
+                            ClaimType = NameClaimType.Current,
+                            RepositoryId = privateRepository.Id
+                        });
                     await dbContext.SaveChangesAsync();
                 }
 

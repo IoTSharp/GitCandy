@@ -63,6 +63,12 @@ public sealed class RepositoryTreeViewModel
 {
     public required string RepositoryName { get; init; }
 
+    public string? NamespaceSlug { get; init; }
+
+    public string? Description { get; init; }
+
+    public bool CanManage { get; init; }
+
     public RepositoryTreeResult? Tree { get; init; }
 }
 

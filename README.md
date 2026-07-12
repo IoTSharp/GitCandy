@@ -40,9 +40,9 @@ Tagged GitHub Releases also contain Linux and Windows service packages, migratio
 
 ## Repository URLs
 
-The canonical repository address is `/{namespace}/{repository}`. Git Smart HTTP accepts both `/{namespace}/{repository}.git` and the no-suffix form; SSH uses `ssh://git@host:port/{namespace}/{repository}.git`. A namespace belongs to an Identity user or team and is case-insensitively unique across both owner types.
+The canonical repository page is `/{namespace}/{repository}`. Git Smart HTTP and LFS use `/{namespace}/{repository}.git`; SSH uses `ssh://git@host:port/{namespace}/{repository}.git`. A namespace belongs to an Identity user or team and is case-insensitively unique across both owner types.
 
-The legacy `/git/{project}[.git]` Smart HTTP and SSH paths remain available through explicit database mappings. Renaming a user, team, or repository keeps the old address as a direct alias to the stable ID. Web and Git HTTP discovery requests use `308 Permanent Redirect` to advertise the canonical remote; SSH alias requests continue through the same authorization and transport backend.
+Repository routes are a direct cutover. Legacy `/git/{project}[.git]`, `/Repository/...` browsing routes, no-suffix HTTP/SSH Git remotes, and retained rename aliases are not served or redirected. They return not found; clients must update their remote to the current namespace/repository `.git` URL.
 
 Name history defaults are configured under `GitCandy:Namespaces`:
 

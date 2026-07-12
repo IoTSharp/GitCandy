@@ -3,19 +3,22 @@
     ViewData["Title"] = Model.Blob.Name;
     var lines = Model.Blob.Text?.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n') ?? [];
     var parentPath = System.IO.Path.GetDirectoryName(Model.Blob.Path)?.Replace('\\', '/');
+    var canonicalUrl = ViewData["CanonicalUrl"] as string;
+    var namespaceSlug = ViewData["NamespaceSlug"] as string;
+    var repositorySlug = ViewData["RepositorySlug"] as string;
 }
-<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><span>@Model.Blob.Name</span></nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-controller="Repository" asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a href="@(canonicalUrl ?? Url.Action("Tree", new { name = Model.RepositoryName }))">@Model.RepositoryName</a><span>/</span><span>@Model.Blob.Name</span></nav>
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading">
     <div><h1>@Model.Blob.Name</h1><p>@Model.Blob.Size.ToString("N0") bytes · @Model.Blob.Revision.DisplayName</p></div>
     <div class="page-actions">
-        <a class="btn" asp-action="Raw" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blob.Path" asp-route-revision="@Model.Blob.Revision.CommitId"><i data-lucide="download"></i> Raw</a>
-        <a class="btn" asp-action="Blame" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blob.Path" asp-route-revision="@Model.Blob.Revision.CommitId"><i data-lucide="scan-text"></i> Blame</a>
-        <a class="btn" asp-action="Blob" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blob.Path" asp-route-revision="@Model.Blob.Revision.CommitId"><i data-lucide="link"></i> Permalink</a>
+        <a class="btn" href="@(canonicalUrl is null ? Url.Action("Raw", new { name = Model.RepositoryName, path = Model.Blob.Path, revision = Model.Blob.Revision.CommitId }) : Url.RouteUrl("canonical-repository-raw", new { namespaceSlug, project = repositorySlug, path = Model.Blob.Path, revision = Model.Blob.Revision.CommitId }))"><i data-lucide="download"></i> Raw</a>
+        <a class="btn" href="@(canonicalUrl is null ? Url.Action("Blame", new { name = Model.RepositoryName, path = Model.Blob.Path, revision = Model.Blob.Revision.CommitId }) : Url.RouteUrl("canonical-repository-blame", new { namespaceSlug, project = repositorySlug, path = Model.Blob.Path, revision = Model.Blob.Revision.CommitId }))"><i data-lucide="scan-text"></i> Blame</a>
+        <a class="btn" href="@(canonicalUrl is null ? Url.Action("Blob", new { name = Model.RepositoryName, path = Model.Blob.Path, revision = Model.Blob.Revision.CommitId }) : Url.RouteUrl("canonical-repository-blob", new { namespaceSlug, project = repositorySlug, path = Model.Blob.Path, revision = Model.Blob.Revision.CommitId }))"><i data-lucide="link"></i> Permalink</a>
         <button class="icon-button" type="button" data-copy-lines data-tooltip="Copy selected lines" aria-label="Copy selected lines"><i data-lucide="copy"></i></button>
     </div>
 </header>
-<nav class="path-breadcrumb" aria-label="Code path"><a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@parentPath" asp-route-revision="@Model.Blob.Revision.RequestedRevision">@Model.RepositoryName / @Model.Blob.Path</a></nav>
+<nav class="path-breadcrumb" aria-label="Code path"><a href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = parentPath, revision = Model.Blob.Revision.RequestedRevision }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = parentPath, revision = Model.Blob.Revision.RequestedRevision }))">@Model.RepositoryName / @Model.Blob.Path</a></nav>
 @if (Model.Blob.IsTooLarge)
 {
     <div class="alert alert-warning">This file exceeds the configured display limit. Raw streaming remains available.</div>

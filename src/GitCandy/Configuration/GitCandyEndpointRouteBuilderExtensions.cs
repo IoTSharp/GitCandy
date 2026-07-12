@@ -9,7 +9,7 @@ namespace GitCandy.Configuration;
 public static class GitCandyEndpointRouteBuilderExtensions
 {
     /// <summary>
-    /// 注册 Git Smart HTTP 与 MVC 兼容路由，保持旧 GitCandy 公开 URL 可匹配。
+    /// 注册 Git Smart HTTP 与 MVC 路由。
     /// </summary>
     /// <param name="endpoints">端点路由构建器。</param>
     /// <returns>同一个端点路由构建器。</returns>
@@ -45,16 +45,6 @@ public static class GitCandyEndpointRouteBuilderExtensions
             .WithStaticAssets();
 
         endpoints.MapControllerRoute(
-            name: "legacy-repository-dotgit",
-            pattern: "git/{project}.git",
-            defaults: new { controller = "NamespaceRepository", action = "Legacy" });
-
-        endpoints.MapControllerRoute(
-            name: "legacy-repository",
-            pattern: "git/{project}",
-            defaults: new { controller = "NamespaceRepository", action = "Legacy" });
-
-        endpoints.MapControllerRoute(
             name: "namespace-repository-dotgit",
             pattern: "{namespaceSlug}/{project}.git",
             defaults: new { controller = "NamespaceRepository", action = "GitCompatibility" });
@@ -65,23 +55,8 @@ public static class GitCandyEndpointRouteBuilderExtensions
             defaults: new { controller = "NamespaceRepository", action = "Index" });
 
         endpoints.MapControllerRoute(
-            name: "git-dotgit",
-            pattern: "git/{project}.git/{**verb}",
-            defaults: new { controller = "Git", action = "Smart" });
-
-        endpoints.MapControllerRoute(
-            name: "git",
-            pattern: "git/{project}/{**verb}",
-            defaults: new { controller = "Git", action = "Smart" });
-
-        endpoints.MapControllerRoute(
             name: "namespace-git-dotgit",
             pattern: "{namespaceSlug}/{project}.git/{**verb}",
-            defaults: new { controller = "Git", action = "Smart" });
-
-        endpoints.MapControllerRoute(
-            name: "namespace-git",
-            pattern: "{namespaceSlug}/{project}/{**verb}",
             defaults: new { controller = "Git", action = "Smart" });
 
         return endpoints;

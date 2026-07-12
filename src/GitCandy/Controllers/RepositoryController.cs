@@ -116,32 +116,20 @@ public sealed class RepositoryController(
             return View(model);
         }
 
-        return RedirectToAction(nameof(Detail), new { name = model.Name });
-    }
-
-    [HttpGet]
-    [AllowAnonymous]
-    public async Task<IActionResult> Detail(string name, CancellationToken cancellationToken)
-    {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
-        if (denied is not null)
+        var namespaceSlug = model.NamespaceSlug ?? _currentUser.UserName;
+        if (!string.IsNullOrWhiteSpace(namespaceSlug))
         {
-            return denied;
+            var address = await _addressResolver.ResolveAsync(
+                namespaceSlug,
+                model.Name,
+                cancellationToken);
+            if (address is not null)
+            {
+                return Redirect(address.CanonicalPath);
+            }
         }
 
-        var repository = await _repositoryManagementService.GetRepositoryAsync(
-            GetResolvedRepository().RepositoryId,
-            cancellationToken);
-        if (repository is null)
-        {
-            return NotFound();
-        }
-
-        var canManage = (await _authorizationService.AuthorizeAsync(
-            User,
-            new RepositoryAuthorizationResource(name),
-            AuthorizationPolicies.RepositoryOwner)).Succeeded;
-        return View(new RepositoryDetailsViewModel { Repository = repository, CanManage = canManage });
+        return RedirectToAction(nameof(Index));
     }
 
     [HttpGet]
@@ -204,7 +192,7 @@ public sealed class RepositoryController(
             name,
             model.ToCommand(),
             cancellationToken)
-                ? RedirectToAction(nameof(Detail), new { name })
+                ? Redirect(GetResolvedRepository().CanonicalPath)
                 : NotFound();
     }
 
@@ -402,16 +390,20 @@ public sealed class RepositoryController(
             : NotFound();
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/tree/{**path}", Name = "canonical-repository-tree")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Tree(
-        string name,
         string? path,
         string? revision,
+        string namespaceSlug,
+        string project,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -429,7 +421,12 @@ public sealed class RepositoryController(
                 return NotFound();
             }
 
-            return View(new RepositoryTreeViewModel { RepositoryName = name, Tree = tree });
+            SetCanonicalAddressViewData();
+            return View(new RepositoryTreeViewModel
+            {
+                RepositoryName = GetResolvedRepository().RepositorySlug,
+                Tree = tree
+            });
         }
         catch (Exception exception) when (IsInvalidRepositoryRequest(exception))
         {
@@ -437,16 +434,17 @@ public sealed class RepositoryController(
         }
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/blob/{**path}", Name = "canonical-repository-blob")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Blob(
-        string name,
         string path,
         string? revision,
+        string namespaceSlug,
+        string project,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -461,7 +459,11 @@ public sealed class RepositoryController(
                 cancellationToken);
             return blob is null
                 ? NotFound()
-                : View(new RepositoryBlobViewModel { RepositoryName = name, Blob = blob });
+                : RenderCanonicalView(new RepositoryBlobViewModel
+                {
+                    RepositoryName = GetResolvedRepository().RepositorySlug,
+                    Blob = blob
+                });
         }
         catch (Exception exception) when (IsInvalidRepositoryRequest(exception))
         {
@@ -469,16 +471,17 @@ public sealed class RepositoryController(
         }
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/raw/{**path}", Name = "canonical-repository-raw")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Raw(
-        string name,
         string path,
         string? revision,
+        string namespaceSlug,
+        string project,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -517,16 +520,17 @@ public sealed class RepositoryController(
         }
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/commits", Name = "canonical-repository-commits")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Commits(
-        string name,
         string? revision,
+        string namespaceSlug,
+        string project,
         int page = 1,
         CancellationToken cancellationToken = default)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -542,7 +546,11 @@ public sealed class RepositoryController(
                 cancellationToken);
             return commits is null
                 ? NotFound()
-                : View(new RepositoryCommitsViewModel { RepositoryName = name, Page = commits });
+                : RenderCanonicalView(new RepositoryCommitsViewModel
+                {
+                    RepositoryName = GetResolvedRepository().RepositorySlug,
+                    Page = commits
+                });
         }
         catch (Exception exception) when (IsInvalidRepositoryRequest(exception))
         {
@@ -550,15 +558,16 @@ public sealed class RepositoryController(
         }
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/commit/{path}", Name = "canonical-repository-commit")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Commit(
-        string name,
         string path,
+        string namespaceSlug,
+        string project,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -572,7 +581,11 @@ public sealed class RepositoryController(
                 cancellationToken);
             return commit is null
                 ? NotFound()
-                : View(new RepositoryCommitViewModel { RepositoryName = name, Commit = commit });
+                : RenderCanonicalView(new RepositoryCommitViewModel
+                {
+                    RepositoryName = GetResolvedRepository().RepositorySlug,
+                    Commit = commit
+                });
         }
         catch (Exception exception) when (IsInvalidRepositoryRequest(exception))
         {
@@ -580,16 +593,17 @@ public sealed class RepositoryController(
         }
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/blame/{**path}", Name = "canonical-repository-blame")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Blame(
-        string name,
         string path,
         string? revision,
+        string namespaceSlug,
+        string project,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -604,7 +618,11 @@ public sealed class RepositoryController(
                 cancellationToken);
             return blame is null
                 ? NotFound()
-                : View(new RepositoryBlameViewModel { RepositoryName = name, Blame = blame });
+                : RenderCanonicalView(new RepositoryBlameViewModel
+                {
+                    RepositoryName = GetResolvedRepository().RepositorySlug,
+                    Blame = blame
+                });
         }
         catch (Exception exception) when (IsInvalidRepositoryRequest(exception))
         {
@@ -612,16 +630,17 @@ public sealed class RepositoryController(
         }
     }
 
-    [HttpGet]
+    [HttpGet("/{namespaceSlug}/{project}/compare", Name = "canonical-repository-compare")]
     [AllowAnonymous]
     [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
     public async Task<IActionResult> Compare(
-        string name,
         string? baseRevision,
         string? headRevision,
+        string namespaceSlug,
+        string project,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
+        var denied = await RequireRepositoryAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead);
         if (denied is not null)
         {
             return denied;
@@ -629,6 +648,7 @@ public sealed class RepositoryController(
 
         if (string.IsNullOrWhiteSpace(baseRevision) || string.IsNullOrWhiteSpace(headRevision))
         {
+            SetCanonicalAddressViewData();
             return View(model: null);
         }
 
@@ -641,45 +661,13 @@ public sealed class RepositoryController(
                 cancellationToken);
             return compare is null
                 ? NotFound()
-                : View(new RepositoryCompareViewModel { RepositoryName = name, Compare = compare });
+                : RenderCanonicalView(new RepositoryCompareViewModel
+                {
+                    RepositoryName = GetResolvedRepository().RepositorySlug,
+                    Compare = compare
+                });
         }
         catch (Exception exception) when (IsInvalidRepositoryRequest(exception))
-        {
-            return NotFound();
-        }
-    }
-
-    [HttpGet]
-    [AllowAnonymous]
-    [RequestTimeout(RepositoryBrowserOptions.RequestTimeoutPolicyName)]
-    public async Task<IActionResult> Archive(
-        string name,
-        string? revision,
-        CancellationToken cancellationToken)
-    {
-        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryRead);
-        if (denied is not null)
-        {
-            return denied;
-        }
-
-        Response.ContentType = "application/zip";
-        Response.Headers.ContentDisposition =
-            $"attachment; filename*=UTF-8''{Uri.EscapeDataString(name)}.zip";
-        try
-        {
-            var result = await _repositoryBrowserService.WriteArchiveAsync(
-                _gitServiceFactory.Create(GetResolvedRepository().StorageName),
-                revision,
-                Response.Body,
-                cancellationToken);
-            return result is null ? NotFound() : new EmptyResult();
-        }
-        catch (InvalidOperationException) when (!Response.HasStarted)
-        {
-            return StatusCode(StatusCodes.Status413PayloadTooLarge);
-        }
-        catch (Exception exception) when (IsInvalidRepositoryRequest(exception) && !Response.HasStarted)
         {
             return NotFound();
         }
@@ -752,6 +740,56 @@ public sealed class RepositoryController(
         }
 
         return _currentUser.IsAuthenticated ? Forbid() : Challenge();
+    }
+
+    private async Task<IActionResult?> RequireRepositoryAsync(
+        string namespaceSlug,
+        string project,
+        string policy)
+    {
+        RepositoryAddressResolution? address;
+        try
+        {
+            address = await _addressResolver.ResolveAsync(
+                namespaceSlug,
+                project,
+                _currentUser.RequestAborted);
+        }
+        catch (ArgumentException)
+        {
+            return NotFound();
+        }
+
+        if (address is null || address.UsedAlias)
+        {
+            return NotFound();
+        }
+
+        var result = await _authorizationService.AuthorizeAsync(
+            User,
+            new RepositoryAuthorizationResource(address.RepositoryId),
+            policy);
+        if (!result.Succeeded)
+        {
+            return _currentUser.IsAuthenticated ? Forbid() : Challenge();
+        }
+
+        HttpContext.Items[ResolvedRepositoryItemKey] = address;
+        return null;
+    }
+
+    private IActionResult RenderCanonicalView(object model)
+    {
+        SetCanonicalAddressViewData();
+        return View(model);
+    }
+
+    private void SetCanonicalAddressViewData()
+    {
+        var address = GetResolvedRepository();
+        ViewData["CanonicalUrl"] = address.CanonicalPath;
+        ViewData["NamespaceSlug"] = address.NamespaceSlug;
+        ViewData["RepositorySlug"] = address.RepositorySlug;
     }
 
     private RepositoryAddressResolution GetResolvedRepository()

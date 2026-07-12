@@ -127,7 +127,7 @@ Invoke-WebRequest http://127.0.0.1:8080/health/ready
 
 代码浏览的显示与计算边界位于 `GitCandy:RepositoryBrowser`：`MaxDisplayedBlobBytes`、`MaxDiffCharacters`、`MaxDiffFiles`、`MaxArchiveBytes`、`MaxArchiveEntries` 和 `OperationTimeout`。这些限制只影响 Web 展示/归档，不改变 Git Smart HTTP/SSH pack 传输。
 
-Git LFS v2 由 `GitCandy:Lfs` 配置：`Enabled`、`MaxObjectBytes`、`RepositoryQuotaBytes`、`StreamBufferSize` 和 `OperationTimeout`。`RepositoryQuotaBytes=0` 表示不设置额外的仓库总量上限。reverse proxy 需要允许 `/git/*.git/info/lfs/*` 的流式 PUT/GET 和 range response。
+Git LFS v2 由 `GitCandy:Lfs` 配置：`Enabled`、`MaxObjectBytes`、`RepositoryQuotaBytes`、`StreamBufferSize` 和 `OperationTimeout`。`RepositoryQuotaBytes=0` 表示不设置额外的仓库总量上限。reverse proxy 需要允许 `/{namespace}/{repository}.git/info/lfs/*` 的流式 PUT/GET 和 range response。
 
 新增的 `GitCandy:Application:DataProtectionKeysPath` 保存 Identity cookie 加密 key ring。它必须位于持久化、仅应用账户可写的目录；丢失后已有 cookie 全部失效。
 

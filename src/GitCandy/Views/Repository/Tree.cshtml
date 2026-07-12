@@ -3,19 +3,37 @@
     ViewData["Title"] = $"{Model.RepositoryName} code";
     var tree = Model.Tree;
     var pathParts = tree?.Path.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
+    var canonicalUrl = ViewData["CanonicalUrl"] as string;
+    var namespaceSlug = ViewData["NamespaceSlug"] as string;
+    var repositorySlug = ViewData["RepositorySlug"] as string;
 }
-<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><strong>@Model.RepositoryName</strong></nav>
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-controller="Repository" asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><strong>@(Model.NamespaceSlug is null ? Model.RepositoryName : $"{Model.NamespaceSlug}/{Model.RepositoryName}")</strong></nav>
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading">
-    <div><h1>@Model.RepositoryName</h1><p>@(tree?.Revision.DisplayName ?? "Empty repository")</p></div>
+    <div><h1>@Model.RepositoryName</h1><p>@(string.IsNullOrWhiteSpace(Model.Description) ? tree?.Revision.DisplayName ?? "Empty repository" : Model.Description)</p></div>
     @if (tree is not null)
     {
         <div class="page-actions">
-            <a class="btn" asp-action="Archive" asp-route-name="@Model.RepositoryName" asp-route-revision="@tree.Revision.CommitId"><i data-lucide="archive"></i> Archive</a>
-            <a class="btn" asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@tree.Path" asp-route-revision="@tree.Revision.CommitId"><i data-lucide="link"></i> Permalink</a>
+            <a class="btn" href="@(canonicalUrl is null ? Url.Action("Archive", new { name = Model.RepositoryName, revision = tree.Revision.CommitId }) : $"{canonicalUrl}/archive?revision={Uri.EscapeDataString(tree.Revision.CommitId)}")"><i data-lucide="archive"></i> Archive</a>
+            <a class="btn" href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = tree.Path, revision = tree.Revision.CommitId }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = tree.Path, revision = tree.Revision.CommitId }))"><i data-lucide="link"></i> Permalink</a>
         </div>
     }
 </header>
+@if (canonicalUrl is not null)
+{
+    var cloneUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}{canonicalUrl}.git";
+    <section aria-labelledby="clone-heading">
+        <h2 id="clone-heading">Clone</h2>
+        <div class="input-group">
+            <input id="repository-clone-url" type="text" value="@cloneUrl" readonly aria-label="HTTPS clone URL" />
+            <span class="input-group-btn"><button type="button" class="btn" data-copy-target="#repository-clone-url" data-label="Copy clone URL" data-copied="Copied" data-tooltip="Copy clone URL" aria-label="Copy clone URL"><i data-lucide="copy"></i></button></span>
+        </div>
+        @if (Model.CanManage)
+        {
+            <p><a asp-controller="Repository" asp-action="Edit" asp-route-name="@Model.RepositoryName"><i data-lucide="settings"></i> Repository settings</a></p>
+        }
+    </section>
+}
 @if (tree is null)
 {
     <div class="empty-state"><div><i data-lucide="folder-git-2"></i><p>No commits are available.</p></div></div>
@@ -23,8 +41,8 @@
 else
 {
     <div class="repository-toolbar">
-        <form asp-action="Tree" method="get" class="revision-selector">
-            <input type="hidden" name="name" value="@Model.RepositoryName" />
+        <form action="@(canonicalUrl is null ? Url.Action("Tree") : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug }))" method="get" class="revision-selector">
+            @if (canonicalUrl is null) { <input type="hidden" name="name" value="@Model.RepositoryName" /> }
             <input type="hidden" name="path" value="@tree.Path" />
             <label for="revision">Revision</label>
             <select id="revision" name="revision" onchange="this.form.submit()">
@@ -45,11 +63,11 @@ else
         <code class="commit-id">@tree.Revision.CommitId[..12]</code>
     </div>
     <nav class="path-breadcrumb" aria-label="Code path">
-        <a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-revision="@tree.Revision.RequestedRevision">@Model.RepositoryName</a>
+        <a href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, revision = tree.Revision.RequestedRevision }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, revision = tree.Revision.RequestedRevision }))">@Model.RepositoryName</a>
         @for (var index = 0; index < pathParts.Length; index++)
         {
             var partPath = string.Join('/', pathParts.Take(index + 1));
-            <span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@partPath" asp-route-revision="@tree.Revision.RequestedRevision">@pathParts[index]</a>
+            <span>/</span><a href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = partPath, revision = tree.Revision.RequestedRevision }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = partPath, revision = tree.Revision.RequestedRevision }))">@pathParts[index]</a>
         }
     </nav>
     <div class="table-responsive">
@@ -62,7 +80,7 @@ else
                     <td>
                         @if (entry.Kind == RepositoryTreeEntryKind.Tree)
                         {
-                            <a asp-action="Tree" asp-route-name="@Model.RepositoryName" asp-route-path="@entry.Path" asp-route-revision="@tree.Revision.RequestedRevision"><i data-lucide="folder"></i> @entry.Name</a>
+                            <a href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = entry.Path, revision = tree.Revision.RequestedRevision }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = entry.Path, revision = tree.Revision.RequestedRevision }))"><i data-lucide="folder"></i> @entry.Name</a>
                         }
                         else if (entry.Kind == RepositoryTreeEntryKind.Submodule)
                         {
@@ -70,7 +88,7 @@ else
                         }
                         else
                         {
-                            <a asp-action="Blob" asp-route-name="@Model.RepositoryName" asp-route-path="@entry.Path" asp-route-revision="@tree.Revision.RequestedRevision"><i data-lucide="file-code-2"></i> @entry.Name</a>
+                            <a href="@(canonicalUrl is null ? Url.Action("Blob", new { name = Model.RepositoryName, path = entry.Path, revision = tree.Revision.RequestedRevision }) : Url.RouteUrl("canonical-repository-blob", new { namespaceSlug, project = repositorySlug, path = entry.Path, revision = tree.Revision.RequestedRevision }))"><i data-lucide="file-code-2"></i> @entry.Name</a>
                         }
                     </td>
                     <td><span class="entity-meta">@entry.Kind</span></td>

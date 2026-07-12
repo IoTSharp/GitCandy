@@ -17,10 +17,9 @@ namespace GitCandy.Controllers;
 /// </summary>
 [ApiController]
 [ApiExplorerSettings(IgnoreApi = true)]
-[Route("git/{project}.git/info/lfs")]
-[Route("git/{project}/info/lfs")]
+[Route("{namespaceSlug}/{project}.git/info/lfs")]
 public sealed class GitLfsController(
-    IRepositoryService repositoryService,
+    IRepositoryAddressResolver addressResolver,
     IGitLfsObjectStore objectStore,
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService,
@@ -30,7 +29,7 @@ public sealed class GitLfsController(
     private static readonly ClaimsPrincipal AnonymousPrincipal = new(new ClaimsIdentity());
     private static readonly IReadOnlyDictionary<string, string> EmptyHeaders =
         new Dictionary<string, string>();
-    private readonly IRepositoryService _repositoryService = repositoryService;
+    private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
     private readonly IGitLfsObjectStore _objectStore = objectStore;
     private readonly IAuthenticationService _authenticationService = authenticationService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
@@ -41,6 +40,7 @@ public sealed class GitLfsController(
     [Consumes(LfsJsonMediaType, "application/json")]
     [Produces(LfsJsonMediaType)]
     public async Task<IActionResult> Batch(
+        string namespaceSlug,
         string project,
         GitLfsBatchRequest request,
         CancellationToken cancellationToken)
@@ -68,7 +68,7 @@ public sealed class GitLfsController(
             return LfsError(StatusCodes.Status422UnprocessableEntity, "Only SHA-256 LFS object IDs are supported.");
         }
 
-        var access = await AuthorizeRepositoryAsync(project, isUpload, cancellationToken);
+        var access = await AuthorizeRepositoryAsync(namespaceSlug, project, isUpload, cancellationToken);
         if (access.Failure is not null)
         {
             return access.Failure;
@@ -76,6 +76,8 @@ public sealed class GitLfsController(
 
         var authenticated = access.Principal?.Identity?.IsAuthenticated == true;
         var objects = request.Objects.Select(item => CreateObjectResponse(
+            access.Address!,
+            namespaceSlug,
             project,
             item,
             isUpload,
@@ -86,11 +88,12 @@ public sealed class GitLfsController(
     /// <summary>流式上传并原子提交 LFS 对象。</summary>
     [HttpPut("objects/{oid}")]
     public async Task<IActionResult> Upload(
+        string namespaceSlug,
         string project,
         string oid,
         CancellationToken cancellationToken)
     {
-        var access = await AuthorizeRepositoryAsync(project, requireWrite: true, cancellationToken);
+        var access = await AuthorizeRepositoryAsync(namespaceSlug, project, requireWrite: true, cancellationToken);
         if (access.Failure is not null)
         {
             return access.Failure;
@@ -101,7 +104,7 @@ public sealed class GitLfsController(
         try
         {
             await _objectStore.WriteAsync(
-                project,
+                access.Address!.StorageName,
                 oid,
                 Request.ContentLength,
                 Request.Body,
@@ -125,11 +128,12 @@ public sealed class GitLfsController(
     /// <summary>流式下载 LFS 对象，支持 HTTP range。</summary>
     [HttpGet("objects/{oid}")]
     public async Task<IActionResult> Download(
+        string namespaceSlug,
         string project,
         string oid,
         CancellationToken cancellationToken)
     {
-        var access = await AuthorizeRepositoryAsync(project, requireWrite: false, cancellationToken);
+        var access = await AuthorizeRepositoryAsync(namespaceSlug, project, requireWrite: false, cancellationToken);
         if (access.Failure is not null)
         {
             return access.Failure;
@@ -137,11 +141,11 @@ public sealed class GitLfsController(
 
         try
         {
-            var info = _objectStore.GetInfo(project, oid);
+            var info = _objectStore.GetInfo(access.Address!.StorageName, oid);
             return info is null
                 ? LfsError(StatusCodes.Status404NotFound, "The LFS object does not exist.")
                 : File(
-                    _objectStore.OpenRead(project, oid),
+                    _objectStore.OpenRead(access.Address.StorageName, oid),
                     "application/octet-stream",
                     enableRangeProcessing: true);
         }
@@ -154,11 +158,12 @@ public sealed class GitLfsController(
     /// <summary>检查 LFS 对象是否存在。</summary>
     [HttpHead("objects/{oid}")]
     public async Task<IActionResult> Exists(
+        string namespaceSlug,
         string project,
         string oid,
         CancellationToken cancellationToken)
     {
-        var access = await AuthorizeRepositoryAsync(project, requireWrite: false, cancellationToken);
+        var access = await AuthorizeRepositoryAsync(namespaceSlug, project, requireWrite: false, cancellationToken);
         if (access.Failure is not null)
         {
             return access.Failure;
@@ -166,7 +171,7 @@ public sealed class GitLfsController(
 
         try
         {
-            var info = _objectStore.GetInfo(project, oid);
+            var info = _objectStore.GetInfo(access.Address!.StorageName, oid);
             if (info is null)
             {
                 return NotFound();
@@ -185,12 +190,13 @@ public sealed class GitLfsController(
     [HttpPost("objects/{oid}/verify")]
     [Consumes(LfsJsonMediaType, "application/json")]
     public async Task<IActionResult> Verify(
+        string namespaceSlug,
         string project,
         string oid,
         GitLfsVerifyRequest request,
         CancellationToken cancellationToken)
     {
-        var access = await AuthorizeRepositoryAsync(project, requireWrite: true, cancellationToken);
+        var access = await AuthorizeRepositoryAsync(namespaceSlug, project, requireWrite: true, cancellationToken);
         if (access.Failure is not null)
         {
             return access.Failure;
@@ -203,7 +209,7 @@ public sealed class GitLfsController(
 
         try
         {
-            var info = _objectStore.GetInfo(project, oid);
+            var info = _objectStore.GetInfo(access.Address!.StorageName, oid);
             return info is not null && info.Size == request.Size
                 ? Ok()
                 : LfsError(StatusCodes.Status422UnprocessableEntity, "The stored LFS object does not match the requested size.");
@@ -215,6 +221,8 @@ public sealed class GitLfsController(
     }
 
     private GitLfsObjectResponse CreateObjectResponse(
+        RepositoryAddressResolution address,
+        string namespaceSlug,
         string project,
         GitLfsObjectRequest request,
         bool isUpload,
@@ -228,7 +236,7 @@ public sealed class GitLfsController(
         GitLfsObjectInfo? existing;
         try
         {
-            existing = _objectStore.GetInfo(project, request.Oid);
+            existing = _objectStore.GetInfo(address.StorageName, request.Oid);
         }
         catch (ArgumentException)
         {
@@ -240,7 +248,7 @@ public sealed class GitLfsController(
             return ObjectError(request, StatusCodes.Status422UnprocessableEntity, "The stored object has a different size.", authenticated);
         }
 
-        var objectUrl = BuildObjectUrl(project, request.Oid);
+        var objectUrl = BuildObjectUrl(namespaceSlug, project, request.Oid);
         if (!isUpload)
         {
             return existing is null
@@ -260,7 +268,7 @@ public sealed class GitLfsController(
             return new GitLfsObjectResponse(request.Oid, request.Size, authenticated);
         }
 
-        if (!_objectStore.CanStore(project, request.Size))
+        if (!_objectStore.CanStore(address.StorageName, request.Size))
         {
             return ObjectError(request, StatusCodes.Status507InsufficientStorage, "The repository LFS quota would be exceeded.", authenticated);
         }
@@ -277,13 +285,14 @@ public sealed class GitLfsController(
     }
 
     private async Task<RepositoryAccess> AuthorizeRepositoryAsync(
+        string namespaceSlug,
         string project,
         bool requireWrite,
         CancellationToken cancellationToken)
     {
         if (!_options.Enabled)
         {
-            return new RepositoryAccess(null, NotFound());
+            return new RepositoryAccess(null, null, NotFound());
         }
 
         var authentication = await _authenticationService.AuthenticateAsync(
@@ -291,39 +300,40 @@ public sealed class GitLfsController(
             GitCandyAuthenticationSchemes.GitBasic);
         if (authentication.Failure is not null)
         {
-            return new RepositoryAccess(null, await ChallengeGitClientAsync());
+            return new RepositoryAccess(null, null, await ChallengeGitClientAsync());
         }
 
         var principal = authentication.Principal ?? AnonymousPrincipal;
-        RepositorySummary? repository;
+        RepositoryAddressResolution? address;
         try
         {
-            repository = await _repositoryService.FindRepositoryAsync(project, cancellationToken);
+            address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
         }
         catch (ArgumentException)
         {
-            return new RepositoryAccess(principal, NotFound());
+            return new RepositoryAccess(principal, null, NotFound());
         }
 
-        if (repository is null)
+        if (address is null || address.UsedAlias)
         {
-            return new RepositoryAccess(principal, NotFound());
+            return new RepositoryAccess(principal, null, NotFound());
         }
 
         var authorized = await _authorizationService.AuthorizeAsync(
             principal,
-            new RepositoryAuthorizationResource(repository.Name),
+            new RepositoryAuthorizationResource(address.RepositoryId),
             requireWrite ? AuthorizationPolicies.RepositoryWrite : AuthorizationPolicies.RepositoryRead);
         if (!authorized.Succeeded)
         {
             return new RepositoryAccess(
                 principal,
+                address,
                 principal.Identity?.IsAuthenticated == true
                     ? StatusCode(StatusCodes.Status403Forbidden)
                     : await ChallengeGitClientAsync());
         }
 
-        return new RepositoryAccess(principal, null);
+        return new RepositoryAccess(principal, address, null);
     }
 
     private async Task<IActionResult> ChallengeGitClientAsync()
@@ -335,9 +345,9 @@ public sealed class GitLfsController(
         return new EmptyResult();
     }
 
-    private string BuildObjectUrl(string project, string oid)
+    private string BuildObjectUrl(string namespaceSlug, string project, string oid)
     {
-        return $"{Request.Scheme}://{Request.Host}{Request.PathBase}/git/{Uri.EscapeDataString(project)}.git/info/lfs/objects/{oid}";
+        return $"{Request.Scheme}://{Request.Host}{Request.PathBase}/{Uri.EscapeDataString(namespaceSlug)}/{Uri.EscapeDataString(project)}.git/info/lfs/objects/{oid}";
     }
 
     private ObjectResult LfsJson(object value, int statusCode = StatusCodes.Status200OK)
@@ -367,5 +377,8 @@ public sealed class GitLfsController(
             Error: new GitLfsError(statusCode, message));
     }
 
-    private sealed record RepositoryAccess(ClaimsPrincipal? Principal, IActionResult? Failure);
+    private sealed record RepositoryAccess(
+        ClaimsPrincipal? Principal,
+        RepositoryAddressResolution? Address,
+        IActionResult? Failure);
 }

@@ -123,9 +123,30 @@ public sealed class MvcPageSmokeTests
                 ["AllowAnonymousWrite"] = "false"
             });
         Assert.AreEqual(HttpStatusCode.Redirect, repositoryResponse.StatusCode);
-        StringAssert.Contains(await fixture.GetStringAsync("/Repository/Detail/m5-repository"), "M5 repository");
+        Assert.AreEqual(
+            "/m5-admin/m5-repository",
+            repositoryResponse.Headers.Location?.OriginalString);
+
+        var repositoryHtml = await fixture.GetStringAsync("/m5-admin/m5-repository");
+        StringAssert.Contains(repositoryHtml, "M5 repository");
         StringAssert.Contains(
-            await fixture.GetStringAsync("/Repository/Tree/m5-repository"),
+            repositoryHtml,
+            $"{fixture.Client.BaseAddress}m5-admin/m5-repository.git");
+        StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/issues\"");
+        Assert.IsFalse(repositoryHtml.Contains("/git/m5-repository.git", StringComparison.Ordinal));
+
+        using var repositoryListResponse = await fixture.Client.GetAsync("/Repository");
+        Assert.AreEqual(HttpStatusCode.OK, repositoryListResponse.StatusCode);
+        StringAssert.Contains(
+            await repositoryListResponse.Content.ReadAsStringAsync(),
+            "href=\"/m5-admin/m5-repository\"");
+
+        using var legacyDetailResponse = await fixture.Client.GetAsync("/Repository/Detail/m5-repository");
+        Assert.AreEqual(HttpStatusCode.NotFound, legacyDetailResponse.StatusCode);
+        using var legacyTreeResponse = await fixture.Client.GetAsync("/Repository/Tree/m5-repository");
+        Assert.AreEqual(HttpStatusCode.NotFound, legacyTreeResponse.StatusCode);
+        StringAssert.Contains(
+            await fixture.GetStringAsync("/m5-admin/m5-repository/tree"),
             "No commits are available.");
         Assert.IsTrue(fixture.PhysicalRepositoryExists("m5-repository"));
 

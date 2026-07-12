@@ -1,6 +1,6 @@
 @model RepositoryCommitViewModel
-@{ ViewData["Title"] = Model.Commit.Commit.MessageShort; }
-<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><a asp-action="Commits" asp-route-name="@Model.RepositoryName">Commits</a><span>/</span><span>@Model.Commit.Commit.Id[..12]</span></nav>
+@{ ViewData["Title"] = Model.Commit.Commit.MessageShort; var canonicalUrl = ViewData["CanonicalUrl"] as string; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@(canonicalUrl ?? Url.Action("Tree", new { name = Model.RepositoryName }))">@Model.RepositoryName</a><span>/</span><a href="@(canonicalUrl is null ? Url.Action("Commits", new { name = Model.RepositoryName }) : $"{canonicalUrl}/commits")">Commits</a><span>/</span><span>@Model.Commit.Commit.Id[..12]</span></nav>
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading"><div><h1>@Model.Commit.Commit.MessageShort</h1><p>@Model.Commit.Commit.AuthorName · @Model.Commit.Commit.AuthoredAt.ToString("u")</p></div><code>@Model.Commit.Commit.Id</code></header>
 <pre class="commit-message">@Model.Commit.Commit.Message</pre>

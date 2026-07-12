@@ -2,7 +2,7 @@
 
 ## 变更点
 
-- Git HTTP alias 增加独立的真实 protocol v2 并发 clone/fetch/push 矩阵；只有规范 claim 可解析时才返回 308，legacy 映射继续原地流式服务。
+- Git HTTP 规范 `.git` 地址具备真实 protocol v2 clone/fetch/push 矩阵；后续直切策略已移除 alias 308 与 legacy transport，旧地址统一返回 404。
 - Issue 创建与评论在 `Serializable` 事务内同时检查滚动一分钟额度并写 timeline，冲突重试后重新读取额度；SQLite 与 SQL Server 新增 actor/type/time 索引。
 - Identity 使用默认 Data Protection token provider 实现一小时一次性密码恢复和邮件确认；统一 SMTP 抽象、枚举防护、限流、安全戳失效和管理员恢复审计日志。
 - `docker-compose.tls.yml` 提供 Caddy HTTPS；Forwarded Headers 仅在显式配置 known proxy 时启用。
@@ -18,7 +18,7 @@
 ## 配置与兼容
 
 - 新配置：`GitCandy:Identity:AccountRecovery`、`GitCandy:Proxy`、`RepositoryBrowser:MaxStatisticsCommits`、`RepositoryBrowser:MaxContributors`。
-- 旧 `/git/{project}[.git]`、规范 Git URL、Smart HTTP content type、streaming 和认证 scheme 不变。
+- 规范 Git URL、Smart HTTP content type、streaming 和认证 scheme 不变；旧 `/git/{project}[.git]` 已由后续直切策略移除。
 - SMTP 默认禁用；TLS proxy 默认禁用，因此现有部署不会因缺少新配置而停止。
 
 ## 回滚

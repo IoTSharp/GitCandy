@@ -138,9 +138,13 @@ internal sealed class SshAccessService(
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var resolver = new RepositoryAddressResolver(dbContext, _timeProvider);
-        return legacy
-            ? await resolver.ResolveLegacyAsync(repositorySlug, cancellationToken)
-            : await resolver.ResolveAsync(namespaceSlug!, repositorySlug, cancellationToken);
+        if (legacy || string.IsNullOrWhiteSpace(namespaceSlug))
+        {
+            return null;
+        }
+
+        var address = await resolver.ResolveAsync(namespaceSlug, repositorySlug, cancellationToken);
+        return address?.UsedAlias == true ? null : address;
     }
 
     private static bool MatchesStoredKey(string storedPublicKey, byte[] publicKey)

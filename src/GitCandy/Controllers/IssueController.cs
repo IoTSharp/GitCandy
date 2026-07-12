@@ -42,15 +42,6 @@ public sealed class IssueController(
         });
     }
 
-    [HttpGet("/Repository/Issues/{name}")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Legacy(string name, CancellationToken cancellationToken)
-    {
-        var address = await _addressResolver.ResolveLegacyAsync(name, cancellationToken);
-        if (address is null || !await CanReadAsync(address.RepositoryId)) return NotFound();
-        return RedirectToActionPermanent(nameof(Index), new { namespaceSlug = address.NamespaceSlug, project = address.RepositorySlug });
-    }
-
     [HttpGet("new")]
     [Authorize]
     public async Task<IActionResult> Create(string namespaceSlug, string project, string? template, string? title, string? body, CancellationToken cancellationToken)
@@ -243,7 +234,7 @@ public sealed class IssueController(
     private async Task<(RepositoryAddressResolution Address, bool IsOwner)?> ResolveReadableAsync(string namespaceSlug, string project, CancellationToken cancellationToken)
     {
         var address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
-        if (address is null || !await CanReadAsync(address.RepositoryId)) return null;
+        if (address is null || address.UsedAlias || !await CanReadAsync(address.RepositoryId)) return null;
         var owner = (await _authorizationService.AuthorizeAsync(User, new RepositoryAuthorizationResource(address.RepositoryId), AuthorizationPolicies.RepositoryOwner)).Succeeded;
         return (address, owner);
     }

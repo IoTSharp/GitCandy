@@ -6,7 +6,7 @@
 
 ## 1. 产品决策摘要
 
-- 新的规范仓库 URL 为 `https://{host}/{namespace}/{repository}`，`namespace` 可以属于用户或团队；Web 和 Git Smart HTTP 同时接受带 `.git` 与不带 `.git` 的仓库路径。
+- 规范仓库页面为 `https://{host}/{namespace}/{repository}`，`namespace` 可以属于用户或团队；Git Smart HTTP/LFS 只接受 `https://{host}/{namespace}/{repository}.git`。
 - 用户、团队、仓库都使用稳定内部 ID。URL slug 只是可变名称，权限、审计、任务和外部绑定不得以 slug 作为外键。
 - 用户和团队共用一个大小写不敏感的全局命名空间；系统路由、当前名称和保留期内的历史别名都不能被再次占用。
 - 用户或团队 URL slug 在滚动 7 天窗口内最多成功修改 3 次。失败的改名不计数；紧急恢复只能由系统管理员通过单独的审计流程执行。
@@ -31,7 +31,7 @@
 
 路由解析顺序必须先识别系统保留路由和 Git protocol verb，再解析 namespace/repository。`account`、`team`、`repository`、`setting`、`git`、`health`、`api`、`assets` 等应用路由应进入可版本化的保留名称表，避免新增 controller 后抢占已有仓库 URL。
 
-现有 `/git/{project}[.git]/{*verb}` 和 MVC controller 路由不能直接删除。迁移时为已有仓库生成明确的 legacy route mapping；当不同 namespace 下出现同名仓库时，不允许进行猜测，应依赖已有映射或返回可诊断冲突。
+旧 `/git/{project}[.git]/{*verb}` 和 MVC repository 浏览路由直接删除，不建立运行时映射或重定向；当不同 namespace 下出现同名仓库时，只能通过完整的当前 namespace/repository 地址访问。
 
 ### 2.2 名称与显示名称
 
@@ -174,7 +174,7 @@
 
 | 能力 | GitHub | GitLab | Gitea/Forgejo | Gitee | GitCandy 取舍 |
 | --- | --- | --- | --- | --- | --- |
-| 仓库改名 | Web 与 clone/fetch/push 旧地址继续重定向；复用旧仓库名会破坏 redirect | 用户、组、项目路径变化会重定向，Git 客户端收到更新 remote 提示；旧路径被再次占用会失效 | 轻量 self-hosted 体验，具体 alias 生命周期需实现时核对版本 | 国内用户熟悉的仓库导入/同步体验 | 旧 namespace/repository alias 默认保留 365 天且期间禁止复用，稳定性强于“可被覆盖的 redirect” |
+| 仓库改名 | Web 与 clone/fetch/push 旧地址继续重定向；复用旧仓库名会破坏 redirect | 用户、组、项目路径变化会重定向，Git 客户端收到更新 remote 提示；旧路径被再次占用会失效 | 轻量 self-hosted 体验，具体 alias 生命周期需实现时核对版本 | 国内用户熟悉的仓库导入/同步体验 | 旧 namespace/repository 名称默认保留 365 天且期间禁止复用，但旧地址直接返回 404，不提供 redirect 或 transport 兼容 |
 | 用户改名占用 | 旧 username 可被其他人立即认领，个人 profile 不保证跳转 | namespace redirect 依赖旧路径未被占用 | 实例管理员可控 | 企业实例强调组织管理 | 企业内网不能接受立即抢注；统一 namespace claim + 限频 + 保留期 |
 | 团队/组织角色 | Owner/member、team maintainer、repository roles，企业版有自定义组织角色 | Guest/Reporter/Developer/Maintainer/Owner 等分级和继承 | Owner team、admin/general team、按 unit 权限 | 国内企业组织和项目协作 | 先落地 Owner/Leader/Deputy/Member 四级管理角色，仓库权限独立，不一开始复制复杂自定义角色系统 |
 | 企业身份 | SAML/SCIM、Enterprise Managed Users；SCIM 负责自动增删成员 | SAML/SCIM，可同步 group membership | LDAP/OAuth 等自托管集成取向 | 国内企业身份生态 | 标准 OIDC/SAML + SCIM 为核心，企业微信/飞书/钉钉使用 provider adapter；停用和 break-glass 是必测项 |
@@ -195,7 +195,7 @@
 
 跨里程碑必测：
 
-- Web、Git HTTP、SSH 对当前 URL、历史 namespace alias、历史 repository alias 均能 clone/fetch/push 或正确访问。
+- Web、Git HTTP/LFS、SSH 只允许当前规范 URL；历史 namespace alias、历史 repository alias、legacy 和无 `.git` remote 均拒绝访问。
 - 改名第 1-3 次成功，第 4 次在同一滚动 7 天窗口失败；并发抢名和大小写变体不能突破唯一约束。
 - alias 到期、延长、释放和再次占用行为可重复验证，SQLite 与 SQL Server migration SQL 都明确表达索引与时间字段。
 - 最后一个 TeamOwner 不能被删除、降级或被目录同步停用；角色提升和外部组映射有审计。

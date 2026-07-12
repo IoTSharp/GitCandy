@@ -269,7 +269,7 @@ internal sealed class GitSshSession : IDisposable
             var address = await _accessService.ResolveRepositoryAsync(
                 parsedCommand.NamespaceSlug,
                 parsedCommand.RepositorySlug,
-                parsedCommand.IsLegacy,
+                legacy: false,
                 linkedCancellation.Token);
             if (address is null)
             {

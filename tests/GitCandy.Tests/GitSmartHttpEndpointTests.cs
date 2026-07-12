@@ -28,13 +28,13 @@ public sealed class GitSmartHttpEndpointTests
     private const string Password = "M6-endpoint-Password-1!";
 
     [TestMethod]
-    public async Task Smart_WithCompatibleRoutesAndProtocolVersions_ReturnsExactAdvertisementHeaders()
+    public async Task Smart_WithCanonicalRouteAndProtocolVersions_ReturnsExactAdvertisementHeaders()
     {
         await using var fixture = await EndpointFixture.CreateAsync();
         await fixture.SeedRepositoryAsync("public-demo", allowAnonymousRead: true);
 
         using var dotGitResponse = await fixture.Client.GetAsync(
-            "/git/public-demo.git/info/refs?service=git-upload-pack");
+            "/legacy/public-demo.git/info/refs?service=git-upload-pack");
         Assert.AreEqual(HttpStatusCode.OK, dotGitResponse.StatusCode);
         Assert.AreEqual(
             "application/x-git-upload-pack-advertisement",
@@ -45,7 +45,7 @@ public sealed class GitSmartHttpEndpointTests
 
         using var noSuffixRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            "/git/public-demo/info/refs?service=git-upload-pack");
+            "/legacy/public-demo.git/info/refs?service=git-upload-pack");
         noSuffixRequest.Headers.TryAddWithoutValidation("Git-Protocol", "version=2");
         using var noSuffixResponse = await fixture.Client.SendAsync(noSuffixRequest);
         Assert.AreEqual(HttpStatusCode.OK, noSuffixResponse.StatusCode);
@@ -73,7 +73,7 @@ public sealed class GitSmartHttpEndpointTests
         content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
             "application/x-git-upload-pack-request");
         using var response = await fixture.Client.PostAsync(
-            "/git/public-demo.git/git-upload-pack?service=git-receive-pack",
+            "/legacy/public-demo.git/git-upload-pack?service=git-receive-pack",
             content);
 
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
@@ -92,7 +92,7 @@ public sealed class GitSmartHttpEndpointTests
         await fixture.CreateUserAsync("denied-user", Password);
 
         using var anonymousResponse = await fixture.Client.GetAsync(
-            "/git/private-demo.git/info/refs?service=git-upload-pack");
+            "/legacy/private-demo.git/info/refs?service=git-upload-pack");
         Assert.AreEqual(HttpStatusCode.Unauthorized, anonymousResponse.StatusCode);
         Assert.AreEqual(
             "Basic realm=\"GitCandy\", charset=\"UTF-8\"",
@@ -100,21 +100,21 @@ public sealed class GitSmartHttpEndpointTests
 
         using var deniedRequest = new HttpRequestMessage(
             HttpMethod.Get,
-            "/git/private-demo.git/info/refs?service=git-upload-pack");
+            "/legacy/private-demo.git/info/refs?service=git-upload-pack");
         deniedRequest.Headers.Authorization = CreateBasicHeader("denied-user", Password);
         using var deniedResponse = await fixture.Client.SendAsync(deniedRequest);
         Assert.AreEqual(HttpStatusCode.Forbidden, deniedResponse.StatusCode);
 
         using var missingResponse = await fixture.Client.GetAsync(
-            "/git/missing-demo.git/info/refs?service=git-upload-pack");
+            "/legacy/missing-demo.git/info/refs?service=git-upload-pack");
         Assert.AreEqual(HttpStatusCode.NotFound, missingResponse.StatusCode);
 
         using var unsupportedResponse = await fixture.Client.GetAsync(
-            "/git/private-demo.git/info/refs?service=git-upload-archive");
+            "/legacy/private-demo.git/info/refs?service=git-upload-archive");
         Assert.AreEqual(HttpStatusCode.Forbidden, unsupportedResponse.StatusCode);
 
         using var traversalResponse = await fixture.Client.GetAsync(
-            "/git/%2e%2e.git/info/refs?service=git-upload-pack");
+            "/legacy/%2e%2e.git/info/refs?service=git-upload-pack");
         Assert.AreEqual(HttpStatusCode.NotFound, traversalResponse.StatusCode);
     }
 
@@ -125,7 +125,7 @@ public sealed class GitSmartHttpEndpointTests
         await fixture.SeedRepositoryAsync("public-demo", allowAnonymousRead: true);
 
         using var response = await fixture.Client.PostAsync(
-            "/git/public-demo.git/git-upload-pack",
+            "/legacy/public-demo.git/git-upload-pack",
             new ByteArrayContent(new byte[64]));
 
         Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
@@ -142,7 +142,7 @@ public sealed class GitSmartHttpEndpointTests
 
         using var request = new HttpRequestMessage(
             HttpMethod.Get,
-            "/git/public-demo.git/info/refs?service=git-upload-pack");
+            "/legacy/public-demo.git/info/refs?service=git-upload-pack");
         request.Headers.TryAddWithoutValidation("Git-Protocol", "version=2");
         using var response = await fixture.Client.SendAsync(request);
 
@@ -265,13 +265,25 @@ public sealed class GitSmartHttpEndpointTests
             Directory.CreateDirectory(Path.Combine(RepositoryRoot, name));
             await using var scope = App.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
-            dbContext.Repositories.Add(new GitCandyRepository
+            var repository = new GitCandyRepository
             {
+                NamespaceId = GitCandyNamespace.LegacyNamespaceId,
                 Name = name,
+                StorageName = name,
                 Description = $"{name} endpoint fixture",
                 CreatedAtUtc = DateTime.UtcNow,
                 IsPrivate = isPrivate,
                 AllowAnonymousRead = allowAnonymousRead
+            };
+            dbContext.Repositories.Add(repository);
+            await dbContext.SaveChangesAsync();
+            dbContext.RepositoryClaims.Add(new GitCandyRepositoryClaim
+            {
+                NamespaceId = GitCandyNamespace.LegacyNamespaceId,
+                NormalizedSlug = name.ToUpperInvariant(),
+                Slug = name,
+                ClaimType = NameClaimType.Current,
+                RepositoryId = repository.Id
             });
             await dbContext.SaveChangesAsync();
         }

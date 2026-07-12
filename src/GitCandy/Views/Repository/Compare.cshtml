@@ -1,10 +1,10 @@
 @model RepositoryCompareViewModel
-@{ ViewData["Title"] = "Compare"; var repositoryName = Model?.RepositoryName ?? Context.Request.Query["name"].ToString(); }
-<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Tree" asp-route-name="@repositoryName">@repositoryName</a><span>/</span><span>Compare</span></nav>
+@{ ViewData["Title"] = "Compare"; var repositoryName = Model?.RepositoryName ?? ViewData["RepositorySlug"] as string ?? Context.Request.Query["name"].ToString(); var canonicalUrl = ViewData["CanonicalUrl"] as string; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@(canonicalUrl ?? Url.Action("Tree", new { name = repositoryName }))">@repositoryName</a><span>/</span><span>Compare</span></nav>
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="repositoryName" />
 <header class="page-heading"><div><h1>Compare revisions</h1></div></header>
-<form asp-action="Compare" method="get" class="compare-form">
-    <input type="hidden" name="name" value="@repositoryName" />
+<form action="@(canonicalUrl is null ? Url.Action("Compare") : $"{canonicalUrl}/compare")" method="get" class="compare-form">
+    @if (canonicalUrl is null) { <input type="hidden" name="name" value="@repositoryName" /> }
     <div class="form-field"><label for="baseRevision">Base</label><input id="baseRevision" name="baseRevision" value="@Model?.Compare.Base.RequestedRevision" /></div>
     <div class="form-field"><label for="headRevision">Head</label><input id="headRevision" name="headRevision" value="@Model?.Compare.Head.RequestedRevision" /></div>
     <button class="btn btn-primary" type="submit"><i data-lucide="git-compare-arrows"></i> Compare</button>

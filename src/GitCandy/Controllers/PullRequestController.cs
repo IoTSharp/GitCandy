@@ -59,21 +59,6 @@ public sealed class PullRequestController(
         });
     }
 
-    [HttpGet("/Repository/Pulls/{name}")]
-    [AllowAnonymous]
-    public async Task<IActionResult> Legacy(string name, CancellationToken cancellationToken)
-    {
-        var address = await _addressResolver.ResolveLegacyAsync(name, cancellationToken);
-        if (address is null || !await CanReadAsync(address.RepositoryId))
-        {
-            return NotFound();
-        }
-
-        return RedirectToActionPermanent(
-            nameof(Index),
-            new { namespaceSlug = address.NamespaceSlug, project = address.RepositorySlug });
-    }
-
     [HttpGet("new")]
     [Authorize]
     public async Task<IActionResult> Create(
@@ -759,7 +744,7 @@ public sealed class PullRequestController(
         CancellationToken cancellationToken)
     {
         var address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
-        if (address is null || !await CanReadAsync(address.RepositoryId))
+        if (address is null || address.UsedAlias || !await CanReadAsync(address.RepositoryId))
         {
             return null;
         }

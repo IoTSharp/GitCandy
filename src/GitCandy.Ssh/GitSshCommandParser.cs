@@ -33,21 +33,13 @@ internal static partial class GitSshCommandParser
         };
         var path = match.Groups["path"].Value.Trim('/');
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (segments.Length == 2
-            && string.Equals(segments[0], "git", StringComparison.OrdinalIgnoreCase))
+        if (segments.Length != 2)
         {
-            var repository = StripDotGit(segments[1]);
-            if (!NamespaceSlugRules.IsValidRepositorySlug(repository))
-            {
-                parsedCommand = null;
-                return false;
-            }
-
-            parsedCommand = new ParsedGitCommand(service, null, repository, IsLegacy: true);
-            return true;
+            parsedCommand = null;
+            return false;
         }
 
-        if (segments.Length != 2)
+        if (!segments[1].EndsWith(".git", StringComparison.OrdinalIgnoreCase))
         {
             parsedCommand = null;
             return false;
@@ -61,7 +53,7 @@ internal static partial class GitSshCommandParser
             return false;
         }
 
-        parsedCommand = new ParsedGitCommand(service, segments[0], repositorySlug, IsLegacy: false);
+        parsedCommand = new ParsedGitCommand(service, segments[0], repositorySlug);
         return true;
     }
 
@@ -75,6 +67,5 @@ internal static partial class GitSshCommandParser
 
 internal sealed record ParsedGitCommand(
     GitTransportService Service,
-    string? NamespaceSlug,
-    string RepositorySlug,
-    bool IsLegacy);
+    string NamespaceSlug,
+    string RepositorySlug);

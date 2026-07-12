@@ -26,15 +26,9 @@ public sealed class SshGitIntegrationTests
     {
         await using var fixture = await SshGitFixture.CreateAsync();
         var clonePath = Path.Combine(fixture.TempRoot, "clone");
-        var currentClonePath = Path.Combine(fixture.TempRoot, "clone-current");
 
-        await fixture.RunGitAsync(["clone", fixture.CurrentRemoteUrl, currentClonePath]);
-        Assert.IsTrue(File.Exists(Path.Combine(currentClonePath, "README.md")));
-        var aliasClone = await fixture.RunGitAsync(["clone", fixture.RemoteUrl, clonePath]);
+        await fixture.RunGitAsync(["clone", fixture.CurrentRemoteUrl, clonePath]);
         Assert.IsTrue(File.Exists(Path.Combine(clonePath, "README.md")));
-        StringAssert.Contains(
-            aliasClone.StandardError,
-            "Repository address changed; update the remote to /m7-owner/private-demo.git.");
 
         File.AppendAllText(
             Path.Combine(fixture.SeedWorkTree, "README.md"),
@@ -73,6 +67,9 @@ public sealed class SshGitIntegrationTests
         Assert.AreEqual(localHead, pushedHead);
 
         await fixture.AssertSshCommandRejectedAsync("whoami");
+        await fixture.AssertSshCommandRejectedAsync("git-upload-pack '/git/private-demo.git'");
+        await fixture.AssertSshCommandRejectedAsync("git-upload-pack '/m7-previous/private-old.git'");
+        await fixture.AssertSshCommandRejectedAsync("git-upload-pack '/m7-owner/private-demo'");
     }
 
     private sealed class SshGitFixture : IAsyncDisposable

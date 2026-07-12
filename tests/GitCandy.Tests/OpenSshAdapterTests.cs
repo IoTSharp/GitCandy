@@ -43,7 +43,7 @@ public sealed class OpenSshAdapterTests
 
         var exitCode = await adapter.ExecuteForcedCommandAsync(
             $"SHA256:{Fingerprint}",
-            "git-upload-pack '/git/demo.git'",
+            "git-upload-pack '/owner/demo.git'",
             "version=2",
             input,
             output,
@@ -56,7 +56,7 @@ public sealed class OpenSshAdapterTests
         Assert.AreEqual(GitTransportService.UploadPack, backend.Request.Service);
         Assert.AreEqual("version=2", backend.Request.ProtocolVersion);
         Assert.AreEqual("request", Encoding.ASCII.GetString(output.ToArray()));
-        StringAssert.Contains(error.ToString(), "Repository address changed");
+        Assert.AreEqual(string.Empty, error.ToString());
     }
 
     [TestMethod]
@@ -69,7 +69,7 @@ public sealed class OpenSshAdapterTests
 
         var exitCode = await adapter.ExecuteForcedCommandAsync(
             Fingerprint,
-            "git-receive-pack '/git/demo.git'",
+            "git-receive-pack '/owner/demo.git'",
             gitProtocol: null,
             Stream.Null,
             Stream.Null,
@@ -99,7 +99,7 @@ public sealed class OpenSshAdapterTests
             shellError);
         var protocolExitCode = await adapter.ExecuteForcedCommandAsync(
             Fingerprint,
-            "git-upload-pack '/git/demo.git'",
+            "git-upload-pack '/owner/demo.git'",
             "version=1",
             Stream.Null,
             Stream.Null,
@@ -123,7 +123,7 @@ public sealed class OpenSshAdapterTests
         var keyExitCode = await adapter.WriteAuthorizedKeyAsync(Fingerprint, keyOutput);
         var commandExitCode = await adapter.ExecuteForcedCommandAsync(
             Fingerprint,
-            "git-upload-pack '/git/demo.git'",
+            "git-upload-pack '/owner/demo.git'",
             gitProtocol: null,
             Stream.Null,
             Stream.Null,

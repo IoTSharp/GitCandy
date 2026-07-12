@@ -3,9 +3,9 @@
 ## URL contract
 
 - Web canonical: `/{namespace}/{repository}`.
-- Git HTTP: `/{namespace}/{repository}[.git]/info/refs`, `git-upload-pack`, and `git-receive-pack`.
-- SSH: `ssh://git@host:port/{namespace}/{repository}[.git]`.
-- Legacy `/git/{project}[.git]` remains an explicit `LegacyRepositoryRoutes` mapping. It never guesses when repositories in different namespaces share a slug.
+- Git HTTP: `/{namespace}/{repository}.git/info/refs`, `git-upload-pack`, and `git-receive-pack`.
+- SSH: `ssh://git@host:port/{namespace}/{repository}.git`.
+- Legacy `/git/{project}[.git]`, `/Repository/...`, no-suffix Git remotes, and retained alias addresses are not routed and return not found.
 - Slugs use ordinal, invariant uppercase normalization for uniqueness. Original casing is retained for display.
 - A slug starts with an ASCII letter, contains only ASCII letters, digits, `.`, `_`, or `-`, has 2-50 characters, and cannot end in `.git`.
 - Reserved root slugs are `account`, `api`, `assets`, `git`, `health`, `home`, `identity`, `legacy`, `repository`, `setting`, `signin-oidc`, `signout-callback-oidc`, and `team`.
@@ -29,18 +29,18 @@ The migration intentionally fails if a user name, team name, active claim, or re
 - Failed, conflicting, and administrator override changes do not consume normal quota.
 - Serializable transactions, a namespace version concurrency token, and unique claim keys protect concurrent changes.
 - Aliases point directly to stable namespace/repository IDs. Cleanup removes expired claims idempotently; administrators can extend active aliases with an audit reason.
-- Web aliases redirect with HTTP 308 after authorization, preserve the query string, set a one-time address update notice, and emit a canonical link.
-- Git HTTP discovery redirects to the canonical `.git` endpoint. RPC bodies are resolved internally and remain streamed.
-- OpenSSH forced-command aliases write the canonical remote to stderr. The built-in Microsoft Dev Tunnels listener sends the same warning with RFC 4254 channel extended data type 1 after Git transport completes and before the channel closes; transport stdout is never modified.
+- Repository create/list/detail and code-browser navigation only generate canonical namespace URLs. Legacy and retained alias addresses return not found without redirecting.
+- Git HTTP and LFS only accept the canonical `.git` endpoint. RPC bodies remain streamed.
+- OpenSSH and the built-in listener only accept current namespace/repository paths; legacy and alias paths are rejected before authorization and transport startup.
 - Deleting a repository converts its active claims to reserved tombstones before deleting metadata and storage, preventing immediate name reuse.
 
 ## Verification matrix
 
 - SQLite migration and model: `GitCandy.Data.Tests`, including three-success/fourth-blocked quota, reserved/occupied failures, expiry idempotence, direct alias resolution, and concurrent final-quota requests.
 - SQL Server: offline idempotent migration SQL contains all namespace/alias/claim/event tables, composite unique indexes, backfill SQL, and stable-ID foreign keys.
-- Web: canonical rendering, canonical link, private-resource authorization, 308 alias/`.git` redirects, query preservation, and legacy route protection.
-- Git HTTP: real protocol v2 legacy, canonical no-suffix, namespace+repository alias clone/fetch/push, authenticated push, and 24 MiB pack streaming.
-- SSH: real current and namespace+repository alias clone/fetch/push with the shared resolver, permission query, path resolver, and transport backend; the client assertion verifies the canonical remote warning arrives on stderr.
+- Web: canonical rendering, canonical link, private-resource authorization, and 404 responses for legacy and alias routes.
+- Git HTTP/LFS: real protocol v2 canonical `.git` clone/fetch/push/LFS, authenticated push, 24 MiB pack streaming, and 404 responses for legacy, alias, and no-suffix remotes.
+- SSH: real current namespace/repository clone/fetch/push with the shared resolver, permission query, path resolver, and transport backend; legacy and alias commands are rejected before transport execution.
 
 ## Rollback
 

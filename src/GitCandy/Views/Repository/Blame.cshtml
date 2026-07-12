@@ -1,6 +1,6 @@
 @model RepositoryBlameViewModel
-@{ ViewData["Title"] = $"Blame {Model.Blame.Path}"; }
-<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><a asp-action="Blob" asp-route-name="@Model.RepositoryName" asp-route-path="@Model.Blame.Path" asp-route-revision="@Model.Blame.Revision.CommitId">@Model.Blame.Path</a><span>/</span><span>Blame</span></nav>
+@{ ViewData["Title"] = $"Blame {Model.Blame.Path}"; var canonicalUrl = ViewData["CanonicalUrl"] as string; var namespaceSlug = ViewData["NamespaceSlug"] as string; var repositorySlug = ViewData["RepositorySlug"] as string; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a href="@(canonicalUrl ?? Url.Action("Tree", new { name = Model.RepositoryName }))">@Model.RepositoryName</a><span>/</span><a href="@(canonicalUrl is null ? Url.Action("Blob", new { name = Model.RepositoryName, path = Model.Blame.Path, revision = Model.Blame.Revision.CommitId }) : Url.RouteUrl("canonical-repository-blob", new { namespaceSlug, project = repositorySlug, path = Model.Blame.Path, revision = Model.Blame.Revision.CommitId }))">@Model.Blame.Path</a><span>/</span><span>Blame</span></nav>
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading"><div><h1>Blame</h1><p>@Model.Blame.Path</p></div></header>
 <div class="blame-view"><table><tbody>
@@ -9,7 +9,7 @@
     for (var index = 0; index < hunk.Lines.Count; index++)
     {
         var line = hunk.StartLine + index;
-        <tr id="@($"L{line}")"><td class="blame-commit">@if (index == 0) { <a asp-action="Commit" asp-route-name="@Model.RepositoryName" asp-route-path="@hunk.CommitId">@hunk.CommitId[..8]</a><span>@hunk.AuthorName</span> }</td><td class="line-number"><a href="@($"#L{line}")">@line</a></td><td class="line-code"><code>@hunk.Lines[index]</code></td></tr>
+        <tr id="@($"L{line}")"><td class="blame-commit">@if (index == 0) { <a href="@(canonicalUrl is null ? Url.Action("Commit", new { name = Model.RepositoryName, path = hunk.CommitId }) : Url.RouteUrl("canonical-repository-commit", new { namespaceSlug, project = repositorySlug, path = hunk.CommitId }))">@hunk.CommitId[..8]</a><span>@hunk.AuthorName</span> }</td><td class="line-number"><a href="@($"#L{line}")">@line</a></td><td class="line-code"><code>@hunk.Lines[index]</code></td></tr>
     }
 }
 </tbody></table></div>

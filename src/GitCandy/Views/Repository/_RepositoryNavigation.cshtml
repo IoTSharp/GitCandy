@@ -1,15 +1,27 @@
 @model string
+@{
+    var canonicalUrl = ViewData["CanonicalUrl"] as string;
+}
 <nav class="repository-navigation" aria-label="Repository navigation">
-    @if (ViewData["CanonicalUrl"] is string canonicalUrl)
+    @if (canonicalUrl is not null)
     {
+        <a href="@canonicalUrl"><i data-lucide="folder-tree"></i> Code</a>
+        <a href="@canonicalUrl/commits"><i data-lucide="history"></i> Commits</a>
         <a href="@canonicalUrl/branches"><i data-lucide="git-branch"></i> Branches</a>
         <a href="@canonicalUrl/tags"><i data-lucide="tag"></i> Tags</a>
         <a href="@canonicalUrl/contributors"><i data-lucide="users"></i> Contributors</a>
+        <a href="@canonicalUrl/compare"><i data-lucide="git-compare-arrows"></i> Compare</a>
+        <a href="@canonicalUrl/issues"><i data-lucide="circle-dot"></i> Issues</a>
+        <a href="@canonicalUrl/pulls"><i data-lucide="git-pull-request"></i> Pull requests</a>
+        <a href="@canonicalUrl"><i data-lucide="settings-2"></i> Repository</a>
     }
-    <a asp-action="Tree" asp-route-name="@Model"><i data-lucide="folder-tree"></i> Code</a>
-    <a asp-action="Commits" asp-route-name="@Model"><i data-lucide="history"></i> Commits</a>
-    <a asp-action="Compare" asp-route-name="@Model"><i data-lucide="git-compare-arrows"></i> Compare</a>
-    <a href="/Repository/Issues/@Uri.EscapeDataString(Model)"><i data-lucide="circle-dot"></i> Issues</a>
-    <a href="/Repository/Pulls/@Uri.EscapeDataString(Model)"><i data-lucide="git-pull-request"></i> Pull requests</a>
-    <a asp-action="Detail" asp-route-name="@Model"><i data-lucide="settings-2"></i> Repository</a>
+    else
+    {
+        <a asp-action="Tree" asp-route-name="@Model"><i data-lucide="folder-tree"></i> Code</a>
+        <a asp-action="Commits" asp-route-name="@Model"><i data-lucide="history"></i> Commits</a>
+        <a asp-action="Compare" asp-route-name="@Model"><i data-lucide="git-compare-arrows"></i> Compare</a>
+        <a href="/Repository/Issues/@Uri.EscapeDataString(Model)"><i data-lucide="circle-dot"></i> Issues</a>
+        <a href="/Repository/Pulls/@Uri.EscapeDataString(Model)"><i data-lucide="git-pull-request"></i> Pull requests</a>
+        <a asp-action="Detail" asp-route-name="@Model"><i data-lucide="settings-2"></i> Repository</a>
+    }
 </nav>

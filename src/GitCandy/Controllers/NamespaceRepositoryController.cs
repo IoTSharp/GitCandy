@@ -15,6 +15,7 @@ namespace GitCandy.Controllers;
 [AutoValidateAntiforgeryToken]
 public sealed class NamespaceRepositoryController(
     IRepositoryAddressResolver addressResolver,
+    IRepositoryManagementService repositoryManagementService,
     IRepositoryBrowserService repositoryBrowserService,
     IManagedGitRepositoryService managedGitRepositoryService,
     IGitServiceFactory gitServiceFactory,
@@ -23,6 +24,7 @@ public sealed class NamespaceRepositoryController(
 {
     private const string AddressChangedMessage = "This repository address changed. Update your bookmark and Git remote to the canonical URL.";
     private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
+    private readonly IRepositoryManagementService _repositoryManagementService = repositoryManagementService;
     private readonly IRepositoryBrowserService _repositoryBrowserService = repositoryBrowserService;
     private readonly IManagedGitRepositoryService _managedGitRepositoryService = managedGitRepositoryService;
     private readonly IGitServiceFactory _gitServiceFactory = gitServiceFactory;
@@ -37,9 +39,9 @@ public sealed class NamespaceRepositoryController(
         CancellationToken cancellationToken)
     {
         var address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
-        return address is null
+        return address is null || address.UsedAlias
             ? NotFound()
-            : await RenderOrRedirectAsync(address, cancellationToken);
+            : await RenderAsync(address, cancellationToken);
     }
 
     /// <summary>将带 .git 的 Web 页面地址规范化为无后缀地址。</summary>
@@ -50,21 +52,7 @@ public sealed class NamespaceRepositoryController(
         CancellationToken cancellationToken)
     {
         var address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken);
-        if (address is null)
-        {
-            return NotFound();
-        }
-
-        var denied = await RequireReadAsync(address.RepositoryId);
-        return denied ?? RedirectCanonical(address.CanonicalPath);
-    }
-
-    /// <summary>将旧 /git/{project}[.git] Web 地址迁移到规范地址。</summary>
-    [HttpGet]
-    public async Task<IActionResult> Legacy(string project, CancellationToken cancellationToken)
-    {
-        var address = await _addressResolver.ResolveLegacyAsync(project, cancellationToken);
-        if (address is null)
+        if (address is null || address.UsedAlias)
         {
             return NotFound();
         }
@@ -80,7 +68,6 @@ public sealed class NamespaceRepositoryController(
         var access = await ResolveAccessAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead, cancellationToken);
         if (access.Result is not null) return access.Result;
         var address = access.Address!;
-        if (address.UsedAlias) return RedirectCanonical($"{address.CanonicalPath}/branches");
         try
         {
             var branches = _repositoryBrowserService.ReadBranches(_gitServiceFactory.Create(address.StorageName), cancellationToken);
@@ -111,7 +98,6 @@ public sealed class NamespaceRepositoryController(
         var access = await ResolveAccessAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead, cancellationToken);
         if (access.Result is not null) return access.Result;
         var address = access.Address!;
-        if (address.UsedAlias) return RedirectCanonical($"{address.CanonicalPath}/tags");
         try
         {
             var tags = _repositoryBrowserService.ReadTags(_gitServiceFactory.Create(address.StorageName), cancellationToken);
@@ -141,7 +127,6 @@ public sealed class NamespaceRepositoryController(
         var access = await ResolveAccessAsync(namespaceSlug, project, AuthorizationPolicies.RepositoryRead, cancellationToken);
         if (access.Result is not null) return access.Result;
         var address = access.Address!;
-        if (address.UsedAlias) return RedirectCanonical($"{address.CanonicalPath}/contributors");
         try
         {
             var statistics = _repositoryBrowserService.ReadStatistics(_gitServiceFactory.Create(address.StorageName), revision, cancellationToken);
@@ -167,7 +152,7 @@ public sealed class NamespaceRepositoryController(
         return result is null ? NotFound() : new EmptyResult();
     }
 
-    private async Task<IActionResult> RenderOrRedirectAsync(
+    private async Task<IActionResult> RenderAsync(
         RepositoryAddressResolution address,
         CancellationToken cancellationToken)
     {
@@ -177,14 +162,17 @@ public sealed class NamespaceRepositoryController(
             return denied;
         }
 
-        if (address.UsedAlias)
-        {
-            return RedirectCanonical(address.CanonicalPath);
-        }
-
         var context = _gitServiceFactory.Create(address.StorageName);
         try
         {
+            var repository = await _repositoryManagementService.GetRepositoryAsync(
+                address.RepositoryId,
+                cancellationToken);
+            if (repository is null)
+            {
+                return NotFound();
+            }
+
             var tree = _repositoryBrowserService.ReadTree(context, revision: null, path: null, cancellationToken);
             if (tree is null && _managedGitRepositoryService.ReadSnapshot(context).HeadCommitId is not null)
             {
@@ -192,9 +180,21 @@ public sealed class NamespaceRepositoryController(
             }
 
             ViewData["CanonicalUrl"] = address.CanonicalPath;
+            ViewData["NamespaceSlug"] = address.NamespaceSlug;
+            ViewData["RepositorySlug"] = address.RepositorySlug;
             return View(
                 "~/Views/Repository/Tree.cshtml",
-                new RepositoryTreeViewModel { RepositoryName = address.RepositorySlug, Tree = tree });
+                new RepositoryTreeViewModel
+                {
+                    RepositoryName = address.RepositorySlug,
+                    NamespaceSlug = address.NamespaceSlug,
+                    Description = repository.Description,
+                    CanManage = (await _authorizationService.AuthorizeAsync(
+                        User,
+                        new RepositoryAuthorizationResource(address.RepositoryId),
+                        AuthorizationPolicies.RepositoryOwner)).Succeeded,
+                    Tree = tree
+                });
         }
         catch (Exception exception) when (exception is ArgumentException
             or InvalidOperationException
@@ -225,7 +225,7 @@ public sealed class NamespaceRepositoryController(
         RepositoryAddressResolution? address;
         try { address = await _addressResolver.ResolveAsync(namespaceSlug, project, cancellationToken); }
         catch (ArgumentException) { return (null, NotFound()); }
-        if (address is null) return (null, NotFound());
+        if (address is null || address.UsedAlias) return (null, NotFound());
         var result = await _authorizationService.AuthorizeAsync(User, new RepositoryAuthorizationResource(address.RepositoryId), policy);
         return result.Succeeded ? (address, null) : (null, _currentUser.IsAuthenticated ? Forbid() : Challenge());
     }

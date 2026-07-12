@@ -36,7 +36,7 @@ else
             @foreach (var repository in Model.Repositories)
             {
                 <tr>
-                    <td><a asp-action="Detail" asp-route-name="@repository.Name">@repository.Name</a></td>
+                    <td><a href="/@Uri.EscapeDataString(repository.NamespaceSlug)/@Uri.EscapeDataString(repository.Name)">@repository.NamespaceSlug/@repository.Name</a></td>
                     <td>@(string.IsNullOrWhiteSpace(repository.Description) ? "No description" : repository.Description)</td>
                     <td>
                         <span class="status-badge @(repository.IsPrivate ? "status-private" : "status-public")">

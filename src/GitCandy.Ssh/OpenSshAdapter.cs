@@ -102,7 +102,7 @@ public sealed class OpenSshAdapter(
             var address = await _accessService.ResolveRepositoryAsync(
                 parsedCommand.NamespaceSlug,
                 parsedCommand.RepositorySlug,
-                parsedCommand.IsLegacy,
+                legacy: false,
                 cancellationToken);
             if (address is null)
             {

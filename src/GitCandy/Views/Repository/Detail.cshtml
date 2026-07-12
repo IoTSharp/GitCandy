@@ -1,7 +1,7 @@
 @model RepositoryDetailsViewModel
 @{
     ViewData["Title"] = Model.Repository.Name;
-    var cloneUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}/git/{Model.Repository.Name}.git";
+    var cloneUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}/{Model.Repository.NamespaceSlug}/{Model.Repository.Name}.git";
 }
 <nav class="breadcrumb" aria-label="Breadcrumb">
     <a asp-action="Index">@Text["Shared_Repositories"]</a><span aria-hidden="true">/</span><span>@Model.Repository.Name</span>

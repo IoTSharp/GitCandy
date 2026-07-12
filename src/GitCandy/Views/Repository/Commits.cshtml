@@ -1,15 +1,15 @@
 @model RepositoryCommitsViewModel
-@{ ViewData["Title"] = $"{Model.RepositoryName} commits"; }
-<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><span>Commits</span></nav>
+@{ ViewData["Title"] = $"{Model.RepositoryName} commits"; var canonicalUrl = ViewData["CanonicalUrl"] as string; var namespaceSlug = ViewData["NamespaceSlug"] as string; var repositorySlug = ViewData["RepositorySlug"] as string; }
+<nav class="breadcrumb" aria-label="Breadcrumb"><a asp-controller="Repository" asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a href="@(canonicalUrl ?? Url.Action("Tree", new { name = Model.RepositoryName }))">@Model.RepositoryName</a><span>/</span><span>Commits</span></nav>
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading"><div><h1>Commit history</h1><p>@Model.Page.Revision.DisplayName</p></div></header>
 <ol class="commit-list">
 @foreach (var commit in Model.Page.Commits)
 {
-    <li><div><a asp-action="Commit" asp-route-name="@Model.RepositoryName" asp-route-path="@commit.Id">@commit.MessageShort</a><p>@commit.AuthorName · <time datetime="@commit.AuthoredAt.ToString("O")">@commit.AuthoredAt.ToString("u")</time></p></div><code>@commit.Id[..12]</code></li>
+    <li><div><a href="@(canonicalUrl is null ? Url.Action("Commit", new { name = Model.RepositoryName, path = commit.Id }) : Url.RouteUrl("canonical-repository-commit", new { namespaceSlug, project = repositorySlug, path = commit.Id }))">@commit.MessageShort</a><p>@commit.AuthorName · <time datetime="@commit.AuthoredAt.ToString("O")">@commit.AuthoredAt.ToString("u")</time></p></div><code>@commit.Id[..12]</code></li>
 }
 </ol>
 <nav class="pager" aria-label="Commit pages">
-    @if (Model.Page.Page > 1) { <a class="btn" asp-action="Commits" asp-route-name="@Model.RepositoryName" asp-route-revision="@Model.Page.Revision.RequestedRevision" asp-route-page="@(Model.Page.Page - 1)"><i data-lucide="arrow-left"></i> Newer</a> }
-    @if (Model.Page.HasNextPage) { <a class="btn" asp-action="Commits" asp-route-name="@Model.RepositoryName" asp-route-revision="@Model.Page.Revision.RequestedRevision" asp-route-page="@(Model.Page.Page + 1)">Older <i data-lucide="arrow-right"></i></a> }
+    @if (Model.Page.Page > 1) { <a class="btn" href="@(canonicalUrl is null ? Url.Action("Commits", new { name = Model.RepositoryName, revision = Model.Page.Revision.RequestedRevision, page = Model.Page.Page - 1 }) : Url.RouteUrl("canonical-repository-commits", new { namespaceSlug, project = repositorySlug, revision = Model.Page.Revision.RequestedRevision, page = Model.Page.Page - 1 }))"><i data-lucide="arrow-left"></i> Newer</a> }
+    @if (Model.Page.HasNextPage) { <a class="btn" href="@(canonicalUrl is null ? Url.Action("Commits", new { name = Model.RepositoryName, revision = Model.Page.Revision.RequestedRevision, page = Model.Page.Page + 1 }) : Url.RouteUrl("canonical-repository-commits", new { namespaceSlug, project = repositorySlug, revision = Model.Page.Revision.RequestedRevision, page = Model.Page.Page + 1 }))">Older <i data-lucide="arrow-right"></i></a> }
 </nav>
