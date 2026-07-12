@@ -19,6 +19,12 @@ docker compose up -d
 docker compose ps
 ```
 
+For automatic HTTPS with Caddy, set `GITCANDY_DOMAIN` to a DNS name that points at the host and start the TLS overlay:
+
+```bash
+GITCANDY_DOMAIN=git.example.com docker compose -f docker-compose.yml -f docker-compose.tls.yml up -d
+```
+
 From a source checkout, `docker compose up --build -d` automatically loads the build settings from `docker-compose.override.yml`. The Release Compose package omits that override and pulls the prebuilt image.
 
 GitCandy checks for pending EF Core migrations and upgrades the SQLite/Identity database before Web, SSH, and background services start. Persistent state is stored in the `gitcandy-data` volume. HTTP and SSH default to host ports `8080` and `2222`.
@@ -57,6 +63,8 @@ Each readable repository exposes an Issue workspace at `/{namespace}/{repository
 Issue descriptions and comments use restricted CommonMark with fenced code blocks and task lists. Raw HTML is disabled and rendered HTML is sanitized before storage. Repository owners can manage labels, milestones, assignees, relations, subscriptions, and discussion locks. Templates live at `.gitcandy/ISSUE_TEMPLATE/{name}.md`; `default.md` is used when no name is supplied. Successful Smart HTTP or built-in SSH pushes apply `fixes #N`, `closes #N`, and `resolves #N` from the default branch HEAD idempotently.
 
 See [the M11 migration record](docs/migration/m11-issues.md) for schema, dependency, backup, and rollback details.
+
+Canonical repositories expose `/branches`, `/tags`, and `/contributors`. Writers can delete non-default branches and tags through antiforgery-protected forms; ref validation and default-branch protection are enforced again by the Git service.
 
 ## Operations
 

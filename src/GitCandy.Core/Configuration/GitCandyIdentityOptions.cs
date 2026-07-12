@@ -10,6 +10,36 @@ public sealed class GitCandyIdentityOptions
     public GitCandyPasswordOptions Password { get; set; } = new();
 
     public GitCandyOpenIdConnectOptions OpenIdConnect { get; set; } = new();
+
+    public GitCandyAccountRecoveryOptions AccountRecovery { get; set; } = new();
+}
+
+/// <summary>账号恢复 token、请求限流和 SMTP 投递配置。</summary>
+public sealed class GitCandyAccountRecoveryOptions
+{
+    public TimeSpan TokenLifespan { get; set; } = TimeSpan.FromHours(1);
+
+    public int MaxRequestsPerWindow { get; set; } = 5;
+
+    public TimeSpan RequestWindow { get; set; } = TimeSpan.FromMinutes(15);
+
+    public GitCandySmtpOptions Smtp { get; set; } = new();
+}
+
+/// <summary>账号邮件的 SMTP 投递配置。</summary>
+public sealed class GitCandySmtpOptions
+{
+    public string Host { get; set; } = string.Empty;
+
+    public int Port { get; set; } = 587;
+
+    public bool EnableSsl { get; set; } = true;
+
+    public string UserName { get; set; } = string.Empty;
+
+    public string Password { get; set; } = string.Empty;
+
+    public string FromAddress { get; set; } = string.Empty;
 }
 
 /// <summary>

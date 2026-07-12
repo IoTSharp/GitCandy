@@ -5,7 +5,7 @@
     var parentPath = System.IO.Path.GetDirectoryName(Model.Blob.Path)?.Replace('\\', '/');
 }
 <nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><span>@Model.Blob.Name</span></nav>
-<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading">
     <div><h1>@Model.Blob.Name</h1><p>@Model.Blob.Size.ToString("N0") bytes · @Model.Blob.Revision.DisplayName</p></div>
     <div class="page-actions">

@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Text;
 using GitCandy.Configuration;
 using LibGit2Sharp;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace GitCandy.Git;
@@ -11,13 +12,102 @@ namespace GitCandy.Git;
 /// </summary>
 public sealed class RepositoryBrowserService(
     IManagedGitRepositoryService repositoryService,
-    IOptions<RepositoryBrowserOptions> options) : IRepositoryBrowserService
+    IOptions<RepositoryBrowserOptions> options,
+    IMemoryCache memoryCache) : IRepositoryBrowserService
 {
     private static readonly UTF8Encoding StrictUtf8 = new(
         encoderShouldEmitUTF8Identifier: false,
         throwOnInvalidBytes: true);
     private readonly IManagedGitRepositoryService _repositoryService = repositoryService;
     private readonly RepositoryBrowserOptions _options = options.Value;
+    private readonly IMemoryCache _memoryCache = memoryCache;
+
+    /// <inheritdoc />
+    public IReadOnlyList<RepositoryBranchSummary> ReadBranches(GitRepositoryContext repository, CancellationToken cancellationToken = default)
+    {
+        using var git = Open(repository);
+        var head = git.Head;
+        return git.Branches.Where(static branch => !branch.IsRemote && branch.Tip is not null)
+            .Select(branch =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var divergence = head.Tip is null ? null : git.ObjectDatabase.CalculateHistoryDivergence(head.Tip, branch.Tip);
+                return new RepositoryBranchSummary(branch.FriendlyName, branch.Tip.Id.Sha, branch.Tip.MessageShort, branch.Tip.Committer.When,
+                    divergence?.AheadBy ?? 0, divergence?.BehindBy ?? 0,
+                    string.Equals(branch.CanonicalName, head.CanonicalName, StringComparison.Ordinal));
+            })
+            .OrderByDescending(static branch => branch.IsDefault)
+            .ThenBy(static branch => branch.Name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<RepositoryTagSummary> ReadTags(GitRepositoryContext repository, CancellationToken cancellationToken = default)
+    {
+        using var git = Open(repository);
+        return git.Tags.Select(tag =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var annotation = tag.Annotation;
+                var commit = tag.Target.Peel<Commit>();
+                return commit is null ? null : new RepositoryTagSummary(tag.FriendlyName, commit.Id.Sha, annotation is not null,
+                    annotation?.Tagger.Name, annotation?.Tagger.When, annotation?.Message?.Trim());
+            })
+            .Where(static tag => tag is not null)
+            .Select(static tag => tag!)
+            .OrderBy(static tag => tag.Name, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <inheritdoc />
+    public RepositoryStatisticsResult? ReadStatistics(GitRepositoryContext repository, string? revision, CancellationToken cancellationToken = default)
+    {
+        using var git = Open(repository);
+        var resolved = ResolveRevision(git, revision);
+        var commit = resolved is null ? null : git.Lookup<Commit>(resolved.CommitId);
+        if (resolved is null || commit is null)
+        {
+            return null;
+        }
+
+        var cacheKey = $"repository-statistics:{repository.RepositoryName}:{resolved.CommitId}";
+        if (_memoryCache.TryGetValue(cacheKey, out RepositoryStatisticsResult? cached) && cached is not null)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return cached;
+        }
+
+        var commits = git.Commits.QueryBy(new CommitFilter { IncludeReachableFrom = commit, SortBy = CommitSortStrategies.Time | CommitSortStrategies.Topological })
+            .Take(_options.MaxStatisticsCommits + 1).ToArray();
+        var truncated = commits.Length > _options.MaxStatisticsCommits;
+        var boundedCommits = commits.Take(_options.MaxStatisticsCommits).ToArray();
+        var contributors = boundedCommits
+            .GroupBy(item => $"{item.Author.Name.Trim().ToUpperInvariant()}\n{item.Author.Email.Trim().ToUpperInvariant()}", StringComparer.Ordinal)
+            .Select(group => new RepositoryContributorSummary(group.First().Author.Name, group.Count()))
+            .OrderByDescending(static contributor => contributor.CommitCount)
+            .ThenBy(static contributor => contributor.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(_options.MaxContributors).ToArray();
+        long fileCount = 0;
+        long sourceBytes = 0;
+        CountTree(commit.Tree, ref fileCount, ref sourceBytes, cancellationToken);
+        var repositoryBytes = Directory.EnumerateFiles(_repositoryService.ResolveExistingPath(repository), "*", SearchOption.AllDirectories)
+            .Sum(path => new FileInfo(path).Length);
+        var result = new RepositoryStatisticsResult(resolved, boundedCommits.Length,
+            boundedCommits.Select(item => $"{item.Author.Name.Trim().ToUpperInvariant()}\n{item.Author.Email.Trim().ToUpperInvariant()}").Distinct(StringComparer.Ordinal).Count(),
+            fileCount, sourceBytes, repositoryBytes, truncated, contributors);
+        _memoryCache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
+        return result;
+    }
+
+    private static void CountTree(Tree tree, ref long fileCount, ref long sourceBytes, CancellationToken cancellationToken)
+    {
+        foreach (var entry in tree)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (entry.Target is Tree child) CountTree(child, ref fileCount, ref sourceBytes, cancellationToken);
+            else if (entry.Target is Blob blob) { fileCount++; sourceBytes += blob.Size; }
+        }
+    }
 
     /// <inheritdoc />
     public RepositoryTreeResult? ReadTree(

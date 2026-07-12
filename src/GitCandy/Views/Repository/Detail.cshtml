@@ -6,7 +6,7 @@
 <nav class="breadcrumb" aria-label="Breadcrumb">
     <a asp-action="Index">@Text["Shared_Repositories"]</a><span aria-hidden="true">/</span><span>@Model.Repository.Name</span>
 </nav>
-<partial name="_RepositoryNavigation" model="Model.Repository.Name" />
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.Repository.Name" />
 <header class="page-heading">
     <div>
         <h1>@Model.Repository.Name</h1>

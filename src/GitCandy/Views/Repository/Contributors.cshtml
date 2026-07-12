@@ -1,0 +1,8 @@
+@model RepositoryContributorsViewModel
+@{ ViewData["Title"] = $"{Model.RepositoryName} contributors"; ViewData["CanonicalUrl"] = $"/{Model.NamespaceSlug}/{Model.RepositoryName}"; }
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
+<header class="page-heading"><div><h1>Contributors</h1><p>@Model.NamespaceSlug/@Model.RepositoryName</p></div></header>
+@if (Model.Statistics is null) { <div class="empty-state"><p>No commits are available.</p></div> }
+else { var stats=Model.Statistics; <dl class="details-grid"><dt>Commits</dt><dd>@stats.CommitCount</dd><dt>Contributors</dt><dd>@stats.ContributorCount</dd><dt>Files</dt><dd>@stats.FileCount</dd><dt>Source size</dt><dd>@stats.SourceBytes.ToString("N0") bytes</dd><dt>Repository size</dt><dd>@stats.RepositoryBytes.ToString("N0") bytes</dd></dl>
+@if(stats.Truncated){<div class="alert alert-info">Statistics are limited to the configured commit traversal boundary.</div>}
+<div class="table-responsive"><table><thead><tr><th>Contributor</th><th>Commits</th></tr></thead><tbody>@foreach(var contributor in stats.Contributors){<tr><td>@contributor.Name</td><td>@contributor.CommitCount</td></tr>}</tbody></table></div> }

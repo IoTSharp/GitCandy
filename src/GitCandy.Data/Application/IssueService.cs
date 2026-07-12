@@ -154,7 +154,7 @@ internal sealed partial class IssueService(
             {
                 return await CreateIssueAttemptAsync(repositoryId, command, cancellationToken);
             }
-            catch (Exception exception) when (attempt < 5 && IsTransientCreateConflict(exception))
+            catch (Exception exception) when (attempt < 10 && IsTransientDiscussionConflict(exception))
             {
                 _dbContext.ChangeTracker.Clear();
                 await Task.Delay(TimeSpan.FromMilliseconds(20 * attempt), cancellationToken);
@@ -170,11 +170,11 @@ internal sealed partial class IssueService(
         ValidateTitleAndBody(command.Title, command.Body);
         if (!await CanReadAsUserAsync(repositoryId, command.AuthorUserId, cancellationToken))
             throw new IssueValidationException("The repository cannot be accessed.");
-        await EnforceRateLimitAsync(command.AuthorUserId, cancellationToken);
         var address = await GetAddressAsync(repositoryId, cancellationToken)
             ?? throw new IssueValidationException("The repository does not exist.");
         ValidateMentionFanOut(command.Body);
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
+        await EnforceRateLimitAsync(command.AuthorUserId, cancellationToken);
         var sequence = await _dbContext.WorkItemSequences.SingleOrDefaultAsync(
             item => item.RepositoryId == repositoryId, cancellationToken);
         if (sequence is null)
@@ -279,28 +279,68 @@ internal sealed partial class IssueService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(body) || body.Length > SchemaLimits.IssueBody) return IssueMutationResult.Invalid;
-        try { ValidateMentionFanOut(body); await EnforceRateLimitAsync(actorUserId, cancellationToken); }
-        catch (IssueRateLimitException) { return IssueMutationResult.RateLimited; }
+        try { ValidateMentionFanOut(body); }
         catch (IssueValidationException) { return IssueMutationResult.Invalid; }
+
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return await AddCommentAttemptAsync(
+                    repositoryId,
+                    number,
+                    actorUserId,
+                    isOwner,
+                    body,
+                    cancellationToken);
+            }
+            catch (IssueRateLimitException)
+            {
+                return IssueMutationResult.RateLimited;
+            }
+            catch (Exception exception) when (attempt < 10 && IsTransientDiscussionConflict(exception))
+            {
+                _dbContext.ChangeTracker.Clear();
+                await Task.Delay(TimeSpan.FromMilliseconds(20 * attempt), cancellationToken);
+            }
+        }
+    }
+
+    private async Task<IssueMutationResult> AddCommentAttemptAsync(
+        long repositoryId,
+        long number,
+        string actorUserId,
+        bool isOwner,
+        string body,
+        CancellationToken cancellationToken)
+    {
         var issue = await FindIssueAsync(repositoryId, number, cancellationToken);
         if (issue is null) return IssueMutationResult.NotFound;
         if (!await CanReadAsUserAsync(repositoryId, actorUserId, cancellationToken)) return IssueMutationResult.Forbidden;
         if (issue.IsLocked && !isOwner) return IssueMutationResult.Locked;
         var address = await GetAddressAsync(repositoryId, cancellationToken);
         if (address is null) return IssueMutationResult.NotFound;
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
+        await EnforceRateLimitAsync(actorUserId, cancellationToken);
+        var now = UtcNow;
         var comment = new GitCandyIssueComment
         {
             AuthorUserId = actorUserId,
             BodyMarkdown = body.Trim(),
             BodyHtml = _markdownRenderer.Render(body, address.Value.NamespaceSlug, address.Value.RepositorySlug),
-            CreatedAtUtc = UtcNow,
+            CreatedAtUtc = now,
             Version = 1
         };
         issue.Comments.Add(comment);
-        issue.Timeline.Add(NewEvent(IssueEventType.Commented, actorUserId, UtcNow, comment: comment));
+        issue.Timeline.Add(NewEvent(IssueEventType.Commented, actorUserId, now, comment: comment));
         Touch(issue);
         await AddReferencesAndNotificationsAsync(issue, actorUserId, body, IssueNotificationType.Reply, cancellationToken);
-        return await SaveMutationAsync(cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return IssueMutationResult.Succeeded;
     }
 
     public async Task<IssueMutationResult> EditCommentAsync(
@@ -437,7 +477,7 @@ internal sealed partial class IssueService(
             await IsAdministratorAsync(userId, cancellationToken),
             cancellationToken);
 
-    private static bool IsTransientCreateConflict(Exception exception) =>
+    private static bool IsTransientDiscussionConflict(Exception exception) =>
         exception is DbUpdateException
         || (string.Equals(exception.GetType().FullName, "Microsoft.Data.Sqlite.SqliteException", StringComparison.Ordinal)
             && (exception.Message.Contains("locked", StringComparison.OrdinalIgnoreCase)

@@ -134,7 +134,7 @@ public sealed class LibGit2RepositoryService(IGitRepositoryPathResolver pathReso
             return false;
         }
 
-        gitRepository.Refs.UpdateTarget(gitRepository.Refs.Head, canonicalName);
+        gitRepository.Refs.UpdateTarget("HEAD", canonicalName);
         return true;
     }
 
@@ -179,6 +179,65 @@ public sealed class LibGit2RepositoryService(IGitRepositoryPathResolver pathReso
             latestCommit,
             branches,
             tags);
+    }
+
+    /// <inheritdoc />
+    public bool DeleteBranch(GitRepositoryContext repository, string branchName, CancellationToken cancellationToken = default)
+    {
+        var normalizedName = ValidateShortRefName(branchName, "refs/heads/");
+        cancellationToken.ThrowIfCancellationRequested();
+        using var git = new Repository(ResolveExistingPath(repository));
+        var branch = git.Branches[normalizedName];
+        if (branch is null)
+        {
+            return false;
+        }
+
+        if (string.Equals(branch.CanonicalName, git.Refs.Head.TargetIdentifier, StringComparison.Ordinal)
+            || string.Equals(branch.CanonicalName, git.Head.CanonicalName, StringComparison.Ordinal)
+            || string.Equals(branch.FriendlyName, git.Head.FriendlyName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("The default branch cannot be deleted.");
+        }
+
+        git.Branches.Remove(branch);
+        return true;
+    }
+
+    /// <inheritdoc />
+    public bool DeleteTag(GitRepositoryContext repository, string tagName, CancellationToken cancellationToken = default)
+    {
+        var normalizedName = ValidateShortRefName(tagName, "refs/tags/");
+        cancellationToken.ThrowIfCancellationRequested();
+        using var git = new Repository(ResolveExistingPath(repository));
+        if (git.Tags[normalizedName] is null)
+        {
+            return false;
+        }
+
+        git.Tags.Remove(normalizedName);
+        return true;
+    }
+
+    private static string ValidateShortRefName(string name, string forbiddenPrefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        var value = name.Trim();
+        if (value.StartsWith("refs/", StringComparison.Ordinal)
+            || value.StartsWith(forbiddenPrefix, StringComparison.Ordinal)
+            || value.Contains("..", StringComparison.Ordinal)
+            || value.Contains("@{", StringComparison.Ordinal)
+            || value.EndsWith(".lock", StringComparison.OrdinalIgnoreCase)
+            || value.EndsWith('/')
+            || value.StartsWith('/')
+            || value.Contains('\\')
+            || !Reference.IsValidName($"{forbiddenPrefix}{value}")
+            || value.Any(character => char.IsControl(character) || character is ' ' or '~' or '^' or ':' or '?' or '*' or '['))
+        {
+            throw new ArgumentException("A valid short Git ref name is required.", nameof(name));
+        }
+
+        return value;
     }
 
     private void EnsureResolvedPathWithinRoot(string repositoryPath)

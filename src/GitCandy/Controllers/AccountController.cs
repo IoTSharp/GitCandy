@@ -5,6 +5,8 @@ using GitCandy.Configuration;
 using GitCandy.Data.Identity;
 using GitCandy.Models;
 using GitCandy.Models.Account;
+using GitCandy.Identity;
+using GitCandy.IdentityServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -22,7 +24,10 @@ public sealed class AccountController(
     IUserAdministrationService userAdministrationService,
     IAuthorizationService authorizationService,
     ICurrentUser currentUser,
-    IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
+    IOptions<GitCandyApplicationOptions> applicationOptions,
+    IAccountEmailSender accountEmailSender,
+    IAccountRecoveryThrottle accountRecoveryThrottle,
+    ILogger<AccountController> logger) : CandyControllerBase
 {
     private const string InvalidCredentialsMessage = "Unable to sign in with the supplied credentials.";
     private readonly UserManager<GitCandyUser> _userManager = userManager;
@@ -34,6 +39,9 @@ public sealed class AccountController(
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
+    private readonly IAccountEmailSender _accountEmailSender = accountEmailSender;
+    private readonly IAccountRecoveryThrottle _accountRecoveryThrottle = accountRecoveryThrottle;
+    private readonly ILogger<AccountController> _logger = logger;
 
     [HttpGet]
     [Authorize(Policy = AuthorizationPolicies.Administrator)]
@@ -157,7 +165,116 @@ public sealed class AccountController(
     [AllowAnonymous]
     public IActionResult Forgot()
     {
-        return View();
+        return View(new ForgotPasswordViewModel());
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<IActionResult> Forgot(ForgotPasswordViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        var partition = $"{HttpContext.Connection.RemoteIpAddress}|{model.Email.Trim().ToUpperInvariant()}";
+        if (_accountRecoveryThrottle.TryAcquire(partition))
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email.Trim());
+            if (user is not null && !string.IsNullOrWhiteSpace(user.Email))
+            {
+                await SendPasswordResetAsync(user, "GitCandy password reset", cancellationToken);
+                _logger.LogInformation("Password recovery was requested for user {UserId}.", user.Id);
+            }
+        }
+
+        model.Email = string.Empty;
+        model.Submitted = true;
+        ModelState.Clear();
+        return View(model);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult ResetPassword(string? email, string? token)
+    {
+        return string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token)
+            ? BadRequest()
+            : View(new ResetPasswordViewModel { Email = email, Token = token });
+    }
+
+    [HttpPost]
+    [AllowAnonymous]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return View(model);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var user = await _userManager.FindByEmailAsync(model.Email.Trim());
+        if (user is null)
+        {
+            return RedirectToAction(nameof(ResetPasswordConfirmation));
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            AddIdentityErrors(result);
+            return View(model);
+        }
+
+        await _userManager.UpdateSecurityStampAsync(user);
+        _logger.LogInformation("Password recovery completed for user {UserId}.", user.Id);
+        return RedirectToAction(nameof(ResetPasswordConfirmation));
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult ResetPasswordConfirmation() => View();
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<IActionResult> ConfirmEmail(string? userId, string? token)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest();
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        var succeeded = user is not null && (await _userManager.ConfirmEmailAsync(user, token)).Succeeded;
+        return View(model: succeeded);
+    }
+
+    [HttpPost]
+    [Authorize(Policy = AuthorizationPolicies.Administrator)]
+    public async Task<IActionResult> AdminRecover(AdminAccountRecoveryViewModel model, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var user = await _userManager.FindByNameAsync(model.UserName);
+        if (user is null || string.IsNullOrWhiteSpace(user.Email))
+        {
+            return NotFound();
+        }
+
+        var delivered = await SendPasswordResetAsync(user, "GitCandy administrator-initiated password recovery", cancellationToken);
+        _logger.LogWarning(
+            "Administrator {ActorUserId} initiated account recovery for user {TargetUserId}. Reason: {Reason}. Delivered: {Delivered}.",
+            _currentUser.UserId,
+            user.Id,
+            model.Reason.Trim(),
+            delivered);
+        return delivered ? Ok() : StatusCode(StatusCodes.Status503ServiceUnavailable);
     }
 
     [HttpPost]
@@ -197,6 +314,20 @@ public sealed class AccountController(
             await _userManager.DeleteAsync(user);
             ModelState.AddModelError(nameof(model.UserName), "The user name is reserved or already occupied by a user or team namespace.");
             return View(model);
+        }
+
+        if (!string.IsNullOrWhiteSpace(user.Email))
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var link = Url.ActionLink(nameof(ConfirmEmail), values: new { userId = user.Id, token });
+            if (Uri.TryCreate(link, UriKind.Absolute, out var actionLink))
+            {
+                await _accountEmailSender.SendActionLinkAsync(
+                    user.Email,
+                    "Confirm your GitCandy email address",
+                    actionLink,
+                    cancellationToken);
+            }
         }
 
         if (!_currentUser.IsAuthenticated)
@@ -563,5 +694,24 @@ public sealed class AccountController(
                 scheme.Name,
                 scheme.DisplayName ?? scheme.Name))
             .ToArray();
+    }
+
+    private async Task<bool> SendPasswordResetAsync(
+        GitCandyUser user,
+        string subject,
+        CancellationToken cancellationToken)
+    {
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var link = Url.ActionLink(
+            nameof(ResetPassword),
+            values: new { email = user.Email, token },
+            protocol: Request.Scheme);
+        return !string.IsNullOrWhiteSpace(user.Email)
+            && Uri.TryCreate(link, UriKind.Absolute, out var actionLink)
+            && await _accountEmailSender.SendActionLinkAsync(
+                user.Email,
+                subject,
+                actionLink,
+                cancellationToken);
     }
 }

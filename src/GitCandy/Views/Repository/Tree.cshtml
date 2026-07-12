@@ -5,7 +5,7 @@
     var pathParts = tree?.Path.Split('/', StringSplitOptions.RemoveEmptyEntries) ?? [];
 }
 <nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><strong>@Model.RepositoryName</strong></nav>
-<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading">
     <div><h1>@Model.RepositoryName</h1><p>@(tree?.Revision.DisplayName ?? "Empty repository")</p></div>
     @if (tree is not null)

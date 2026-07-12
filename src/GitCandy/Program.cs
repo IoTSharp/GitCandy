@@ -2,6 +2,7 @@ using GitCandy.Configuration;
 using GitCandy.Observability;
 using GitCandy.Operations;
 using GitCandy.Profiling;
+using Microsoft.Extensions.Options;
 
 var openSshRequested = OpenSshCommandLine.IsRequested(args);
 OpenSshInvocation? openSshInvocation = null;
@@ -68,6 +69,11 @@ if (openSshRequested)
 }
 
 await app.Services.MigrateGitCandyDatabaseAsync();
+
+if (app.Services.GetRequiredService<IOptions<GitCandyProxyOptions>>().Value.Enabled)
+{
+    app.UseForwardedHeaders();
+}
 
 app.UseGitCandyRequestProfiler();
 

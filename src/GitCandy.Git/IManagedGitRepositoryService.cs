@@ -44,4 +44,10 @@ public interface IManagedGitRepositoryService
     GitRepositorySnapshot ReadSnapshot(
         GitRepositoryContext repository,
         CancellationToken cancellationToken = default);
+
+    /// <summary>删除非默认本地分支。</summary>
+    bool DeleteBranch(GitRepositoryContext repository, string branchName, CancellationToken cancellationToken = default);
+
+    /// <summary>删除本地 tag。</summary>
+    bool DeleteTag(GitRepositoryContext repository, string tagName, CancellationToken cancellationToken = default);
 }

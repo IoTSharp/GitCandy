@@ -1,7 +1,7 @@
 @model RepositoryCompareViewModel
 @{ ViewData["Title"] = "Compare"; var repositoryName = Model?.RepositoryName ?? Context.Request.Query["name"].ToString(); }
 <nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Tree" asp-route-name="@repositoryName">@repositoryName</a><span>/</span><span>Compare</span></nav>
-<partial name="_RepositoryNavigation" model="repositoryName" />
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="repositoryName" />
 <header class="page-heading"><div><h1>Compare revisions</h1></div></header>
 <form asp-action="Compare" method="get" class="compare-form">
     <input type="hidden" name="name" value="@repositoryName" />

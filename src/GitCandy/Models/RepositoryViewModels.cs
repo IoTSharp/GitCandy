@@ -108,6 +108,12 @@ public sealed class RepositoryDetailsViewModel
     public bool CanManage { get; init; }
 }
 
+public sealed record RepositoryBranchesViewModel(string NamespaceSlug, string RepositoryName, IReadOnlyList<RepositoryBranchSummary> Branches, bool CanWrite);
+
+public sealed record RepositoryTagsViewModel(string NamespaceSlug, string RepositoryName, IReadOnlyList<RepositoryTagSummary> Tags, bool CanWrite);
+
+public sealed record RepositoryContributorsViewModel(string NamespaceSlug, string RepositoryName, RepositoryStatisticsResult? Statistics);
+
 public sealed class RepositoryUserRoleCommand
 {
     [Required]

@@ -1,6 +1,18 @@
+@model ForgotPasswordViewModel
 @{
     ViewData["Title"] = "Password recovery";
 }
 <section class="account-shell"><i data-lucide="key-round"></i><h1>Password recovery</h1>
-<div class="alert alert-info" role="status">Self-service password reset is not enabled. Contact a GitCandy administrator.</div>
+@if (Model.Submitted)
+{
+    <div class="alert alert-info" role="status">If an account matches that address, a password reset link has been sent.</div>
+}
+else
+{
+    <form asp-action="Forgot" method="post" class="account-form">
+        <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+        <div class="form-field"><label asp-for="Email"></label><input asp-for="Email" autocomplete="email" autofocus /><span asp-validation-for="Email"></span></div>
+        <button type="submit" class="primary-button"><i data-lucide="mail"></i> Send reset link</button>
+    </form>
+}
 <a asp-action="Login" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></section>

@@ -458,9 +458,10 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ActorUserId");
-
                     b.HasIndex("CommentId");
+
+                    b.HasIndex("ActorUserId", "Type", "CreatedAtUtc")
+                        .HasDatabaseName("IX_IssueTimelineEvents_ActorUserId_Type_CreatedAtUtc");
 
                     b.HasIndex("IssueId", "CreatedAtUtc", "Id")
                         .HasDatabaseName("IX_IssueTimelineEvents_IssueId_CreatedAtUtc_Id");

@@ -103,3 +103,15 @@ public sealed record RepositoryCompareResult(
     IReadOnlyList<RepositoryCommitSummary> Commits,
     IReadOnlyList<RepositoryDiffFile> Files,
     bool DiffTruncated);
+
+/// <summary>本地分支摘要。</summary>
+public sealed record RepositoryBranchSummary(string Name, string CommitId, string Message, DateTimeOffset UpdatedAt, int AheadBy, int BehindBy, bool IsDefault);
+
+/// <summary>Git tag 摘要。</summary>
+public sealed record RepositoryTagSummary(string Name, string CommitId, bool IsAnnotated, string? TaggerName, DateTimeOffset? TaggedAt, string? Message);
+
+/// <summary>不包含邮箱地址的 contributor 摘要。</summary>
+public sealed record RepositoryContributorSummary(string Name, int CommitCount);
+
+/// <summary>有界仓库统计结果。</summary>
+public sealed record RepositoryStatisticsResult(RepositoryRevision Revision, int CommitCount, int ContributorCount, long FileCount, long SourceBytes, long RepositoryBytes, bool Truncated, IReadOnlyList<RepositoryContributorSummary> Contributors);

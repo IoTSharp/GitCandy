@@ -1,0 +1,8 @@
+@model RepositoryTagsViewModel
+@{ ViewData["Title"] = $"{Model.RepositoryName} tags"; ViewData["CanonicalUrl"] = $"/{Model.NamespaceSlug}/{Model.RepositoryName}"; }
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
+<header class="page-heading"><div><h1>Tags</h1><p>@Model.NamespaceSlug/@Model.RepositoryName</p></div></header>
+@if (Model.Tags.Count == 0) { <div class="empty-state"><p>No tags are available.</p></div> }
+else { <div class="table-responsive"><table><thead><tr><th>Tag</th><th>Target</th><th>Type</th><th>Tagger</th><th></th></tr></thead><tbody>
+@foreach (var tag in Model.Tags) { <tr><td><strong>@tag.Name</strong><div>@tag.Message</div></td><td><code>@tag.CommitId[..12]</code></td><td>@(tag.IsAnnotated ? "Annotated" : "Lightweight")</td><td>@tag.TaggerName @tag.TaggedAt?.ToString("u")</td><td><a class="btn" href="/@Model.NamespaceSlug/@Model.RepositoryName/archive?revision=@Uri.EscapeDataString(tag.Name)"><i data-lucide="archive"></i> Archive</a>@if(Model.CanWrite){<form action="/@Model.NamespaceSlug/@Model.RepositoryName/tags/delete" method="post">@Html.AntiForgeryToken()<input type="hidden" name="name" value="@tag.Name" /><button class="btn btn-danger" type="submit"><i data-lucide="trash-2"></i> Delete</button></form>}</td></tr> }
+</tbody></table></div> }

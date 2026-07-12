@@ -28,6 +28,12 @@ public sealed class RepositoryBrowserOptions
 
     /// <summary>仓库读取操作的最长执行时间。</summary>
     public TimeSpan OperationTimeout { get; set; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>Contributors 统计最多遍历的提交数。</summary>
+    public int MaxStatisticsCommits { get; set; } = 10000;
+
+    /// <summary>Contributors 页面最多显示的作者数。</summary>
+    public int MaxContributors { get; set; } = 100;
 }
 
 /// <summary>

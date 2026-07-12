@@ -4,6 +4,7 @@ using GitCandy.Configuration;
 using GitCandy.Git;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GitCandy.Tests;
 
@@ -64,6 +65,18 @@ public sealed class RepositoryBrowserServiceTests
             var compare = service.Compare(context, commits.Commits[^1].Id, commits.Commits[0].Id);
             Assert.IsNotNull(compare);
             Assert.IsGreaterThanOrEqualTo(1, compare.AheadBy);
+            var branches = service.ReadBranches(context);
+            Assert.IsTrue(branches.Any(static branch => branch.IsDefault));
+            Assert.IsTrue(branches.Any(static branch => branch.Name == "feature"));
+            var tags = service.ReadTags(context);
+            Assert.IsTrue(tags.Any(static tag => tag.Name == "v1" && !tag.IsAnnotated));
+            Assert.IsTrue(tags.Any(static tag => tag.Name == "v2" && tag.IsAnnotated && tag.Message == "Release v2"));
+            var statistics = service.ReadStatistics(context, "HEAD");
+            Assert.IsNotNull(statistics);
+            Assert.IsGreaterThanOrEqualTo(3, statistics.CommitCount);
+            Assert.IsGreaterThanOrEqualTo(1, statistics.ContributorCount);
+            Assert.IsTrue(statistics.Contributors.All(static contributor => !contributor.Name.Contains('@')));
+            Assert.IsGreaterThanOrEqualTo(4L, statistics.FileCount);
 
             await using var archiveStream = new MemoryStream();
             var archiveRevision = await service.WriteArchiveAsync(
@@ -75,6 +88,30 @@ public sealed class RepositoryBrowserServiceTests
             using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
             Assert.IsNotNull(archive.GetEntry("README.md"));
             Assert.IsNull(archive.GetEntry("vendor/demo"));
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
+    }
+
+    [TestMethod]
+    public void ManagedRepository_WithRefDeletion_ProtectsDefaultAndValidatesNamespaces()
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            var repositoryPath = CreateRepository(rootPath);
+            var service = new LibGit2RepositoryService(new BrowserPathResolver(rootPath));
+            var context = new GitRepositoryContext("browser", repositoryPath);
+            var defaultBranch = service.ReadSnapshot(context).HeadCanonicalName["refs/heads/".Length..];
+
+            Assert.ThrowsExactly<InvalidOperationException>(() => service.DeleteBranch(context, defaultBranch));
+            Assert.ThrowsExactly<ArgumentException>(() => service.DeleteBranch(context, "refs/heads/feature"));
+            Assert.IsTrue(service.DeleteBranch(context, "feature"));
+            Assert.IsFalse(service.DeleteBranch(context, "feature"));
+            Assert.IsTrue(service.DeleteTag(context, "v1"));
+            Assert.ThrowsExactly<ArgumentException>(() => service.DeleteTag(context, "../main"));
         }
         finally
         {
@@ -141,6 +178,7 @@ public sealed class RepositoryBrowserServiceTests
             prettifyMessage: true);
         repository.Refs.UpdateTarget(repository.Head.CanonicalName, specialCommit.Id.Sha);
         repository.ApplyTag("v1", firstCommit.Sha);
+        repository.ApplyTag("v2", specialCommit.Sha, signature, "Release v2");
         repository.CreateBranch("feature", secondCommit);
         return repositoryPath;
     }
@@ -160,7 +198,8 @@ public sealed class RepositoryBrowserServiceTests
                 MaxDiffFiles = 100,
                 MaxArchiveBytes = maxArchiveBytes,
                 MaxArchiveEntries = 100
-            }));
+            }),
+            new MemoryCache(new MemoryCacheOptions()));
     }
 
     private sealed class BrowserPathResolver(string rootPath) : IGitRepositoryPathResolver

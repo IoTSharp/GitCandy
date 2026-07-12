@@ -31,7 +31,6 @@ public sealed class GitSmartHttpIntegrationTests
         await using var fixture = await GitHttpFixture.CreateAsync();
         var clonePath = Path.Combine(fixture.TempRoot, "clones", "public-dotgit");
         var noSuffixClonePath = Path.Combine(fixture.TempRoot, "clones", "public-no-suffix");
-        var aliasClonePath = Path.Combine(fixture.TempRoot, "clones", "public-alias");
 
         await fixture.RunGitAsync(
             ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}git/public-demo.git", clonePath]);
@@ -41,10 +40,6 @@ public sealed class GitSmartHttpIntegrationTests
             ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}m6-owner/public-demo", noSuffixClonePath]);
         Assert.IsTrue(File.Exists(Path.Combine(noSuffixClonePath, "README.md")));
 
-        await fixture.RunGitAsync(
-            ["-c", "protocol.version=2", "clone", $"{fixture.BaseAddress}m6-previous/public-old.git", aliasClonePath]);
-        Assert.IsTrue(File.Exists(Path.Combine(aliasClonePath, "README.md")));
-
         File.AppendAllText(
             Path.Combine(fixture.SeedWorkTree, "README.md"),
             "fetch verification\n",
@@ -53,26 +48,12 @@ public sealed class GitSmartHttpIntegrationTests
         await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "commit", "-m", "M6 fetch verification"]);
         await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "push", "origin", "main"]);
         await fixture.RunGitAsync(["-C", clonePath, "fetch", "--all", "--tags"]);
-        await fixture.RunGitAsync(["-C", aliasClonePath, "fetch", "--all", "--tags"]);
 
         var remoteHead = await fixture.RunGitForOutputAsync(
             ["-C", clonePath, "rev-parse", "origin/main"]);
         var bareHead = await fixture.RunGitForOutputAsync(
             ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]);
         Assert.AreEqual(bareHead, remoteHead);
-
-        File.AppendAllText(Path.Combine(aliasClonePath, "README.md"), "alias push verification\n", Encoding.UTF8);
-        await fixture.RunGitAsync(["-C", aliasClonePath, "config", "user.name", "GitCandy M10 Bot"]);
-        await fixture.RunGitAsync(["-C", aliasClonePath, "config", "user.email", "m10@gitcandy.local"]);
-        await fixture.RunGitAsync(["-C", aliasClonePath, "add", "README.md"]);
-        await fixture.RunGitAsync(["-C", aliasClonePath, "commit", "-m", "M10 alias push verification"]);
-        await fixture.RunGitAsync(
-            ["-C", aliasClonePath, "push", "origin", "HEAD:refs/heads/m10-alias"],
-            useOwnerCredentials: true);
-        var aliasPushedHead = await fixture.RunGitForOutputAsync(
-            ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/m10-alias"]);
-        var aliasLocalHead = await fixture.RunGitForOutputAsync(["-C", aliasClonePath, "rev-parse", "HEAD"]);
-        Assert.AreEqual(aliasLocalHead, aliasPushedHead);
 
         var largeFilePath = Path.Combine(clonePath, "large-pack.bin");
         await WriteRandomFileAsync(largeFilePath, LargeFileSize);
@@ -95,6 +76,53 @@ public sealed class GitSmartHttpIntegrationTests
         Assert.AreEqual(
             LargeFileSize,
             int.Parse(remoteLargeFileSize, CultureInfo.InvariantCulture));
+    }
+
+    [TestMethod]
+    public async Task GitSmartHttp_WithAliasAndConcurrentRealClients_ClonesFetchesAndPushesReliably()
+    {
+        await using var fixture = await GitHttpFixture.CreateAsync();
+        var clonePaths = Enumerable.Range(0, 4)
+            .Select(index => Path.Combine(fixture.TempRoot, "clones", $"alias-{index}"))
+            .ToArray();
+        var aliasUrl = $"{fixture.BaseAddress}m6-previous/public-old.git";
+
+        await Task.WhenAll(clonePaths.Select(path => fixture.RunGitAsync(
+            ["-c", "protocol.version=2", "clone", aliasUrl, path])));
+        Assert.IsTrue(clonePaths.All(path => File.Exists(Path.Combine(path, "README.md"))));
+
+        File.AppendAllText(
+            Path.Combine(fixture.SeedWorkTree, "README.md"),
+            "concurrent alias fetch verification\n",
+            Encoding.UTF8);
+        await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "add", "README.md"]);
+        await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "commit", "-m", "M12.5 alias fetch verification"]);
+        await fixture.RunGitAsync(["-C", fixture.SeedWorkTree, "push", "origin", "main"]);
+
+        await Task.WhenAll(clonePaths.Select(path => fixture.RunGitAsync(
+            ["-C", path, "-c", "protocol.version=2", "fetch", "--all", "--tags"])));
+
+        for (var index = 0; index < clonePaths.Length; index++)
+        {
+            var clonePath = clonePaths[index];
+            File.WriteAllText(Path.Combine(clonePath, $"alias-{index}.txt"), $"alias {index}\n", Encoding.UTF8);
+            await fixture.RunGitAsync(["-C", clonePath, "config", "user.name", "GitCandy M12.5 Bot"]);
+            await fixture.RunGitAsync(["-C", clonePath, "config", "user.email", "m12.5@gitcandy.local"]);
+            await fixture.RunGitAsync(["-C", clonePath, "add", $"alias-{index}.txt"]);
+            await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", $"M12.5 alias push {index}"]);
+        }
+
+        await Task.WhenAll(clonePaths.Select((path, index) => fixture.RunGitAsync(
+            ["-C", path, "-c", "protocol.version=2", "push", "origin", $"HEAD:refs/heads/m12-alias-{index}"],
+            useOwnerCredentials: true)));
+
+        foreach (var index in Enumerable.Range(0, clonePaths.Length))
+        {
+            var pushedHead = await fixture.RunGitForOutputAsync(
+                ["--git-dir", fixture.BareRepositoryPath, "rev-parse", $"refs/heads/m12-alias-{index}"]);
+            var localHead = await fixture.RunGitForOutputAsync(["-C", clonePaths[index], "rev-parse", "HEAD"]);
+            Assert.AreEqual(localHead, pushedHead);
+        }
     }
 
     private static async Task WriteRandomFileAsync(string path, int size)

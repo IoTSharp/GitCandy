@@ -43,8 +43,12 @@ permissions:
 
 jobs:
   build-test:
-    name: Build and test GitCandy.slnx
-    runs-on: windows-latest
+    name: Build and test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
@@ -55,9 +59,73 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Validate migration solution
+      - name: Restore
+        run: dotnet restore GitCandy.slnx
+
+      - name: Build
+        run: dotnet build GitCandy.slnx --configuration Release --no-restore
+
+      - name: Test with coverage
+        run: dotnet test GitCandy.slnx --configuration Release --no-build --no-restore --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Enforce 80% line coverage
         shell: pwsh
-        run: ./tools/migration/m1-012/Invoke-M1SolutionValidation.ps1 -Configuration Release
+        run: ./tools/coverage/Test-CoverageThreshold.ps1 -ResultsPath TestResults -MinimumLineRate 80
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: error
+
+  browser:
+    name: Browser smoke and visual artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: dotnet build src/GitCandy/GitCandy.csproj --configuration Release
+      - name: Start GitCandy
+        run: |
+          mkdir -p /tmp/gitcandy/repositories /tmp/gitcandy/cache /tmp/gitcandy/keys
+          ASPNETCORE_URLS=http://127.0.0.1:5080 \
+          GitCandy__Application__EnableSsh=false \
+          GitCandy__Application__RepositoryPath=/tmp/gitcandy/repositories \
+          GitCandy__Application__CachePath=/tmp/gitcandy/cache \
+          GitCandy__Application__DataProtectionKeysPath=/tmp/gitcandy/keys \
+          ConnectionStrings__GitCandy='Data Source=/tmp/gitcandy/GitCandy.db' \
+          dotnet run --project src/GitCandy --configuration Release --no-build --no-launch-profile > /tmp/gitcandy.log 2>&1 &
+          for attempt in {1..60}; do curl --fail --silent http://127.0.0.1:5080/health/live && break; sleep 1; done
+      - name: Run browser smoke
+        run: |
+          npm install --no-save playwright-core@1.55.0
+          CHROME_PATH=/usr/bin/google-chrome node tools/browser/smoke.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-visuals
+          path: output/playwright/*.png
+          if-no-files-found: error
+
+  recovery:
+    name: Backup and restore rehearsal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create representative recovery set
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .recovery/repositories/demo.git, .recovery/lfs/objects, .recovery/data-protection-keys | Out-Null
+          Set-Content .recovery/GitCandy.db 'sqlite-placeholder'
+          Set-Content .recovery/repositories/demo.git/HEAD 'ref: refs/heads/main'
+          Set-Content .recovery/lfs/objects/sample 'lfs-object'
+          Set-Content .recovery/data-protection-keys/key.xml '<key />'
+          ./tools/operations/Invoke-RecoveryRehearsal.ps1 -DataRoot .recovery
 
   container:
     name: Validate Docker image and Compose
@@ -71,6 +139,17 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose --file docker-compose.yml config --quiet
+          GITCANDY_DOMAIN=gitcandy.example.test docker compose --file docker-compose.yml --file docker-compose.tls.yml config --quiet
 
       - name: Build image
         run: docker build --tag gitcandy:ci .
+
+      - name: Start image and verify readiness
+        run: |
+          docker run --detach --name gitcandy-ci -p 18080:8080 -e GitCandy__Application__EnableSsh=false gitcandy:ci
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:18080/health/ready; then exit 0; fi
+            sleep 1
+          done
+          docker logs gitcandy-ci
+          exit 1

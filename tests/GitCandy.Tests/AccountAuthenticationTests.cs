@@ -7,12 +7,14 @@ using GitCandy.Configuration;
 using GitCandy.Controllers;
 using GitCandy.Data;
 using GitCandy.Data.Identity;
+using GitCandy.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -155,6 +157,71 @@ public sealed class AccountAuthenticationTests
     }
 
     [TestMethod]
+    public async Task PasswordRecovery_WithOneTimeToken_ResetsPasswordWithoutAccountEnumeration()
+    {
+        await using var fixture = await AccountWebFixture.CreateAsync();
+        await fixture.CreateUserAsync("recovery-user", "recovery-user@example.com", OriginalPassword);
+        using var existingSession = fixture.CreateClient();
+        await fixture.LoginAsync("recovery-user", OriginalPassword, existingSession);
+
+        var missingToken = await fixture.GetAntiforgeryTokenAsync("/Account/Forgot");
+        using var missingResponse = await fixture.PostFormAsync(
+            "/Account/Forgot",
+            missingToken,
+            new Dictionary<string, string> { ["Email"] = "missing@example.com" });
+        var missingHtml = await missingResponse.Content.ReadAsStringAsync();
+
+        var recoveryToken = await fixture.GetAntiforgeryTokenAsync("/Account/Forgot");
+        using var recoveryResponse = await fixture.PostFormAsync(
+            "/Account/Forgot",
+            recoveryToken,
+            new Dictionary<string, string> { ["Email"] = "recovery-user@example.com" });
+        var recoveryHtml = await recoveryResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(missingHtml, "If an account matches that address");
+        StringAssert.Contains(recoveryHtml, "If an account matches that address");
+        Assert.AreEqual(1, fixture.EmailSender.Messages.Count);
+
+        var actionLink = fixture.EmailSender.Messages.Single().ActionLink;
+        var query = QueryHelpers.ParseQuery(actionLink.Query);
+        var email = query["email"].ToString();
+        var token = query["token"].ToString();
+        var formToken = await fixture.GetAntiforgeryTokenAsync(actionLink.PathAndQuery);
+        using var resetResponse = await fixture.PostFormAsync(
+            "/Account/ResetPassword",
+            formToken,
+            new Dictionary<string, string>
+            {
+                ["Email"] = email,
+                ["Token"] = token,
+                ["NewPassword"] = ChangedPassword,
+                ["ConfirmPassword"] = ChangedPassword
+            });
+        Assert.AreEqual(HttpStatusCode.Redirect, resetResponse.StatusCode);
+
+        using var reusedTokenResponse = await fixture.PostFormAsync(
+            "/Account/ResetPassword",
+            formToken,
+            new Dictionary<string, string>
+            {
+                ["Email"] = email,
+                ["Token"] = token,
+                ["NewPassword"] = "M4-Another-Password-2026!",
+                ["ConfirmPassword"] = "M4-Another-Password-2026!"
+            });
+        Assert.AreEqual(HttpStatusCode.OK, reusedTokenResponse.StatusCode);
+        StringAssert.Contains(
+            await reusedTokenResponse.Content.ReadAsStringAsync(),
+            "Invalid token");
+
+        using var oldLogin = await fixture.PostLoginAsync("recovery-user", OriginalPassword);
+        Assert.AreEqual(HttpStatusCode.OK, oldLogin.StatusCode);
+        using var newLogin = await fixture.PostLoginAsync("recovery-user", ChangedPassword);
+        Assert.AreEqual(HttpStatusCode.Redirect, newLogin.StatusCode);
+        var oldSessionHome = await fixture.GetStringAsync("/Repository", existingSession);
+        StringAssert.Contains(oldSessionHome, "Login");
+    }
+
+    [TestMethod]
     public async Task Login_WithRepeatedInvalidPasswords_LocksUserAndRejectsValidPassword()
     {
         await using var fixture = await AccountWebFixture.CreateAsync();
@@ -257,11 +324,12 @@ public sealed class AccountAuthenticationTests
 
     private sealed class AccountWebFixture : IAsyncDisposable
     {
-        private AccountWebFixture(WebApplication app, HttpClient client, string tempRoot)
+        private AccountWebFixture(WebApplication app, HttpClient client, string tempRoot, CapturingAccountEmailSender emailSender)
         {
             App = app;
             Client = client;
             TempRoot = tempRoot;
+            EmailSender = emailSender;
         }
 
         private WebApplication App { get; }
@@ -269,6 +337,8 @@ public sealed class AccountAuthenticationTests
         private HttpClient Client { get; }
 
         private string TempRoot { get; }
+
+        public CapturingAccountEmailSender EmailSender { get; }
 
         public static async Task<AccountWebFixture> CreateAsync()
         {
@@ -293,6 +363,9 @@ public sealed class AccountAuthenticationTests
             builder.Services.AddControllersWithViews()
                 .AddApplicationPart(typeof(AccountController).Assembly);
             builder.Services.RemoveAll<IHostedService>();
+            builder.Services.RemoveAll<IAccountEmailSender>();
+            var emailSender = new CapturingAccountEmailSender();
+            builder.Services.AddSingleton<IAccountEmailSender>(emailSender);
             builder.Services.ConfigureApplicationCookie(options =>
             {
                 options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
@@ -324,7 +397,7 @@ public sealed class AccountAuthenticationTests
                 await app.StartAsync();
                 var client = CreateClient(app);
 
-                return new AccountWebFixture(app, client, tempRoot);
+                return new AccountWebFixture(app, client, tempRoot, emailSender);
             }
             catch
             {
@@ -553,6 +626,22 @@ public sealed class AccountAuthenticationTests
 
             Assert.IsNotNull(directory);
             return Path.Combine(directory.FullName, "src", "GitCandy");
+        }
+    }
+
+    private sealed class CapturingAccountEmailSender : IAccountEmailSender
+    {
+        public List<(string Recipient, string Subject, Uri ActionLink)> Messages { get; } = [];
+
+        public Task<bool> SendActionLinkAsync(
+            string recipient,
+            string subject,
+            Uri actionLink,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Messages.Add((recipient, subject, actionLink));
+            return Task.FromResult(true);
         }
     }
 }

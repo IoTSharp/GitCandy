@@ -1,0 +1,8 @@
+@model RepositoryBranchesViewModel
+@{ ViewData["Title"] = $"{Model.RepositoryName} branches"; ViewData["CanonicalUrl"] = $"/{Model.NamespaceSlug}/{Model.RepositoryName}"; }
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
+<header class="page-heading"><div><h1>Branches</h1><p>@Model.NamespaceSlug/@Model.RepositoryName</p></div></header>
+@if (Model.Branches.Count == 0) { <div class="empty-state"><p>No branches are available. The repository may be empty.</p></div> }
+else { <div class="table-responsive"><table><thead><tr><th>Branch</th><th>Tip</th><th>Updated</th><th>Ahead / behind</th><th></th></tr></thead><tbody>
+@foreach (var branch in Model.Branches) { <tr><td><strong>@branch.Name</strong> @if(branch.IsDefault){<span class="status-badge">default</span>}</td><td><code>@branch.CommitId[..12]</code> @branch.Message</td><td>@branch.UpdatedAt.ToString("u")</td><td>@branch.AheadBy / @branch.BehindBy</td><td>@if(Model.CanWrite && !branch.IsDefault){<form action="/@Model.NamespaceSlug/@Model.RepositoryName/branches/delete" method="post">@Html.AntiForgeryToken()<input type="hidden" name="name" value="@branch.Name" /><button class="btn btn-danger" type="submit"><i data-lucide="trash-2"></i> Delete</button></form>}</td></tr> }
+</tbody></table></div> }

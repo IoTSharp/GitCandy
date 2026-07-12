@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using GitCandy.Application;
 using GitCandy.Authentication;
 using GitCandy.Authorization;
@@ -9,6 +10,8 @@ using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
 using GitCandy.Diagnostics;
 using GitCandy.Git;
+using GitCandy.Identity;
+using GitCandy.IdentityServices;
 using GitCandy.Operations;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
@@ -20,6 +23,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -62,6 +66,7 @@ public static class WebServiceCollectionExtensions
         services.AddGitCandyApplicationOptions(configuration);
         services.AddGitCandyNamespaceOptions(configuration);
         services.AddGitCandyOpenSshOptions(configuration);
+        services.AddGitCandyProxyOptions(configuration);
         services.AddDataProtection()
             .SetApplicationName("GitCandy")
             .PersistKeysToFileSystem(new DirectoryInfo(
@@ -98,6 +103,8 @@ public static class WebServiceCollectionExtensions
             })
             .AddEntityFrameworkStores<GitCandyDbContext>()
             .AddDefaultTokenProviders();
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+            options.TokenLifespan = identitySettings.AccountRecovery.TokenLifespan);
 
         var authentication = services.AddAuthentication()
             .AddScheme<AuthenticationSchemeOptions, GitBasicAuthenticationHandler>(
@@ -188,6 +195,9 @@ public static class WebServiceCollectionExtensions
 
     private static IServiceCollection AddGitCandyWebServices(this IServiceCollection services)
     {
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IAccountRecoveryThrottle, AccountRecoveryThrottle>();
+        services.TryAddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
         services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, RepositoryAuthorizationHandler>());
@@ -286,6 +296,26 @@ public static class WebServiceCollectionExtensions
         return services;
     }
 
+    private static IServiceCollection AddGitCandyProxyOptions(this IServiceCollection services, IConfiguration configuration)
+    {
+        var section = configuration.GetSection(GitCandyProxyOptions.SectionName);
+        var settings = section.Get<GitCandyProxyOptions>() ?? new GitCandyProxyOptions();
+        services.AddOptions<GitCandyProxyOptions>().Bind(section)
+            .Validate(options => !options.Enabled || (options.ForwardLimit is >= 1 and <= 10 && options.KnownProxies.Length > 0
+                && options.KnownProxies.All(static value => IPAddress.TryParse(value, out _))),
+                "Enabled proxy forwarding requires a forward limit and explicit IP addresses.")
+            .ValidateOnStart();
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedHost | ForwardedHeaders.XForwardedProto;
+            options.ForwardLimit = settings.ForwardLimit;
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+            foreach (var value in settings.KnownProxies) options.KnownProxies.Add(IPAddress.Parse(value));
+        });
+        return services;
+    }
+
     private static IServiceCollection AddGitCandyNamespaceOptions(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -318,6 +348,19 @@ public static class WebServiceCollectionExtensions
                 options => options.Password.RequiredUniqueChars is >= 1 and <= 128
                     && options.Password.RequiredUniqueChars <= options.Password.RequiredLength,
                 $"{nameof(GitCandyPasswordOptions.RequiredUniqueChars)} must be between 1 and the required password length.")
+            .Validate(
+                options => options.AccountRecovery.TokenLifespan > TimeSpan.Zero
+                    && options.AccountRecovery.TokenLifespan <= TimeSpan.FromDays(1),
+                "Account recovery token lifespan must be between zero and one day.")
+            .Validate(
+                options => options.AccountRecovery.MaxRequestsPerWindow is >= 1 and <= 100
+                    && options.AccountRecovery.RequestWindow > TimeSpan.Zero,
+                "Account recovery rate-limit settings are invalid.")
+            .Validate(
+                options => string.IsNullOrWhiteSpace(options.AccountRecovery.Smtp.Host)
+                    || (!string.IsNullOrWhiteSpace(options.AccountRecovery.Smtp.FromAddress)
+                        && options.AccountRecovery.Smtp.Port is >= 1 and <= 65535),
+                "Enabled SMTP delivery requires a from address and valid port.")
             .Validate(
                 options => !options.OpenIdConnect.Enabled
                     || (!string.IsNullOrWhiteSpace(options.OpenIdConnect.DisplayName)
@@ -401,6 +444,8 @@ public static class WebServiceCollectionExtensions
             .Validate(options => options.MaxArchiveBytes > 0, "MaxArchiveBytes must be greater than zero.")
             .Validate(options => options.MaxArchiveEntries > 0, "MaxArchiveEntries must be greater than zero.")
             .Validate(options => options.OperationTimeout > TimeSpan.Zero, "OperationTimeout must be greater than zero.")
+            .Validate(options => options.MaxStatisticsCommits is >= 1 and <= 1_000_000, "MaxStatisticsCommits is invalid.")
+            .Validate(options => options.MaxContributors is >= 1 and <= 10_000, "MaxContributors is invalid.")
             .ValidateOnStart();
         var browserSettings = configuration
             .GetSection(RepositoryBrowserOptions.SectionName)

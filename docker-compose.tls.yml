@@ -1,0 +1,37 @@
+services:
+  gitcandy:
+    environment:
+      GitCandy__Proxy__Enabled: "true"
+      GitCandy__Proxy__ForwardLimit: "1"
+      GitCandy__Proxy__KnownProxies__0: "172.16.0.2"
+    networks:
+      gitcandy-edge:
+        ipv4_address: 172.16.0.3
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - gitcandy
+    environment:
+      GITCANDY_DOMAIN: ${GITCANDY_DOMAIN:?set GITCANDY_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      gitcandy-edge:
+        ipv4_address: 172.16.0.2
+
+networks:
+  gitcandy-edge:
+    ipam:
+      config:
+        - subnet: 172.16.0.0/24
+
+volumes:
+  caddy-data:
+  caddy-config:

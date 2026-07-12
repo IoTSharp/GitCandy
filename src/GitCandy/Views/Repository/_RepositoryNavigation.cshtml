@@ -1,5 +1,11 @@
 @model string
 <nav class="repository-navigation" aria-label="Repository navigation">
+    @if (ViewData["CanonicalUrl"] is string canonicalUrl)
+    {
+        <a href="@canonicalUrl/branches"><i data-lucide="git-branch"></i> Branches</a>
+        <a href="@canonicalUrl/tags"><i data-lucide="tag"></i> Tags</a>
+        <a href="@canonicalUrl/contributors"><i data-lucide="users"></i> Contributors</a>
+    }
     <a asp-action="Tree" asp-route-name="@Model"><i data-lucide="folder-tree"></i> Code</a>
     <a asp-action="Commits" asp-route-name="@Model"><i data-lucide="history"></i> Commits</a>
     <a asp-action="Compare" asp-route-name="@Model"><i data-lucide="git-compare-arrows"></i> Compare</a>

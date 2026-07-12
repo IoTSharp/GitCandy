@@ -75,6 +75,52 @@ jobs:
             -p:DebugType=None `
             -p:DebugSymbols=false
 
+      - name: Smoke Linux service package
+        if: matrix.rid == 'linux-x64'
+        shell: bash
+        run: |
+          root="$(mktemp -d)"
+          mkdir -p "$root/repositories" "$root/cache" "$root/keys"
+          ASPNETCORE_URLS=http://127.0.0.1:15080 \
+          GitCandy__Application__EnableSsh=false \
+          GitCandy__Application__UserConfigurationPath="$root/config.xml" \
+          GitCandy__Application__RepositoryPath="$root/repositories" \
+          GitCandy__Application__CachePath="$root/cache" \
+          GitCandy__Application__SshHostKeyPath="$root/ssh.xml" \
+          GitCandy__Application__DataProtectionKeysPath="$root/keys" \
+          ConnectionStrings__GitCandy="Data Source=$root/GitCandy.db" \
+          ./dist/app/GitCandy > "$root/app.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do curl --fail --silent http://127.0.0.1:15080/health/live && exit 0; sleep 1; done
+          cat "$root/app.log"
+          exit 1
+
+      - name: Smoke Windows service package
+        if: matrix.rid == 'win-x64'
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP "gitcandy-service-smoke"
+          New-Item -ItemType Directory -Force $root,(Join-Path $root 'repositories'),(Join-Path $root 'cache'),(Join-Path $root 'keys') | Out-Null
+          $env:ASPNETCORE_URLS = 'http://127.0.0.1:15080'
+          $env:GitCandy__Application__EnableSsh = 'false'
+          $env:GitCandy__Application__UserConfigurationPath = Join-Path $root 'config.xml'
+          $env:GitCandy__Application__RepositoryPath = Join-Path $root 'repositories'
+          $env:GitCandy__Application__CachePath = Join-Path $root 'cache'
+          $env:GitCandy__Application__SshHostKeyPath = Join-Path $root 'ssh.xml'
+          $env:GitCandy__Application__DataProtectionKeysPath = Join-Path $root 'keys'
+          $env:ConnectionStrings__GitCandy = "Data Source=$(Join-Path $root 'GitCandy.db')"
+          $process = Start-Process dist/app/GitCandy.exe -WindowStyle Hidden -PassThru
+          try {
+            foreach ($attempt in 1..60) {
+              try { if ((Invoke-WebRequest http://127.0.0.1:15080/health/live -TimeoutSec 2).StatusCode -eq 200) { exit 0 } } catch {}
+              Start-Sleep -Seconds 1
+            }
+            throw 'Published Windows service package did not become live.'
+          } finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Package Linux service
         if: matrix.rid == 'linux-x64'
         shell: bash
@@ -218,7 +264,7 @@ jobs:
       - name: Package Compose deployment files
         run: |
           version="${GITHUB_REF_NAME#v}"
-          zip "gitcandy-${version}-compose.zip" docker-compose.yml .env.example
+          zip "gitcandy-${version}-compose.zip" docker-compose.yml docker-compose.tls.yml deploy/caddy/Caddyfile .env.example
 
       - name: Upload container artifacts
         uses: actions/upload-artifact@v4

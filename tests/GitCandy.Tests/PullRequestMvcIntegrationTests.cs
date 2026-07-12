@@ -26,6 +26,72 @@ namespace GitCandy.Tests;
 public sealed partial class PullRequestMvcIntegrationTests
 {
     [TestMethod]
+    public async Task RepositoryReferences_WithCanonicalRoutes_ListsDeletesAndProtectsPrivateData()
+    {
+        await using var fixture = await PullRequestWebFixture.CreateAsync();
+        fixture.AddTags();
+
+        using var branches = await fixture.Client.GetAsync("/review-author/reviews/branches");
+        var branchesHtml = await branches.Content.ReadAsStringAsync();
+        Assert.AreEqual(HttpStatusCode.OK, branches.StatusCode, branchesHtml);
+        StringAssert.Contains(branchesHtml, "main");
+        StringAssert.Contains(branchesHtml, "feature");
+
+        using var tags = await fixture.Client.GetAsync("/review-author/reviews/tags");
+        Assert.AreEqual(HttpStatusCode.OK, tags.StatusCode);
+        var tagsHtml = await tags.Content.ReadAsStringAsync();
+        StringAssert.Contains(tagsHtml, "v-lightweight");
+        StringAssert.Contains(tagsHtml, "v-annotated");
+        StringAssert.Contains(tagsHtml, "Annotated");
+
+        using var contributors = await fixture.Client.GetAsync("/review-author/reviews/contributors?revision=main");
+        Assert.AreEqual(HttpStatusCode.OK, contributors.StatusCode);
+        var contributorsHtml = await contributors.Content.ReadAsStringAsync();
+        StringAssert.Contains(contributorsHtml, "Contributors");
+        Assert.IsFalse(contributorsHtml.Contains("@example.com", StringComparison.OrdinalIgnoreCase));
+        using var invalidRevision = await fixture.Client.GetAsync("/review-author/reviews/contributors?revision=missing-ref");
+        Assert.AreEqual(HttpStatusCode.NotFound, invalidRevision.StatusCode);
+
+        await fixture.LoginAsync();
+        var branchToken = await fixture.GetAntiforgeryTokenAsync("/review-author/reviews/branches");
+        using var deleteFeature = await fixture.Client.PostAsync(
+            "/review-author/reviews/branches/delete",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = branchToken,
+                ["name"] = "feature"
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, deleteFeature.StatusCode);
+        Assert.IsFalse(fixture.ReferenceExists("refs/heads/feature"));
+
+        using var deleteDefault = await fixture.Client.PostAsync(
+            "/review-author/reviews/branches/delete",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = branchToken,
+                ["name"] = "main"
+            }));
+        Assert.AreEqual(HttpStatusCode.Conflict, deleteDefault.StatusCode);
+        Assert.IsTrue(fixture.ReferenceExists("refs/heads/main"));
+
+        var tagToken = await fixture.GetAntiforgeryTokenAsync("/review-author/reviews/tags");
+        using var deleteTag = await fixture.Client.PostAsync(
+            "/review-author/reviews/tags/delete",
+            new FormUrlEncodedContent(new Dictionary<string, string>
+            {
+                ["__RequestVerificationToken"] = tagToken,
+                ["name"] = "v-lightweight"
+            }));
+        Assert.AreEqual(HttpStatusCode.Redirect, deleteTag.StatusCode);
+        Assert.IsFalse(fixture.ReferenceExists("refs/tags/v-lightweight"));
+
+        await fixture.MakeRepositoryPrivateAsync();
+        using var anonymous = fixture.CreateClient();
+        using var privateBranches = await anonymous.GetAsync("/review-author/reviews/branches");
+        Assert.AreEqual(HttpStatusCode.Redirect, privateBranches.StatusCode);
+    }
+
+    [TestMethod]
     public async Task PullRequestMvc_WithWritableBranches_CreatesDraftAndHidesPrivateRepository()
     {
         await using var fixture = await PullRequestWebFixture.CreateAsync();
@@ -302,6 +368,21 @@ public sealed partial class PullRequestMvcIntegrationTests
             await dbContext.SaveChangesAsync();
         }
 
+        public void AddTags()
+        {
+            using var repository = new Repository(RepositoryPath);
+            var target = repository.Branches["main"].Tip;
+            var signature = new Signature("Release Bot", "release@example.com", DateTimeOffset.UtcNow);
+            repository.ApplyTag("v-lightweight", target.Sha);
+            repository.ApplyTag("v-annotated", target.Sha, signature, "Annotated release");
+        }
+
+        public bool ReferenceExists(string canonicalName)
+        {
+            using var repository = new Repository(RepositoryPath);
+            return repository.Refs[canonicalName] is not null;
+        }
+
         public async ValueTask DisposeAsync()
         {
             Client.Dispose();
@@ -417,7 +498,7 @@ public sealed partial class PullRequestMvcIntegrationTests
             {
                 SetReference(bare, "refs/heads/main", mainSha);
                 SetReference(bare, "refs/heads/feature", featureSha);
-                bare.Refs.UpdateTarget(bare.Refs.Head, "refs/heads/main");
+                bare.Refs.UpdateTarget("HEAD", "refs/heads/main");
             }
 
             return barePath;

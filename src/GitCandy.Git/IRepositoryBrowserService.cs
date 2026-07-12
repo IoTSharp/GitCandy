@@ -61,4 +61,13 @@ public interface IRepositoryBrowserService
         string? revision,
         Stream output,
         CancellationToken cancellationToken = default);
+
+    /// <summary>读取本地分支及其相对默认分支的 ahead/behind。</summary>
+    IReadOnlyList<RepositoryBranchSummary> ReadBranches(GitRepositoryContext repository, CancellationToken cancellationToken = default);
+
+    /// <summary>读取 lightweight 与 annotated tags。</summary>
+    IReadOnlyList<RepositoryTagSummary> ReadTags(GitRepositoryContext repository, CancellationToken cancellationToken = default);
+
+    /// <summary>按 revision 计算有界且不公开邮箱的 contributor 与仓库统计。</summary>
+    RepositoryStatisticsResult? ReadStatistics(GitRepositoryContext repository, string? revision, CancellationToken cancellationToken = default);
 }

@@ -10,6 +10,10 @@
  - Completed the M11-M12 collaboration baseline with Issues, Markdown discussions, labels, milestones, notifications, Pull Requests, cross-fork sources, inline review, approvals, mergeability, merge commits, and squash.
 
 #### Added
+ - Added M12.5 Branches, Tags, and Contributors pages on canonical repository URLs, including default-branch protection, controlled ref deletion, annotated-tag metadata, archives, and bounded statistics without exposing author email addresses.
+ - Added Identity password recovery and email confirmation through one-time ASP.NET Core Identity tokens, SMTP delivery abstraction, enumeration-safe responses, throttling, administrator-initiated recovery audit logs, and security-stamp invalidation.
+ - Added an opt-in Caddy TLS Compose overlay with explicit forwarded-header proxy trust, Windows/Linux CI coverage artifacts, browser smoke screenshots, and a hash-verified SQLite/repository/LFS/Data Protection recovery rehearsal.
+ - Added SQLite and SQL Server `AtomicIssueDiscussionRateLimit` migrations with the actor/type/time index used by serializable discussion writes.
  - Completed M12 #135-#139 with explainable mergeability, required approvals, unresolved-thread and conflict gates, server-side merge commit/squash, conditional ref rollback, and merge-result timeline records.
  - Added stable cross-fork Pull Request source repository IDs, controlled local object import into read-only PR refs, and same-fork-network permission validation.
  - Added idempotent Issue auto-close after successful PR merge plus real bare-repository and Kestrel review-to-squash integration coverage.

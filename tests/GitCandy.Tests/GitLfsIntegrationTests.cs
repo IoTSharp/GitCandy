@@ -211,7 +211,9 @@ public sealed class GitLfsIntegrationTests
 
                     var repository = new GitCandyRepository
                     {
+                        NamespaceId = GitCandyNamespace.LegacyNamespaceId,
                         Name = "lfs-demo",
+                        StorageName = "lfs-demo",
                         Description = "M9 LFS integration fixture",
                         CreatedAtUtc = DateTime.UtcNow,
                         AllowAnonymousRead = true
@@ -226,7 +228,9 @@ public sealed class GitLfsIntegrationTests
                     dbContext.Repositories.Add(repository);
                     var privateRepository = new GitCandyRepository
                     {
+                        NamespaceId = GitCandyNamespace.LegacyNamespaceId,
                         Name = "private-lfs",
+                        StorageName = "private-lfs",
                         Description = "Private LFS authorization fixture",
                         CreatedAtUtc = DateTime.UtcNow,
                         IsPrivate = true

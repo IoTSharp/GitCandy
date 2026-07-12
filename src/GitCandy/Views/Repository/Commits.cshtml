@@ -1,7 +1,7 @@
 @model RepositoryCommitsViewModel
 @{ ViewData["Title"] = $"{Model.RepositoryName} commits"; }
 <nav class="breadcrumb" aria-label="Breadcrumb"><a asp-action="Index">@Text["Shared_Repositories"]</a><span>/</span><a asp-action="Tree" asp-route-name="@Model.RepositoryName">@Model.RepositoryName</a><span>/</span><span>Commits</span></nav>
-<partial name="_RepositoryNavigation" model="Model.RepositoryName" />
+<partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading"><div><h1>Commit history</h1><p>@Model.Page.Revision.DisplayName</p></div></header>
 <ol class="commit-list">
 @foreach (var commit in Model.Page.Commits)

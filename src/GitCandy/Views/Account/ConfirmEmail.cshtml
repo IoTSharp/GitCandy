@@ -1,0 +1,3 @@
+@model bool
+@{ ViewData["Title"] = "Email confirmation"; }
+<section class="account-shell"><h1>Email confirmation</h1><div class="alert alert-info" role="status">@(Model ? "Your email address is confirmed." : "This confirmation link is invalid or expired.")</div><a asp-action="Login" class="primary-button">Sign in</a></section>

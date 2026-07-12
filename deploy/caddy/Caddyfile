@@ -1,0 +1,4 @@
+{$GITCANDY_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy gitcandy:8080
+}

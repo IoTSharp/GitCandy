@@ -59,6 +59,38 @@ public sealed class IssueServiceTests
     }
 
     [TestMethod]
+    public async Task CreateIssue_WithConcurrentRequests_DoesNotExceedDiscussionRateLimit()
+    {
+        await using var fixture = await IssueFixture.CreateAsync();
+        var tasks = Enumerable.Range(0, 24).Select(async index =>
+        {
+            await using var scope = fixture.RootProvider.CreateAsyncScope();
+            try
+            {
+                await scope.ServiceProvider.GetRequiredService<IIssueService>().CreateIssueAsync(
+                    fixture.RepositoryId,
+                    new CreateIssueCommand($"Rate limited issue {index}", string.Empty, fixture.AuthorId));
+                return true;
+            }
+            catch (IssueRateLimitException)
+            {
+                return false;
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        Assert.AreEqual(20, results.Count(static succeeded => succeeded));
+        Assert.AreEqual(4, results.Count(static succeeded => !succeeded));
+
+        await using var verificationScope = fixture.RootProvider.CreateAsyncScope();
+        var dbContext = verificationScope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+        Assert.AreEqual(20, await dbContext.Issues.CountAsync());
+        Assert.AreEqual(
+            20,
+            await dbContext.IssueTimelineEvents.CountAsync(item => item.Type == IssueEventType.Created));
+    }
+
+    [TestMethod]
     public async Task Discussion_WithMetadataStateAndRelation_PreservesTimeline()
     {
         await using var fixture = await IssueFixture.CreateAsync();

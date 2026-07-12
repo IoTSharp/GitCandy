@@ -92,6 +92,8 @@ internal static class IssueModelConfiguration
             entity.HasOne(item => item.Actor).WithMany().HasForeignKey(item => item.ActorUserId).OnDelete(DeleteBehavior.Restrict);
             entity.HasIndex(item => new { item.IssueId, item.CreatedAtUtc, item.Id })
                 .HasDatabaseName("IX_IssueTimelineEvents_IssueId_CreatedAtUtc_Id");
+            entity.HasIndex(item => new { item.ActorUserId, item.Type, item.CreatedAtUtc })
+                .HasDatabaseName("IX_IssueTimelineEvents_ActorUserId_Type_CreatedAtUtc");
         });
 
         builder.Entity<GitCandyIssueLabel>(entity =>
