@@ -218,3 +218,4 @@ ModelManifest.xml
 # To be ignored
 CacheVersion
 Information
+.artifacts/
