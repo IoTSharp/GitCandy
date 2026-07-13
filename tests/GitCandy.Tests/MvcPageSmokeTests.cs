@@ -65,6 +65,10 @@ public sealed class MvcPageSmokeTests
         var explore = await fixture.GetStringAsync("/explore");
         StringAssert.Contains(explore, "public-repository");
         Assert.IsFalse(explore.Contains("private-repository", StringComparison.Ordinal));
+        var search = await fixture.GetStringAsync("/search?q=repository");
+        StringAssert.Contains(search, "profile-user/public-repository");
+        Assert.IsFalse(search.Contains("private-repository", StringComparison.Ordinal));
+        StringAssert.Contains(await fixture.GetStringAsync("/profile-user/public-repository/releases"), "No releases");
 
         var publicProfile = await fixture.GetStringAsync("/profile-user?tab=repositories");
         StringAssert.Contains(publicProfile, "Profile User");
@@ -81,6 +85,7 @@ public sealed class MvcPageSmokeTests
         StringAssert.Contains(dashboard, "Needs your attention");
         StringAssert.Contains(dashboard, "Activity feed");
         StringAssert.Contains(dashboard, "Public repositories");
+        StringAssert.Contains(await fixture.GetStringAsync("/notifications/preferences"), "Notification delivery");
         var administratorView = await fixture.GetStringAsync("/profile-user?tab=repositories");
         Assert.IsFalse(administratorView.Contains("private-repository", StringComparison.Ordinal));
         Assert.IsFalse(administratorView.Contains("profile-user@example.com", StringComparison.OrdinalIgnoreCase));
@@ -198,6 +203,7 @@ public sealed class MvcPageSmokeTests
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/deploy-keys\"");
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/branch-rules\"");
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/webhooks\"");
+        StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/releases\"");
         Assert.IsFalse(repositoryHtml.Contains("/git/m5-repository.git", StringComparison.Ordinal));
 
         var deployKeysHtml = await fixture.GetStringAsync(
@@ -260,6 +266,12 @@ public sealed class MvcPageSmokeTests
         webhooksHtml = await fixture.GetStringAsync(webhooksPath);
         StringAssert.Contains(webhooksHtml, "external-ci");
         Assert.IsFalse(webhooksHtml.Contains("whsec_", StringComparison.Ordinal));
+        StringAssert.Contains(
+            await fixture.GetStringAsync("/m5-admin/m5-repository/settings/audit"),
+            "rule.save");
+        StringAssert.Contains(
+            await fixture.GetStringAsync("/m5-admin/m5-repository/releases/new"),
+            "New release");
 
         using var repositoryListResponse = await fixture.Client.GetAsync("/Repository");
         Assert.AreEqual(HttpStatusCode.OK, repositoryListResponse.StatusCode);

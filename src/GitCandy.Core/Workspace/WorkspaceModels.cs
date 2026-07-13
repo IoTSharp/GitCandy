@@ -41,6 +41,16 @@ public enum WorkspaceNotificationReason
     Team
 }
 
+/// <summary>统一通知及外部投递使用的稳定事件类型。</summary>
+public enum WorkspaceNotificationEventType
+{
+    Issue,
+    PullRequest,
+    Review,
+    Check,
+    Release
+}
+
 /// <summary>版本化活动事件类型。</summary>
 public enum WorkspaceActivityType
 {
@@ -69,6 +79,7 @@ public sealed record WorkspaceTodo(
 /// <summary>统一通知摘要。</summary>
 public sealed record WorkspaceNotification(
     long Id,
+    WorkspaceNotificationEventType EventType,
     WorkspaceResourceType ResourceType,
     WorkspaceNotificationReason Reason,
     string Title,

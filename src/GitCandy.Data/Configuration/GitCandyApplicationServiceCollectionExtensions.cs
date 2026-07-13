@@ -9,6 +9,10 @@ using GitCandy.Governance;
 using GitCandy.Integrations;
 using GitCandy.Configuration;
 using GitCandy.Workspace;
+using GitCandy.Notifications;
+using GitCandy.Audit;
+using GitCandy.Releases;
+using GitCandy.Search;
 
 namespace GitCandy.Data.Configuration;
 
@@ -27,6 +31,7 @@ public static class GitCandyApplicationServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.AddOptions<GitCandyApplicationOptions>();
+        services.AddOptions<ReleaseOptions>();
 
         services.TryAddScoped<IMembershipService, MembershipService>();
         services.TryAddScoped<IUserAdministrationService, UserAdministrationService>();
@@ -52,6 +57,10 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddSingleton<IWebhookService, WebhookService>();
         services.TryAddSingleton<IIntegrationEventPublisher, IntegrationEventPublisher>();
         services.TryAddSingleton<ICommitCheckService, CommitCheckService>();
+        services.TryAddSingleton<INotificationDeliveryService, NotificationDeliveryService>();
+        services.TryAddScoped<IAuditLogService, AuditLogService>();
+        services.TryAddScoped<IReleaseService, ReleaseService>();
+        services.TryAddScoped<ICollaborationSearchService, CollaborationSearchService>();
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IPullRequestMergeHook, BranchProtectionPullRequestMergeHook>());
         services.TryAddEnumerable(

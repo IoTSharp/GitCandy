@@ -26,6 +26,12 @@
  - Added PAT-protected commit status/check APIs with repository authorization, exact commit validation, SHA/context idempotency, per-credential rate limiting, target URL policy, and additive SQLite, SQL Server, and SonnetDB `WebhookAndChecks` migrations.
  - Added exact-SHA required check contexts to branch rules so Git HTTP/SSH pushes and Web merges reject missing or unsuccessful checks without allowing an old head result to satisfy a new update.
  - Added bounded CODEOWNERS parsing, merge-base changed-path ownership, branch-rule minimum/code-owner reviews, stale-head approval enforcement, and explainable required-review blockers through the existing HTTP/SSH/Web push gate.
+ - Added PR/review/check/release notification events, per-event email or signed-webhook preferences, persistent delivery leases/retries, permission-revocation checks, and user-visible failure diagnostics on the existing unified inbox.
+ - Added an owner-only repository audit view over immutable governance and credential evidence, including rule changes, bypass, force/delete decisions, webhook operations, checks, and Release asset changes.
+ - Added tag-backed Releases with sanitized Markdown, bounded streamed assets, SHA-256 metadata, range downloads, generated storage keys, and scheduled orphan cleanup under the persistent cache root.
+ - Added permission-first repository, Issue, Pull Request, commit, and default-branch code search with bounded repository/history/file scanning.
+ - Added the external CI acceptance fixture covering signed push webhook delivery, 503 retry, minimal-scope PAT check writeback, exact-SHA required gate, PAT revocation, and unchecked-head rejection.
+ - Added additive SQLite, SQL Server, and SonnetDB `M13CollaborationExtensions` migrations for notification event/preferences/delivery and Release metadata/assets.
  - Added `IoTSharp/SonnetDB` as a source submodule and fixed unique-index NULL semantics in the database engine so EF migration seed rows can contain multiple NULL values while duplicate non-NULL values remain rejected.
 
 #### Removed
@@ -181,6 +187,7 @@
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
+ - M13 collaboration extensions add `NotificationPreferences`, `NotificationDeliveries`, `Releases`, and `ReleaseAssets`, and backfill existing unified notifications as `Issue` events. Release assets are stored under `CachePath/release-assets` and must be backed up with the database; rollback requires restoring the pre-upgrade database/cache backup with the previous application version.
  - The M12 #134 migrations add nullable Pull Request assignees plus reviewer-request and immutable review-history tables. Existing Pull Requests remain unassigned with no requested reviewers; back up the database before upgrade and restore that backup with the previous application version to roll back. See [the M12 #134 migration record](docs/migration/m12-134-pull-request-review-status.md).
  - The M11 SQLite and SQL Server migrations add Issue collaboration tables and backfill one `WorkItemSequences` row per existing repository without changing Identity, repository storage, Git URLs, or Git wire behavior. Back up the database before upgrade; rollback requires restoring that backup with the previous application version. See [the M11 migration record](docs/migration/m11-issues.md).
  - The M10 SQLite and SQL Server migrations create stable namespaces for existing users/teams, assign each existing repository to its first owner namespace (or the reserved `legacy` namespace when no owner exists), preserve the existing physical directory as `StorageName`, and create explicit `/git/{project}` mappings.

@@ -78,6 +78,11 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE TABLE [IntegrationEvents]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [WebhookSubscriptions]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [WebhookDeliveries]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [NotificationPreferences]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [NotificationDeliveries]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [Releases]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [ReleaseAssets]");
+        StringAssert.Contains(migrationSql, "[EventType] nvarchar(24) NOT NULL DEFAULT N'Issue'");
         StringAssert.Contains(migrationSql, "[RequiredApprovals] int NOT NULL");
         StringAssert.Contains(migrationSql, "[RequireCodeOwnerReviews] bit NOT NULL");
         StringAssert.Contains(migrationSql, "[DismissStaleApprovals] bit NOT NULL");
@@ -100,6 +105,7 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_BranchProtectionRules_RepositoryId_Pattern]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_CommitChecks_Repository_Sha_Kind_Context]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_WebhookSubscriptions_RepositoryId_Name]");
+        StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_Releases_Repository_Tag]");
         Assert.IsFalse(migrationSql.Contains("CREATE TABLE [Users]", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(migrationSql.Contains("AuthorizationLog", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(migrationSql.Contains("PasswordVersion", StringComparison.OrdinalIgnoreCase));

@@ -4,6 +4,9 @@ using System.Text;
 using GitCandy.Configuration;
 using GitCandy.Integrations;
 using GitCandy.Web.Integrations;
+using GitCandy.Notifications;
+using GitCandy.Workspace;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -126,6 +129,50 @@ public sealed class WebhookIntegrationTests
             await receiver.StopAsync();
             await receiver.DisposeAsync();
         }
+    }
+
+    [TestMethod]
+    public async Task NotificationDeliverySender_WithWebhookPreference_SignsBoundedVersionedPayload()
+    {
+        const string secret = "notification-secret";
+        var handler = new CapturingHandler();
+        var sender = new NotificationDeliverySender(
+            new TestHttpClientFactory(handler),
+            new TestSecretProtector(secret),
+            Options.Create(new WebhookOptions { RequestTimeout = TimeSpan.FromSeconds(5) }),
+            Options.Create(new GitCandyIdentityOptions()),
+            NullLogger<NotificationDeliverySender>.Instance);
+        var result = await sender.SendAsync(new NotificationDeliveryWorkItem(
+            "abcdef0123456789abcdef0123456789",
+            NotificationDeliveryChannel.Webhook,
+            "https://notifications.example.test/hook",
+            "protected-secret",
+            WorkspaceNotificationEventType.Check,
+            "Check ci/build: Success",
+            "/owner/repository/pulls/1",
+            AttemptCount: 1));
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual("notification.check", handler.EventType);
+        StringAssert.Contains(handler.Payload, "\"version\":1");
+        StringAssert.Contains(handler.Payload, "Check ci/build: Success");
+        Assert.IsFalse(handler.Payload.Contains(secret, StringComparison.Ordinal));
+        var expected = "sha256=" + Convert.ToHexString(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(secret),
+            Encoding.UTF8.GetBytes(handler.Payload))).ToLowerInvariant();
+        Assert.AreEqual(expected, handler.Signature);
+
+        var email = await sender.SendAsync(new NotificationDeliveryWorkItem(
+            "0123456789abcdef0123456789abcdef",
+            NotificationDeliveryChannel.Email,
+            "owner@example.com",
+            null,
+            WorkspaceNotificationEventType.Release,
+            "Release published",
+            "/owner/repository/releases/1",
+            AttemptCount: 1));
+        Assert.IsFalse(email.Succeeded);
+        Assert.AreEqual("smtp_not_configured", email.ErrorCode);
     }
 
     private sealed class CapturingHandler : HttpMessageHandler

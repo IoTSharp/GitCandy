@@ -11,7 +11,8 @@ public enum WebhookEventTypes
     Push = 1,
     PullRequestMerged = 2,
     CheckUpdated = 4,
-    All = Push | PullRequestMerged | CheckUpdated
+    ReleasePublished = 8,
+    All = Push | PullRequestMerged | CheckUpdated | ReleasePublished
 }
 
 /// <summary>持久化 webhook delivery 状态。</summary>
@@ -181,6 +182,14 @@ public interface IIntegrationEventPublisher
         long repositoryId,
         string actorUserId,
         CommitCheckSummary check,
+        CancellationToken cancellationToken = default);
+
+    Task PublishReleasePublishedAsync(
+        long repositoryId,
+        string actorUserId,
+        long releaseId,
+        string tagName,
+        string tagCommitSha,
         CancellationToken cancellationToken = default);
 }
 

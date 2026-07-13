@@ -17,6 +17,7 @@ using GitCandy.Git;
 using GitCandy.Identity;
 using GitCandy.IdentityServices;
 using GitCandy.Integrations;
+using GitCandy.Notifications;
 using GitCandy.Operations;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
@@ -80,6 +81,14 @@ public static class WebServiceCollectionExtensions
                 ResolveDataProtectionKeysPath(configuration, contentRootPath)));
         services.AddGitSmartHttpOptions(configuration);
         services.AddRepositoryBrowserOptions(configuration);
+        services.AddOptions<ReleaseOptions>()
+            .Bind(configuration.GetSection(ReleaseOptions.SectionName))
+            .Validate(options => options.MaxAssetBytes > 0, "Release MaxAssetBytes must be positive.")
+            .Validate(options => options.MaxAssetBytes <= 4L * 1024 * 1024 * 1024, "Release MaxAssetBytes cannot exceed 4 GiB.")
+            .Validate(options => options.MaxTotalAssetBytes >= options.MaxAssetBytes, "Release total asset limit must include one asset.")
+            .Validate(options => options.MaxAssetsPerRelease is >= 1 and <= 1000, "Release asset count limit is invalid.")
+            .Validate(options => options.OrphanRetention > TimeSpan.Zero, "Release orphan retention must be positive.")
+            .ValidateOnStart();
         services.AddGitCandyWebhooks(configuration);
         var identitySettings = AddGitCandyIdentityOptions(services, configuration);
         services.TryAddEnumerable(
@@ -310,6 +319,8 @@ public static class WebServiceCollectionExtensions
         services.TryAddTransient<QuartzSchedulerJob>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, WorkspaceProjectionJob>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, WebhookDeliveryJob>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, NotificationDeliveryJob>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, ReleaseAssetCleanupJob>());
 
         services.AddQuartz(options =>
         {
@@ -352,6 +363,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IWebhookSecretProtector, WebhookSecretProtector>();
         services.TryAddSingleton<IOutboundTargetPolicy, OutboundTargetPolicy>();
         services.TryAddSingleton<IWebhookSender, WebhookSender>();
+        services.TryAddSingleton<INotificationDeliverySender, NotificationDeliverySender>();
         services.AddHttpClient(WebhookSender.HttpClientName, client =>
             client.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(provider =>

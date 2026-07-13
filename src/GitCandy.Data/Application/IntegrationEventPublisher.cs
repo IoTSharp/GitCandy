@@ -113,6 +113,39 @@ internal sealed class IntegrationEventPublisher(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task PublishReleasePublishedAsync(
+        long repositoryId,
+        string actorUserId,
+        long releaseId,
+        string tagName,
+        string tagCommitSha,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorUserId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagCommitSha);
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var repository = await ResolveRepositoryByIdAsync(dbContext, repositoryId, cancellationToken);
+        if (repository is null) return;
+        var actorName = await dbContext.Users.AsNoTracking()
+            .Where(item => item.Id == actorUserId)
+            .Select(item => item.UserName)
+            .SingleOrDefaultAsync(cancellationToken) ?? actorUserId;
+        var occurredAt = _timeProvider.GetUtcNow();
+        await AddEventAsync(
+            dbContext,
+            repository,
+            CreateEventId($"release.published:{repositoryId}:{releaseId}:{tagCommitSha}"),
+            "release.published",
+            WebhookEventTypes.ReleasePublished,
+            actorUserId,
+            actorName,
+            occurredAt,
+            new { releaseId, tagName, tagCommitSha },
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     internal static async Task AddCheckUpdatedAsync(
         GitCandyDbContext dbContext,
         long repositoryId,

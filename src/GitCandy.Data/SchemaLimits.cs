@@ -49,4 +49,7 @@ internal static class SchemaLimits
     public const int CheckContext = 100;
     public const int CheckDescription = 500;
     public const int CheckExternalId = 128;
+    public const int ReleaseName = 200;
+    public const int ReleaseAssetName = 255;
+    public const int ReleaseContentType = 100;
 }

@@ -15,11 +15,13 @@ using GitCandy.Workspace;
 using GitCandy.Governance;
 using GitCandy.Credentials;
 using GitCandy.Integrations;
+using GitCandy.Schedules;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -276,6 +278,117 @@ public sealed class GitSmartHttpIntegrationTests
                 ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]));
     }
 
+    [TestMethod]
+    public async Task ExternalCi_WithPushWebhookAndMinimalPat_WritesCheckAndControlsRequiredGateAfterRetryAndRevocation()
+    {
+        var firstAttempt = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var successfulCheck = new TaskCompletionSource<(string Sha, HttpStatusCode Status)>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        string? gitCandyBaseAddress = null;
+        string? ciToken = null;
+        string? webhookSecret = null;
+        var attempts = 0;
+        var receiverBuilder = WebApplication.CreateBuilder();
+        receiverBuilder.WebHost.UseKestrel().UseUrls("http://127.0.0.1:0");
+        var receiver = receiverBuilder.Build();
+        receiver.MapPost("/ci", async context =>
+        {
+            using var reader = new StreamReader(context.Request.Body, Encoding.UTF8);
+            var payload = await reader.ReadToEndAsync(context.RequestAborted);
+            var expectedSignature = "sha256=" + Convert.ToHexString(HMACSHA256.HashData(
+                Encoding.UTF8.GetBytes(webhookSecret ?? string.Empty),
+                Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+            if (!string.Equals(
+                    expectedSignature,
+                    context.Request.Headers["X-GitCandy-Signature-256"].ToString(),
+                    StringComparison.Ordinal))
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+            if (Interlocked.Increment(ref attempts) == 1)
+            {
+                firstAttempt.TrySetResult();
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                return;
+            }
+            using var document = System.Text.Json.JsonDocument.Parse(payload);
+            var sha = document.RootElement.GetProperty("data").GetProperty("references")
+                .EnumerateArray()
+                .First(item => string.Equals(
+                    item.GetProperty("name").GetString(),
+                    "refs/heads/ci-candidate",
+                    StringComparison.Ordinal))
+                .GetProperty("targetSha").GetString()!;
+            using var client = new HttpClient { BaseAddress = new Uri(gitCandyBaseAddress!) };
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", ciToken);
+            using var response = await client.PostAsJsonAsync(
+                $"api/v1/repositories/m6-owner/public-demo/commits/{sha}/statuses",
+                new { context = "ci/external", state = "success", description = "external fixture" },
+                context.RequestAborted);
+            successfulCheck.TrySetResult((sha, response.StatusCode));
+            context.Response.StatusCode = StatusCodes.Status202Accepted;
+        });
+        await receiver.StartAsync();
+        try
+        {
+            var receiverAddress = receiver.Services.GetRequiredService<IServer>()
+                .Features.Get<IServerAddressesFeature>()?.Addresses.Single();
+            Assert.IsNotNull(receiverAddress);
+            await using var fixture = await GitHttpFixture.CreateAsync(allowPrivateWebhookTargets: true);
+            gitCandyBaseAddress = fixture.BaseAddress;
+            var token = await fixture.CreatePersonalAccessTokenDetailsAsync(PersonalAccessTokenScopes.ApiWrite);
+            ciToken = token.Token;
+            webhookSecret = await fixture.CreatePushWebhookAsync($"{receiverAddress}/ci");
+            await fixture.ProtectMainWithRequiredCheckAsync("ci/external");
+            var clonePath = Path.Combine(fixture.TempRoot, "clones", "external-ci");
+            await fixture.RunGitAsync(["clone", $"{fixture.BaseAddress}m6-owner/public-demo.git", clonePath]);
+            await fixture.RunGitAsync(["-C", clonePath, "config", "user.name", "External CI Test"]);
+            await fixture.RunGitAsync(["-C", clonePath, "config", "user.email", "external-ci@example.com"]);
+            File.AppendAllText(Path.Combine(clonePath, "README.md"), "external ci\n", Encoding.UTF8);
+            await fixture.RunGitAsync(["-C", clonePath, "add", "README.md"]);
+            await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", "external ci candidate"]);
+            await fixture.RunGitAsync(
+                ["-C", clonePath, "push", "origin", "HEAD:refs/heads/ci-candidate"],
+                useOwnerCredentials: true);
+
+            await fixture.RunWebhookDeliveryJobAsync();
+            await firstAttempt.Task.WaitAsync(TimeSpan.FromSeconds(5));
+            await fixture.MakeWebhookDeliveriesDueAsync();
+            await fixture.RunWebhookDeliveryJobAsync();
+            var check = await successfulCheck.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            Assert.AreEqual(HttpStatusCode.OK, check.Status);
+            Assert.AreEqual(
+                await fixture.RunGitForOutputAsync(["-C", clonePath, "rev-parse", "HEAD"]),
+                check.Sha);
+            await fixture.RunGitAsync(
+                ["-C", clonePath, "push", "origin", "HEAD:refs/heads/main"],
+                useOwnerCredentials: true);
+
+            await fixture.RevokePersonalAccessTokenAsync(token.Summary.Id);
+            using var revokedClient = new HttpClient { BaseAddress = new Uri(fixture.BaseAddress) };
+            revokedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token.Token);
+            using var revoked = await revokedClient.PostAsJsonAsync(
+                $"api/v1/repositories/m6-owner/public-demo/commits/{check.Sha}/statuses",
+                new { context = "ci/external", state = "success" });
+            Assert.AreEqual(HttpStatusCode.Unauthorized, revoked.StatusCode);
+
+            File.AppendAllText(Path.Combine(clonePath, "README.md"), "revoked ci\n", Encoding.UTF8);
+            await fixture.RunGitAsync(["-C", clonePath, "add", "README.md"]);
+            await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", "revoked external ci"]);
+            var rejected = await fixture.RunGitExpectFailureAsync(
+                ["-C", clonePath, "push", "origin", "HEAD:refs/heads/main"],
+                useOwnerCredentials: true);
+            StringAssert.Contains(rejected.StandardError, "required check 'ci/external' is missing");
+            Assert.IsTrue(await fixture.HasAuditActionAsync("check.update"));
+        }
+        finally
+        {
+            await receiver.StopAsync();
+            await receiver.DisposeAsync();
+        }
+    }
+
     private static async Task WriteRandomFileAsync(string path, int size)
     {
         var directory = Path.GetDirectoryName(path)
@@ -377,6 +490,11 @@ public sealed class GitSmartHttpIntegrationTests
 
         public async Task<string> CreatePersonalAccessTokenAsync(string scopeName)
         {
+            return (await CreatePersonalAccessTokenDetailsAsync(scopeName)).Token;
+        }
+
+        public async Task<CreatedPersonalAccessToken> CreatePersonalAccessTokenDetailsAsync(string scopeName)
+        {
             await using var scope = App.Services.CreateAsyncScope();
             var ownerId = await scope.ServiceProvider.GetRequiredService<GitCandyDbContext>().Users
                 .Where(user => user.NormalizedUserName == "M6-OWNER")
@@ -388,7 +506,57 @@ public sealed class GitSmartHttpIntegrationTests
                 [scopeName],
                 DateTimeOffset.UtcNow.AddHours(1));
             Assert.IsNotNull(token);
-            return token.Token;
+            return token;
+        }
+
+        public async Task RevokePersonalAccessTokenAsync(long tokenId)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            var ownerId = await db.Users.Where(user => user.NormalizedUserName == "M6-OWNER")
+                .Select(user => user.Id).SingleAsync();
+            Assert.IsTrue(await scope.ServiceProvider.GetRequiredService<IPersonalAccessTokenService>()
+                .RevokeAsync(ownerId, tokenId));
+        }
+
+        public async Task<string> CreatePushWebhookAsync(string targetUrl)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            var ownerId = await db.Users.Where(user => user.NormalizedUserName == "M6-OWNER")
+                .Select(user => user.Id).SingleAsync();
+            var created = await scope.ServiceProvider.GetRequiredService<IWebhookService>().CreateSubscriptionAsync(
+                RepositoryId,
+                ownerId,
+                new CreateWebhookSubscription("external ci", targetUrl, WebhookEventTypes.Push));
+            Assert.IsNotNull(created);
+            return created.Secret;
+        }
+
+        public async Task RunWebhookDeliveryJobAsync()
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var job = scope.ServiceProvider.GetServices<ISchedulerJob>()
+                .Single(item => string.Equals(item.Name, "webhook-delivery", StringComparison.Ordinal));
+            await job.ExecuteAsync(new SchedulerJobContext(1, DateTimeOffset.UtcNow, null, null));
+        }
+
+        public async Task MakeWebhookDeliveriesDueAsync()
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            await db.WebhookDeliveries.Where(item => item.State == WebhookDeliveryState.Pending)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(
+                    item => item.NextAttemptAtUtc,
+                    DateTime.UtcNow.AddSeconds(-1)));
+        }
+
+        public async Task<bool> HasAuditActionAsync(string action)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<GitCandyDbContext>()
+                .GovernanceAuditEvents.AsNoTracking()
+                .AnyAsync(item => item.RepositoryId == RepositoryId && item.Action == action);
         }
 
         public async Task<bool> HasPushActivityAsync()
@@ -422,7 +590,7 @@ public sealed class GitSmartHttpIntegrationTests
             return response.StatusCode;
         }
 
-        public static async Task<GitHttpFixture> CreateAsync()
+        public static async Task<GitHttpFixture> CreateAsync(bool allowPrivateWebhookTargets = false)
         {
             var tempRoot = TestDirectory.Create();
             var repositoryRoot = Path.Combine(tempRoot, "Repositories");
@@ -458,7 +626,9 @@ public sealed class GitSmartHttpIntegrationTests
                 ["GitCandy:Application:RepositoryPath"] = repositoryRoot,
                 ["GitCandy:Application:CachePath"] = Path.Combine(tempRoot, "Caches"),
                 ["GitCandy:Application:EnableSsh"] = "false",
-                ["GitCandy:GitHttp:RequestTimeout"] = "00:05:00"
+                ["GitCandy:GitHttp:RequestTimeout"] = "00:05:00",
+                ["GitCandy:Webhooks:AllowHttpTargets"] = allowPrivateWebhookTargets.ToString(),
+                ["GitCandy:Webhooks:AllowPrivateNetworkTargets"] = allowPrivateWebhookTargets.ToString()
             });
             builder.Services.AddGitCandyWebShell(builder.Configuration);
             builder.Services.AddControllersWithViews()

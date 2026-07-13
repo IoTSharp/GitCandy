@@ -4,6 +4,8 @@ using GitCandy.Data.Permissions;
 using GitCandy.Issues;
 using GitCandy.PullRequests;
 using GitCandy.Workspace;
+using GitCandy.Notifications;
+using GitCandy.Integrations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +14,7 @@ namespace GitCandy.Application;
 internal sealed class WorkspaceService(
     GitCandyDbContext dbContext,
     IGitCandyRepositoryPermissionQuery permissionQuery,
+    IIntegrationEventPublisher integrationEventPublisher,
     TimeProvider timeProvider,
     ILogger<WorkspaceService> logger) : IWorkspaceService
 {
@@ -19,6 +22,7 @@ internal sealed class WorkspaceService(
     private const string RecommendationVersion = "m12.7-v1";
     private readonly GitCandyDbContext _dbContext = dbContext;
     private readonly IGitCandyRepositoryPermissionQuery _permissionQuery = permissionQuery;
+    private readonly IIntegrationEventPublisher _integrationEventPublisher = integrationEventPublisher;
     private readonly TimeProvider _timeProvider = timeProvider;
     private readonly ILogger<WorkspaceService> _logger = logger;
     private readonly HashSet<string> _synchronizedUsers = new(StringComparer.Ordinal);
@@ -124,7 +128,7 @@ internal sealed class WorkspaceService(
                 && !await _permissionQuery.CanReadRepositoryAsync(repositoryId, userId, isAdministrator, cancellationToken)) continue;
             if (row.Item.TeamId is long teamId
                 && !await IsTeamMemberAsync(teamId, userId, cancellationToken)) continue;
-            visible.Add(new WorkspaceNotification(row.Item.Id, row.Item.ResourceType, row.Item.Reason, row.Item.Title,
+            visible.Add(new WorkspaceNotification(row.Item.Id, row.Item.EventType, row.Item.ResourceType, row.Item.Reason, row.Item.Title,
                 row.Item.Url, row.Actor?.UserName, row.Namespace?.Slug, row.Repository?.Name, row.Team?.Name,
                 row.Item.CreatedAtUtc, row.Item.ReadAtUtc));
         }
@@ -309,6 +313,7 @@ internal sealed class WorkspaceService(
     {
         await ProjectIssueActivitiesAsync(cancellationToken);
         await ProjectPullRequestActivitiesAsync(cancellationToken);
+        await ProjectReleaseActivitiesAsync(cancellationToken);
         await RefreshMetricsAndRecommendationsAsync(cancellationToken);
         await _dbContext.ActivityEvents.Where(item => item.RetainUntilUtc < UtcNow).ExecuteDeleteAsync(cancellationToken);
         await _dbContext.RepositoryPageViews.Where(item => item.DayUtc < UtcNow.Date.AddDays(-2)).ExecuteDeleteAsync(cancellationToken);
@@ -353,7 +358,8 @@ internal sealed class WorkspaceService(
             await UpsertNotificationAsync($"pull-request-review:{row.PullRequest.Id}:{row.Reviewer.Version}", userId,
                 row.Reviewer.RequestedByUserId, row.Repository.Id, reviewTeamId, WorkspaceResourceType.PullRequest, resource,
                 WorkspaceNotificationReason.ReviewRequest, $"Review requested: {row.PullRequest.Title}",
-                $"/{row.Namespace.Slug}/{row.Repository.Name}/pulls/{row.PullRequest.Number}", row.Reviewer.RequestedAtUtc, null, cancellationToken);
+                $"/{row.Namespace.Slug}/{row.Repository.Name}/pulls/{row.PullRequest.Number}", row.Reviewer.RequestedAtUtc, null,
+                WorkspaceNotificationEventType.Review, cancellationToken);
         }
         var mentions = await (from notification in _dbContext.IssueNotifications.AsNoTracking()
             join issue in _dbContext.Issues.AsNoTracking() on notification.IssueId equals issue.Id
@@ -377,7 +383,93 @@ internal sealed class WorkspaceService(
             await UpsertNotificationAsync($"issue-notification:{row.Notification.Id}", userId, row.Notification.ActorUserId,
                 row.Repository.Id, notificationTeamId, WorkspaceResourceType.Issue, resource, MapReason(row.Notification.Type),
                 row.Issue.Title, $"/{row.Namespace.Slug}/{row.Repository.Name}/issues/{row.Issue.Number}",
-                row.Notification.CreatedAtUtc, row.Notification.ReadAtUtc, cancellationToken);
+                row.Notification.CreatedAtUtc, row.Notification.ReadAtUtc, WorkspaceNotificationEventType.Issue, cancellationToken);
+        }
+        var pullRequestEvents = await (
+            from timeline in _dbContext.PullRequestTimelineEvents.AsNoTracking()
+            join pullRequest in _dbContext.PullRequests.AsNoTracking() on timeline.PullRequestId equals pullRequest.Id
+            join repository in _dbContext.Repositories.AsNoTracking() on pullRequest.RepositoryId equals repository.Id
+            join repositoryNamespace in _dbContext.Namespaces.AsNoTracking() on repository.NamespaceId equals repositoryNamespace.Id
+            where timeline.ActorUserId != userId
+                && (pullRequest.AuthorUserId == userId
+                    || _dbContext.PullRequestReviewers.Any(reviewer => reviewer.PullRequestId == pullRequest.Id
+                        && reviewer.ReviewerUserId == userId))
+                && (timeline.Type == PullRequestEventType.ReviewSubmitted
+                    || timeline.Type == PullRequestEventType.ReviewDismissed
+                    || timeline.Type == PullRequestEventType.Merged
+                    || timeline.Type == PullRequestEventType.Closed
+                    || timeline.Type == PullRequestEventType.Reopened)
+            orderby timeline.Id descending
+            select new { Timeline = timeline, PullRequest = pullRequest, Repository = repository, Namespace = repositoryNamespace })
+            .Take(500)
+            .ToArrayAsync(cancellationToken);
+        foreach (var row in pullRequestEvents)
+        {
+            if (!await _permissionQuery.CanReadRepositoryAsync(row.Repository.Id, userId, false, cancellationToken)) continue;
+            var eventType = row.Timeline.Type is PullRequestEventType.ReviewSubmitted or PullRequestEventType.ReviewDismissed
+                ? WorkspaceNotificationEventType.Review
+                : WorkspaceNotificationEventType.PullRequest;
+            var eventTitle = row.Timeline.Type switch
+            {
+                PullRequestEventType.ReviewSubmitted => $"Review submitted: {row.PullRequest.Title}",
+                PullRequestEventType.ReviewDismissed => $"Review dismissed: {row.PullRequest.Title}",
+                PullRequestEventType.Merged => $"Pull request merged: {row.PullRequest.Title}",
+                PullRequestEventType.Closed => $"Pull request closed: {row.PullRequest.Title}",
+                _ => $"Pull request reopened: {row.PullRequest.Title}"
+            };
+            await UpsertNotificationAsync($"pull-request-timeline:{row.Timeline.Id}", userId,
+                row.Timeline.ActorUserId, row.Repository.Id, await ResolveTeamSourceAsync(row.Repository.Id, userId, cancellationToken),
+                WorkspaceResourceType.PullRequest, $"pull-request:{row.PullRequest.Id}",
+                WorkspaceNotificationReason.Participation, eventTitle,
+                $"/{row.Namespace.Slug}/{row.Repository.Name}/pulls/{row.PullRequest.Number}",
+                row.Timeline.CreatedAtUtc, null, eventType, cancellationToken);
+        }
+        var checks = await (
+            from check in _dbContext.CommitChecks.AsNoTracking()
+            join pullRequest in _dbContext.PullRequests.AsNoTracking() on check.RepositoryId equals pullRequest.RepositoryId
+            join repository in _dbContext.Repositories.AsNoTracking() on pullRequest.RepositoryId equals repository.Id
+            join repositoryNamespace in _dbContext.Namespaces.AsNoTracking() on repository.NamespaceId equals repositoryNamespace.Id
+            where pullRequest.State == PullRequestState.Open
+                && pullRequest.CurrentHeadSha == check.Sha
+                && check.ActorUserId != userId
+                && (pullRequest.AuthorUserId == userId
+                    || _dbContext.PullRequestReviewers.Any(reviewer => reviewer.PullRequestId == pullRequest.Id
+                        && reviewer.ReviewerUserId == userId))
+            orderby check.UpdatedAtUtc descending
+            select new { Check = check, PullRequest = pullRequest, Repository = repository, Namespace = repositoryNamespace })
+            .Take(500)
+            .ToArrayAsync(cancellationToken);
+        foreach (var row in checks)
+        {
+            if (!await _permissionQuery.CanReadRepositoryAsync(row.Repository.Id, userId, false, cancellationToken)) continue;
+            await UpsertNotificationAsync($"check:{row.Check.Id}:{row.Check.State}:{row.Check.UpdatedAtUtc.Ticks}", userId,
+                row.Check.ActorUserId, row.Repository.Id, await ResolveTeamSourceAsync(row.Repository.Id, userId, cancellationToken),
+                WorkspaceResourceType.PullRequest, $"pull-request:{row.PullRequest.Id}",
+                WorkspaceNotificationReason.Participation,
+                $"Check {row.Check.Context}: {row.Check.State}",
+                $"/{row.Namespace.Slug}/{row.Repository.Name}/pulls/{row.PullRequest.Number}",
+                row.Check.UpdatedAtUtc, null, WorkspaceNotificationEventType.Check, cancellationToken);
+        }
+        var relatedRepositoryIds = await GetContextRepositoryIdsAsync(userId, false, cancellationToken);
+        var releases = await (
+            from release in _dbContext.Releases.AsNoTracking()
+            join repository in _dbContext.Repositories.AsNoTracking() on release.RepositoryId equals repository.Id
+            join repositoryNamespace in _dbContext.Namespaces.AsNoTracking() on repository.NamespaceId equals repositoryNamespace.Id
+            where !release.IsDraft && release.CreatedByUserId != userId && relatedRepositoryIds.Contains(repository.Id)
+            orderby release.PublishedAtUtc descending
+            select new { Release = release, Repository = repository, Namespace = repositoryNamespace })
+            .Take(200)
+            .ToArrayAsync(cancellationToken);
+        foreach (var row in releases)
+        {
+            if (!await _permissionQuery.CanReadRepositoryAsync(row.Repository.Id, userId, false, cancellationToken)) continue;
+            await UpsertNotificationAsync($"release:{row.Release.Id}", userId, row.Release.CreatedByUserId,
+                row.Repository.Id, await ResolveTeamSourceAsync(row.Repository.Id, userId, cancellationToken),
+                WorkspaceResourceType.Release, $"release:{row.Release.Id}", WorkspaceNotificationReason.Subscription,
+                $"Release published: {row.Release.Name}",
+                $"/{row.Namespace.Slug}/{row.Repository.Name}/releases/{row.Release.Id}",
+                row.Release.PublishedAtUtc ?? row.Release.CreatedAtUtc, null,
+                WorkspaceNotificationEventType.Release, cancellationToken);
         }
         var blocked = await (from pullRequest in _dbContext.PullRequests.AsNoTracking()
             join repository in _dbContext.Repositories.AsNoTracking() on pullRequest.RepositoryId equals repository.Id
@@ -472,13 +564,56 @@ internal sealed class WorkspaceService(
 
     private async Task UpsertNotificationAsync(string eventId, string userId, string? actorUserId, long? repositoryId,
         long? teamId, WorkspaceResourceType resourceType, string resourceId, WorkspaceNotificationReason reason,
-        string title, string url, DateTime createdAtUtc, DateTime? readAtUtc, CancellationToken cancellationToken)
+        string title, string url, DateTime createdAtUtc, DateTime? readAtUtc,
+        WorkspaceNotificationEventType eventType, CancellationToken cancellationToken)
     {
         var exists = await _dbContext.Notifications.AnyAsync(item => item.UserId == userId && item.EventId == eventId, cancellationToken);
-        if (!exists) _dbContext.Notifications.Add(new GitCandyNotification { EventId = eventId, UserId = userId,
+        if (exists) return;
+        var notification = new GitCandyNotification { EventId = eventId, UserId = userId,
             ActorUserId = actorUserId, RepositoryId = repositoryId, TeamId = teamId, ResourceType = resourceType,
-            ResourceId = resourceId, Reason = reason, Title = title, Url = url, CreatedAtUtc = createdAtUtc, ReadAtUtc = readAtUtc });
+            EventType = eventType, ResourceId = resourceId, Reason = reason, Title = title, Url = url,
+            CreatedAtUtc = createdAtUtc, ReadAtUtc = readAtUtc };
+        _dbContext.Notifications.Add(notification);
+        var preference = await _dbContext.NotificationPreferences.AsNoTracking().SingleOrDefaultAsync(
+            item => item.UserId == userId && item.EventType == eventType,
+            cancellationToken);
+        if (preference?.EmailEnabled == true)
+        {
+            var email = await _dbContext.Users.AsNoTracking()
+                .Where(item => item.Id == userId && item.EmailConfirmed && item.Email != null)
+                .Select(item => item.Email)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                notification.Deliveries.Add(NewDelivery(NotificationDeliveryChannel.Email, email, null, createdAtUtc));
+            }
+        }
+        if (preference?.WebhookEnabled == true
+            && !string.IsNullOrWhiteSpace(preference.WebhookUrl)
+            && !string.IsNullOrWhiteSpace(preference.ProtectedWebhookSecret))
+        {
+            notification.Deliveries.Add(NewDelivery(
+                NotificationDeliveryChannel.Webhook,
+                preference.WebhookUrl,
+                preference.ProtectedWebhookSecret,
+                createdAtUtc));
+        }
     }
+
+    private static GitCandyNotificationDelivery NewDelivery(
+        NotificationDeliveryChannel channel,
+        string recipient,
+        string? protectedSecret,
+        DateTime createdAtUtc) => new()
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            Channel = channel,
+            State = NotificationDeliveryState.Pending,
+            Recipient = recipient,
+            ProtectedSecret = protectedSecret,
+            NextAttemptAtUtc = createdAtUtc,
+            CreatedAtUtc = createdAtUtc
+        };
 
     private async Task<bool> ChangeTodoAsync(long todoId, string userId, long version, WorkspaceTodoStatus status,
         DateTime? snoozedUntilUtc, CancellationToken cancellationToken)
@@ -543,6 +678,50 @@ internal sealed class WorkspaceService(
                     : row.Timeline.Type == PullRequestEventType.ReviewSubmitted ? WorkspaceActivityType.ReviewSubmitted : WorkspaceActivityType.PullRequestUpdated,
                 Title = row.PullRequest.Title, Url = $"/{row.Namespace.Slug}/{row.Repository.Name}/pulls/{row.PullRequest.Number}",
                 OccurredAtUtc = row.Timeline.CreatedAtUtc, RetainUntilUtc = row.Timeline.CreatedAtUtc.AddDays(180) });
+        }
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task ProjectReleaseActivitiesAsync(CancellationToken cancellationToken)
+    {
+        var rows = await (
+            from release in _dbContext.Releases.AsNoTracking()
+            join repository in _dbContext.Repositories.AsNoTracking() on release.RepositoryId equals repository.Id
+            join repositoryNamespace in _dbContext.Namespaces.AsNoTracking() on repository.NamespaceId equals repositoryNamespace.Id
+            where !release.IsDraft
+            orderby release.PublishedAtUtc descending
+            select new { Release = release, Repository = repository, Namespace = repositoryNamespace })
+            .Take(2000)
+            .ToArrayAsync(cancellationToken);
+        var ids = rows.Select(item => $"release:{item.Release.Id}").ToArray();
+        var existing = await _dbContext.ActivityEvents.AsNoTracking().Where(item => ids.Contains(item.EventId))
+            .Select(item => item.EventId).ToArrayAsync(cancellationToken);
+        var known = existing.ToHashSet(StringComparer.Ordinal);
+        foreach (var row in rows)
+        {
+            var eventId = $"release:{row.Release.Id}";
+            if (known.Contains(eventId)) continue;
+            var occurredAt = row.Release.PublishedAtUtc ?? row.Release.CreatedAtUtc;
+            await _integrationEventPublisher.PublishReleasePublishedAsync(
+                row.Repository.Id,
+                row.Release.CreatedByUserId,
+                row.Release.Id,
+                row.Release.TagName,
+                row.Release.TagCommitSha,
+                cancellationToken);
+            _dbContext.ActivityEvents.Add(new GitCandyActivityEvent
+            {
+                EventId = eventId,
+                ActorUserId = row.Release.CreatedByUserId,
+                RepositoryId = row.Repository.Id,
+                ResourceType = WorkspaceResourceType.Release,
+                ResourceId = eventId,
+                Type = WorkspaceActivityType.Release,
+                Title = row.Release.Name,
+                Url = $"/{row.Namespace.Slug}/{row.Repository.Name}/releases/{row.Release.Id}",
+                OccurredAtUtc = occurredAt,
+                RetainUntilUtc = occurredAt.AddDays(365)
+            });
         }
         await _dbContext.SaveChangesAsync(cancellationToken);
     }

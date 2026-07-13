@@ -35,12 +35,16 @@ public sealed class CreateWebhookViewModel
     [Display(Name = "Check updated")]
     public bool CheckUpdated { get; set; }
 
+    [Display(Name = "Release published")]
+    public bool ReleasePublished { get; set; }
+
     public WebhookEventTypes ToEvents()
     {
         var events = WebhookEventTypes.None;
         if (Push) events |= WebhookEventTypes.Push;
         if (PullRequestMerged) events |= WebhookEventTypes.PullRequestMerged;
         if (CheckUpdated) events |= WebhookEventTypes.CheckUpdated;
+        if (ReleasePublished) events |= WebhookEventTypes.ReleasePublished;
         return events;
     }
 }

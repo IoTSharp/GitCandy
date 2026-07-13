@@ -1,4 +1,5 @@
 using GitCandy.Workspace;
+using GitCandy.Notifications;
 
 namespace GitCandy.Data.Domain;
 
@@ -29,6 +30,7 @@ public sealed class GitCandyNotification
     public string? ActorUserId { get; set; }
     public long? RepositoryId { get; set; }
     public long? TeamId { get; set; }
+    public WorkspaceNotificationEventType EventType { get; set; }
     public WorkspaceResourceType ResourceType { get; set; }
     public string ResourceId { get; set; } = string.Empty;
     public WorkspaceNotificationReason Reason { get; set; }
@@ -36,6 +38,37 @@ public sealed class GitCandyNotification
     public string Url { get; set; } = string.Empty;
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? ReadAtUtc { get; set; }
+    public ICollection<GitCandyNotificationDelivery> Deliveries { get; } = [];
+}
+
+public sealed class GitCandyNotificationPreference
+{
+    public string UserId { get; set; } = string.Empty;
+    public WorkspaceNotificationEventType EventType { get; set; }
+    public bool EmailEnabled { get; set; }
+    public bool WebhookEnabled { get; set; }
+    public string? WebhookUrl { get; set; }
+    public string? ProtectedWebhookSecret { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
+}
+
+public sealed class GitCandyNotificationDelivery
+{
+    public string Id { get; set; } = string.Empty;
+    public long NotificationId { get; set; }
+    public NotificationDeliveryChannel Channel { get; set; }
+    public NotificationDeliveryState State { get; set; }
+    public string Recipient { get; set; } = string.Empty;
+    public string? ProtectedSecret { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTime? NextAttemptAtUtc { get; set; }
+    public DateTime? LeaseExpiresAtUtc { get; set; }
+    public DateTime? LastAttemptAtUtc { get; set; }
+    public int? ResponseStatusCode { get; set; }
+    public string? ErrorCode { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime? CompletedAtUtc { get; set; }
+    public GitCandyNotification? Notification { get; set; }
 }
 
 public sealed class GitCandyActivityEvent

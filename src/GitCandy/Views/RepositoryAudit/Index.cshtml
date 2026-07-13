@@ -1,0 +1,7 @@
+@model RepositoryAuditViewModel
+@{ ViewData["Title"] = "Repository audit"; }
+<header class="page-heading"><div><h1>Audit log</h1><p>@Model.NamespaceSlug/@Model.RepositoryName</p></div><a class="btn" href="/@Model.NamespaceSlug/@Model.RepositoryName"><i data-lucide="arrow-left"></i> Repository</a></header>
+@if (Model.Events.Count == 0) { <div class="empty-state"><div><i data-lucide="shield-check"></i><h2>No audit events</h2></div></div> }
+else { <div class="table-responsive"><table class="table"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Outcome</th><th>Reference</th><th>Detail</th></tr></thead><tbody>
+@foreach (var item in Model.Events) { <tr><td>@item.OccurredAt.ToString("u")</td><td>@item.Actor</td><td>@item.Action</td><td>@item.Outcome</td><td>@item.Reference</td><td>@item.Detail</td></tr> }
+</tbody></table></div> }

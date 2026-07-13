@@ -1,0 +1,6 @@
+@model SearchViewModel
+@{ ViewData["Title"] = "Search"; }
+<header class="page-heading"><div><h1>Search</h1></div></header>
+<form method="get" class="inbox-filters"><div class="input-group"><input type="search" name="q" value="@Model.Query" minlength="2" maxlength="200" required autofocus /><button class="btn" type="submit" aria-label="Search"><i data-lucide="search"></i></button></div><select name="scope" asp-for="Scope" asp-items="Html.GetEnumSelectList<GitCandy.Search.SearchScope>()"></select></form>
+@if (Model.Query.Length >= 2 && Model.Hits.Count == 0) { <div class="empty-state"><div><i data-lucide="search-x"></i><h2>No results</h2></div></div> }
+else if (Model.Hits.Count > 0) { <div class="entity-list">@foreach (var item in Model.Hits) { <article class="entity-row"><div><a href="@item.Url"><strong>@item.Title</strong></a><p>@item.Scope · @item.Repository</p><p>@(item.Excerpt.Length <= 240 ? item.Excerpt : item.Excerpt[..240])</p></div></article> }</div> }

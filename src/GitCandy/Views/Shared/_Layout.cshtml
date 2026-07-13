@@ -133,6 +133,11 @@
                         </a>
                     </li>
                     <li>
+                        <a class="nav-link @(currentController == "Search" ? "is-active" : null)" asp-controller="Search" asp-action="Index">
+                            <i data-lucide="search"></i> Search
+                        </a>
+                    </li>
+                    <li>
                         <a class="nav-link @(currentController == "Home" ? "is-active" : null)" asp-controller="Home" asp-action="About">
                             <i data-lucide="lightbulb"></i> @Text["Shared_About"]
                         </a>

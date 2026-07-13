@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- M13 的 PAT、deploy key、versioned webhook、status/check API、CODEOWNERS 和 required review/check gate 已建立；当前进入通知、审计、release、search 和外部 CI 总验收。M14-M16 继续按依赖顺序推进。
+- M13 的 PAT、deploy key、webhook/check、branch protection、CODEOWNERS、通知、审计、Release、search 和外部 CI gate 已完成；当前进入 M14 团队治理与企业身份联邦，M15-M16 继续按依赖顺序推进。
 
 ## 已确认的产品决策与冲突处理
 
@@ -36,31 +36,13 @@
 | “开源”文案 | 没有显式 SPDX/许可证证据时只能称“公开仓库”；确认开放许可证后才称“开源项目” | 避免把 public 错误等同于 open source |
 | Activity 与 Audit | Activity 为用户可见产品事件；Audit 为不可篡改安全证据，可共享事件 envelope 但必须分开存储和保留 | M12.7 Feed 不能替代 M13 审计 |
 | Packages | M12.7 只提供真实目录和空状态；OCI push/pull、存储、GC 由 M15.6 实现 | 不提前展示无后端的上传能力 |
-| 通知阶段 | M12.7 建立统一 inbox 和 dashboard 摘要；M13 `#145` 扩展 PR/review/check/release 与外部投递 | 避免 M12.7 和 M13 各建一套通知模型 |
+| 通知阶段 | M12.7 建立统一 inbox 和 dashboard 摘要；M13 在其上扩展 PR/review/check/release 与外部投递 | 避免 M12.7 和 M13 各建一套通知模型 |
 
 ## 当前实施顺序
 
-1. `#145-#149`：扩展通知/审计/release/search，并完成外部 CI webhook -> check -> gate 总验收。
-2. M13 完成后再进入 M14/M15；M15.5 文档体系在相关产品契约稳定后实施。
+1. `#150-#159`：四级团队角色、企业连接、Microsoft Entra ID/SCIM 与国内 provider，同步停用和总验收。
+2. M14 完成后进入 M15 remote/mirror；M15.5 文档体系在相关产品契约稳定后实施。
 3. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
-
-## 🚧 Milestone 13：合并治理、外部集成与发布基础
-
-目标：让 Issue/PR 接入外部 CI、自动化和仓库治理，并形成可审计、可诊断的团队开发入口。
-
-`#140-#144` 的机器凭据、webhook/check、branch protection、CODEOWNERS 和 required review/check gate 已完成，验收记录见 [机器凭据与 push gate](docs/migration/m13-140-143-machine-credentials-push-gate.md)、[webhook/check/required gate](docs/migration/m13-141-143-webhooks-checks-required-gate.md)及 [CODEOWNERS/required review](docs/migration/m13-144-codeowners-required-reviews.md)。当前执行顺序：`#145 -> #149`。保护分支必须同时作用于 Git HTTP、SSH push 和 Web merge；webhook 失败不能回滚已经成功的 push/merge。
-
-| 编号 | 状态 | 主题 | 验收重点 |
-| --- | --- | --- | --- |
-| #145 | ⬜ | 通知事件扩展与外部投递器 | 在 M12.7 统一 inbox 上增加 PR/review/check/release、偏好、邮件/webhook 投递和失败诊断；不新建第二套 inbox |
-| #146 | ⬜ | 协作审计日志 | 不可由普通用户篡改的关键变更证据；与 Feed 分离存储、保留和查询 |
-| #147 | ⬜ | Releases 与 assets | tag release、Markdown、受限附件、权限、路径/大小和孤儿清理 |
-| #148 | ⬜ | 协作搜索 | repository/issue/PR/commit/code 搜索，所有结果先做 repository 权限过滤 |
-| #149 | ⬜ | 外部 CI 端到端验证 | fixture 收 webhook、回写 check，required review/check 控制 push/merge，并覆盖撤销、重试、并发和私有数据 |
-
-完成门槛：外部 CI 能用最小 scope PAT 完成 webhook -> check -> required gate；所有 bypass、force/delete 和规则变化可审计；通知、search、release 和 payload 不泄漏私有资源。
-
-详细设计见 [协作路线设计](docs/product/collaboration-roadmap.md)。
 
 ## ⬜ Milestone 14：团队治理与企业身份联邦
 

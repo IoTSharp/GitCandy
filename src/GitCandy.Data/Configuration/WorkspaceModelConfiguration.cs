@@ -1,5 +1,6 @@
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Notifications;
 using Microsoft.EntityFrameworkCore;
 
 namespace GitCandy.Data.Configuration;
@@ -38,6 +39,7 @@ internal static class WorkspaceModelConfiguration
             entity.Property(item => item.EventId).IsRequired().HasMaxLength(128);
             entity.Property(item => item.UserId).IsRequired().HasMaxLength(SchemaLimits.IdentityKey);
             entity.Property(item => item.ActorUserId).HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.EventType).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(item => item.ResourceType).HasConversion<string>().HasMaxLength(24).IsRequired();
             entity.Property(item => item.ResourceId).IsRequired().HasMaxLength(128);
             entity.Property(item => item.Reason).HasConversion<string>().HasMaxLength(24).IsRequired();
@@ -50,6 +52,35 @@ internal static class WorkspaceModelConfiguration
                 .HasDatabaseName("IX_Notifications_User_Event").IsUnique();
             entity.HasIndex(item => new { item.UserId, item.ReadAtUtc, item.CreatedAtUtc })
                 .HasDatabaseName("IX_Notifications_User_Read_Created");
+        });
+
+        builder.Entity<GitCandyNotificationPreference>(entity =>
+        {
+            entity.ToTable("NotificationPreferences");
+            entity.HasKey(item => new { item.UserId, item.EventType });
+            entity.Property(item => item.UserId).IsRequired().HasMaxLength(SchemaLimits.IdentityKey);
+            entity.Property(item => item.EventType).HasConversion<string>().HasMaxLength(24);
+            entity.Property(item => item.WebhookUrl).HasMaxLength(SchemaLimits.TargetUrl);
+            entity.Property(item => item.ProtectedWebhookSecret).HasMaxLength(SchemaLimits.ProtectedSecret);
+            entity.HasOne<GitCandyUser>().WithMany().HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<GitCandyNotificationDelivery>(entity =>
+        {
+            entity.ToTable("NotificationDeliveries");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).HasMaxLength(SchemaLimits.WebhookDeliveryId);
+            entity.Property(item => item.Channel).HasConversion<string>().HasMaxLength(16).IsRequired();
+            entity.Property(item => item.State).HasConversion<string>().HasMaxLength(16).IsRequired();
+            entity.Property(item => item.Recipient).IsRequired().HasMaxLength(SchemaLimits.TargetUrl);
+            entity.Property(item => item.ProtectedSecret).HasMaxLength(SchemaLimits.ProtectedSecret);
+            entity.Property(item => item.ErrorCode).HasMaxLength(SchemaLimits.WebhookErrorCode);
+            entity.HasOne(item => item.Notification).WithMany(item => item.Deliveries)
+                .HasForeignKey(item => item.NotificationId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(item => new { item.NotificationId, item.Channel })
+                .HasDatabaseName("IX_NotificationDeliveries_Notification_Channel").IsUnique();
+            entity.HasIndex(item => new { item.State, item.NextAttemptAtUtc })
+                .HasDatabaseName("IX_NotificationDeliveries_State_NextAttempt");
         });
 
         builder.Entity<GitCandyActivityEvent>(entity =>

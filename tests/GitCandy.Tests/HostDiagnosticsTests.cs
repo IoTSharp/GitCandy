@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -121,9 +122,17 @@ public sealed class HostDiagnosticsTests
         finally
         {
             ResetQuartzLogging();
-            if (Directory.Exists(tempRoot))
+            SqliteConnection.ClearAllPools();
+            for (var attempt = 0; attempt < 5 && Directory.Exists(tempRoot); attempt++)
             {
-                Directory.Delete(tempRoot, recursive: true);
+                try
+                {
+                    TestDirectory.Delete(tempRoot);
+                }
+                catch (IOException) when (attempt < 4)
+                {
+                    await Task.Delay(100);
+                }
             }
         }
     }

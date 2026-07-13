@@ -195,6 +195,7 @@ internal sealed class BranchProtectionService(
                 continue;
             }
 
+            var reasonCountBeforeUpdate = reasons.Count;
             var branch = update.ReferenceName[BranchPrefix.Length..];
             var matchingRules = rules.Where(rule => Matches(rule.Pattern, branch)).ToArray();
             var enforcedRules = new List<GitCandyBranchProtectionRule>(matchingRules.Length);
@@ -228,7 +229,17 @@ internal sealed class BranchProtectionService(
                 }
             }
 
-            if (update.IsDelete || accessBlocked)
+            if (update.IsDelete)
+            {
+                if (request.RecordAudit)
+                {
+                    AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
+                        "ref.delete", accessBlocked ? "denied" : "allowed", update.ReferenceName,
+                        accessBlocked ? "branch protection rejected deletion" : "branch protection allowed deletion", now);
+                }
+                continue;
+            }
+            if (accessBlocked)
             {
                 continue;
             }
@@ -274,6 +285,13 @@ internal sealed class BranchProtectionService(
                     AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
                         "gate.reject", "denied", update.ReferenceName, reviewBlocker, now);
                 }
+            }
+            if (request.RecordAudit && update.IsForceUpdate)
+            {
+                var allowed = reasons.Count == reasonCountBeforeUpdate;
+                AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
+                    "ref.force", allowed ? "allowed" : "denied", update.ReferenceName,
+                    allowed ? "branch protection allowed force update" : "branch protection rejected force update", now);
             }
         }
 

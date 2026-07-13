@@ -5,6 +5,7 @@ using GitCandy.Git;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Caching.Memory;
+using GitCandy.Search;
 
 namespace GitCandy.Tests;
 
@@ -135,6 +136,39 @@ public sealed class RepositoryBrowserServiceTests
                 service.ReadTree(context, "HEAD", "folder\\child"));
             Assert.ThrowsExactly<InvalidOperationException>(() =>
                 service.WriteArchiveAsync(context, "HEAD", new MemoryStream()).GetAwaiter().GetResult());
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
+    }
+
+    [TestMethod]
+    public void GitContentSearch_WithAuthorizedCandidate_FindsBoundedCommitAndCodeResults()
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            CreateRepository(rootPath);
+            var pathResolver = new BrowserPathResolver(rootPath);
+            var service = new GitContentSearchService(
+                pathResolver,
+                new LibGit2RepositoryService(pathResolver));
+            var candidate = new SearchRepositoryCandidate(
+                7,
+                "owner",
+                "browser",
+                "browser",
+                "fixture");
+
+            var commits = service.Search([candidate], "Update README", SearchScope.Commit, 10);
+            var code = service.Search([candidate], "second line", SearchScope.Code, 10);
+
+            Assert.AreEqual(1, commits.Count);
+            Assert.AreEqual(SearchScope.Commit, commits[0].Scope);
+            Assert.AreEqual(1, code.Count);
+            Assert.AreEqual("README.md:2", code[0].Title);
+            StringAssert.Contains(code[0].Url, "#L2");
         }
         finally
         {

@@ -91,6 +91,8 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyPullRequestReview> PullRequestReviews => Set<GitCandyPullRequestReview>();
     public DbSet<GitCandyTodo> Todos => Set<GitCandyTodo>();
     public DbSet<GitCandyNotification> Notifications => Set<GitCandyNotification>();
+    public DbSet<GitCandyNotificationPreference> NotificationPreferences => Set<GitCandyNotificationPreference>();
+    public DbSet<GitCandyNotificationDelivery> NotificationDeliveries => Set<GitCandyNotificationDelivery>();
     public DbSet<GitCandyActivityEvent> ActivityEvents => Set<GitCandyActivityEvent>();
     public DbSet<GitCandyRepositoryStar> RepositoryStars => Set<GitCandyRepositoryStar>();
     public DbSet<GitCandyRepositoryInteraction> RepositoryInteractions => Set<GitCandyRepositoryInteraction>();
@@ -108,6 +110,8 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyWebhookSubscription> WebhookSubscriptions => Set<GitCandyWebhookSubscription>();
     public DbSet<GitCandyWebhookDelivery> WebhookDeliveries => Set<GitCandyWebhookDelivery>();
     public DbSet<GitCandyCommitCheck> CommitChecks => Set<GitCandyCommitCheck>();
+    public DbSet<GitCandyRelease> Releases => Set<GitCandyRelease>();
+    public DbSet<GitCandyReleaseAsset> ReleaseAssets => Set<GitCandyReleaseAsset>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -142,6 +146,7 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         builder.ConfigureCredentialModel();
         builder.ConfigureGovernanceModel();
         builder.ConfigureIntegrationModel();
+        builder.ConfigureReleaseModel();
 
         builder.Entity<GitCandyUser>(entity =>
         {

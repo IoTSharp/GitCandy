@@ -81,6 +81,16 @@ internal sealed class CommitCheckService(
             actorUserId,
             summary,
             cancellationToken);
+        dbContext.GovernanceAuditEvents.Add(new GitCandyGovernanceAuditEvent
+        {
+            RepositoryId = repositoryId,
+            ActorUserId = actorUserId,
+            Action = "check.update",
+            Outcome = "success",
+            ReferenceName = sha,
+            Detail = $"{context}:{update.State}",
+            OccurredAtUtc = now.UtcDateTime
+        });
         await dbContext.SaveChangesAsync(cancellationToken);
         return ToSummary(check);
     }

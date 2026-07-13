@@ -3,6 +3,7 @@ using GitCandy.Application;
 using GitCandy.Credentials;
 using GitCandy.Git;
 using GitCandy.Governance;
+using GitCandy.Audit;
 
 namespace GitCandy.Models;
 
@@ -196,6 +197,11 @@ public sealed class RepositoryBranchProtectionsViewModel
     public string CanonicalRepositoryPath =>
         $"/{Uri.EscapeDataString(NamespaceSlug)}/{Uri.EscapeDataString(RepositoryName)}";
 }
+
+public sealed record RepositoryAuditViewModel(
+    string NamespaceSlug,
+    string RepositoryName,
+    IReadOnlyList<AuditEvent> Events);
 
 public sealed class BranchProtectionFormViewModel
 {

@@ -1,0 +1,21 @@
+@model NotificationPreferencesViewModel
+@{ ViewData["Title"] = "Notification delivery"; }
+<header class="page-heading"><div><h1>Notification delivery</h1><p>Choose external delivery per event. Inbox delivery always remains enabled.</p></div><a class="btn" asp-action="Index"><i data-lucide="arrow-left"></i> Inbox</a></header>
+<div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+<div class="table-responsive"><table class="table"><thead><tr><th>Event</th><th>Email</th><th>Webhook</th><th>Target</th></tr></thead><tbody>
+@foreach (var item in Model.Preferences) {
+<tr><td>@item.EventType</td><td>@(item.EmailEnabled ? "Enabled" : "Disabled")</td><td>@(item.WebhookEnabled ? "Enabled" : "Disabled")</td><td>@(item.WebhookUrl ?? "-")</td></tr>
+}
+</tbody></table></div>
+<section class="settings-section"><h2>Update preference</h2><form asp-action="Preferences" method="post" class="form-grid">
+<div class="form-field"><label asp-for="Edit.EventType"></label><select asp-for="Edit.EventType" asp-items="Html.GetEnumSelectList<GitCandy.Workspace.WorkspaceNotificationEventType>()"></select></div>
+<label><input asp-for="Edit.EmailEnabled" /> Email</label><label><input asp-for="Edit.WebhookEnabled" /> Webhook</label>
+<div class="form-field"><label asp-for="Edit.WebhookUrl"></label><input asp-for="Edit.WebhookUrl" type="url" autocomplete="url" /></div>
+<div class="form-field"><label asp-for="Edit.WebhookSecret"></label><input asp-for="Edit.WebhookSecret" type="password" autocomplete="new-password" /><small>Leave blank to keep the current secret.</small></div>
+<button class="primary-button" type="submit"><i data-lucide="save"></i> Save</button></form></section>
+<section class="settings-section"><h2>Recent delivery diagnostics</h2>
+@if (Model.Deliveries.Count == 0) { <div class="empty-state"><div><i data-lucide="send"></i><h3>No external deliveries</h3></div></div> }
+else { <div class="table-responsive"><table class="table"><thead><tr><th>Event</th><th>Channel</th><th>State</th><th>Attempts</th><th>Error</th><th>Created</th></tr></thead><tbody>
+@foreach (var item in Model.Deliveries) { <tr><td>@item.EventType</td><td>@item.Channel</td><td>@item.State</td><td>@item.AttemptCount</td><td>@(item.ErrorCode ?? "-")</td><td>@item.CreatedAt.ToString("u")</td></tr> }
+</tbody></table></div> }
+</section>
