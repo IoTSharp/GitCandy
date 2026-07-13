@@ -88,3 +88,7 @@ docker compose logs --tail 200 gitcandy
 DNS 和 TLS 生效后，至少验证 Web 注册/登录、私有仓库权限，以及真实 `git clone`、`git fetch`、`git push`。SSH URL 使用 `ssh://git@gitcandy.com:2222/{namespace}/{repository}.git`。
 
 HTTP `http://gitcandy.com` 只作为到 HTTPS 的重定向入口；Identity Secure Cookie 和 Git 凭据不应在明文 HTTP 上使用。
+
+## 生产验收记录
+
+2026-07-13 已完成 DNS/TLS、Web 登录、私有权限、HTTP/SSH clone/fetch/push、Git LFS、端口边界、资源限制、一致备份恢复和镜像回滚。镜像摘要、commit/OID、维护窗口和已知边界见 [M12.6 生产部署验收](../../docs/migration/m12-6-sonnetdb-production-acceptance.md)。

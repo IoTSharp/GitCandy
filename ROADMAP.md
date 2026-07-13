@@ -2,7 +2,7 @@
 
 更新日期：2026-07-13
 
-本文件只维护尚未完成的工作。已经退出活动路线图的 M0-M12.5 和 M12.7、验收结论和专题文档入口见 [已完成里程碑索引](docs/roadmap/completed-milestones.md)；重组前的完整路线图见 [2026-07-13 历史快照](docs/roadmap/roadmap-archive-2026-07-13.md)。
+本文件只维护尚未完成的工作。已经退出活动路线图的 M0-M12.7、验收结论和专题文档入口见 [已完成里程碑索引](docs/roadmap/completed-milestones.md)；重组前的完整路线图见 [2026-07-13 历史快照](docs/roadmap/roadmap-archive-2026-07-13.md)。
 
 ## 状态与维护规则
 
@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- 当前实施必须先完成生产验收，再进入外部 CI、企业身份、mirror、registry 和代码智能。
+- M13 的 PAT、deploy key、versioned webhook、status/check API、CODEOWNERS 和 required review/check gate 已建立；当前进入通知、审计、release、search 和外部 CI 总验收。M14-M16 继续按依赖顺序推进。
 
 ## 已确认的产品决策与冲突处理
 
@@ -40,41 +40,18 @@
 
 ## 当前实施顺序
 
-1. `#139L`：完成 `gitcandy.com` 真实生产部署验收。
-2. `#140/#140A/#143`：先建立机器凭据和 push gate，再接 webhook/check。
-3. M13 完成后再进入 M14/M15；M15.5 文档体系在相关产品契约稳定后实施。
-4. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
+1. `#145-#149`：扩展通知/审计/release/search，并完成外部 CI webhook -> check -> gate 总验收。
+2. M13 完成后再进入 M14/M15；M15.5 文档体系在相关产品契约稳定后实施。
+3. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
 
-## 🚧 Milestone 12.6：SonnetDB 生产部署收口
-
-目标：完成配置选择、migration 和兼容保护网之后的真实生产部署、协议和恢复验收。`#139J/#139K` 已进入完成历史，本阶段只保留尚未闭环的生产任务。
-
-| 编号 | 状态 | 主题 | 验收重点 |
-| --- | --- | --- | --- |
-| #139L | 🚧 | `gitcandy.com` 生产部署 | 复用现有 Caddy 与内部 SonnetDB，固定代理信任边界，持久化 repository/LFS/host key/Data Protection 数据；完成 DNS、TLS、Web 登录、HTTP/SSH clone/fetch/push、资源限制和一致备份恢复 |
-
-完成门槛：
-
-- HTTP 自动跳转 HTTPS，Secure cookie、OIDC callback 和 canonical clone URL 正确。
-- Caddy 不缓冲 Git pack，HTTP clone/fetch/push 和独立 SSH 端口 clone/fetch/push 通过。
-- SonnetDB 不暴露公网；token、连接信息和内部地址不进入日志或页面。
-- 数据库、repositories、LFS、SSH host key 和 Data Protection keys 在同一恢复点完成备份、恢复和版本回滚演练。
-- 生产验收记录写入独立部署文档后，M12.6 整体迁入完成历史。
-
-## ⬜ Milestone 13：合并治理、外部集成与发布基础
+## 🚧 Milestone 13：合并治理、外部集成与发布基础
 
 目标：让 Issue/PR 接入外部 CI、自动化和仓库治理，并形成可审计、可诊断的团队开发入口。
 
-执行顺序：`#140 -> #140A -> #143 -> #141/#142 -> #144-#149`。保护分支必须同时作用于 Git HTTP、SSH push 和 Web merge；webhook 失败不能回滚已经成功的 push/merge。
+`#140-#144` 的机器凭据、webhook/check、branch protection、CODEOWNERS 和 required review/check gate 已完成，验收记录见 [机器凭据与 push gate](docs/migration/m13-140-143-machine-credentials-push-gate.md)、[webhook/check/required gate](docs/migration/m13-141-143-webhooks-checks-required-gate.md)及 [CODEOWNERS/required review](docs/migration/m13-144-codeowners-required-reviews.md)。当前执行顺序：`#145 -> #149`。保护分支必须同时作用于 Git HTTP、SSH push 和 Web merge；webhook 失败不能回滚已经成功的 push/merge。
 
 | 编号 | 状态 | 主题 | 验收重点 |
 | --- | --- | --- | --- |
-| #140 | ⬜ | Personal Access Token 与 API auth | scoped PAT 只存 hash，一次显示、到期、撤销、last-used、审计和 API/Git 独立 scope |
-| #140A | ⬜ | Deploy key 与机器凭据 | 仓库级只读/可写 key、唯一 fingerprint、到期/撤销、最小权限和审计 |
-| #141 | ⬜ | Versioned Webhook delivery | 版本化 envelope、HMAC、delivery ID、超时、重试、重放和 SSRF/内网策略 |
-| #142 | ⬜ | Commit Status 与 Check API | SHA/context 幂等状态、权限、限流、过期 head 和 target URL 边界 |
-| #143 | ⬜ | Branch protection 与 push gate | force/delete、allowed push/merge、required checks/approvals 在 HTTP/SSH/Web 统一执行 |
-| #144 | ⬜ | CODEOWNERS 与 Required Review | 受控解析、changed-path owner、最少批准、stale approval 和可解释阻塞 |
 | #145 | ⬜ | 通知事件扩展与外部投递器 | 在 M12.7 统一 inbox 上增加 PR/review/check/release、偏好、邮件/webhook 投递和失败诊断；不新建第二套 inbox |
 | #146 | ⬜ | 协作审计日志 | 不可由普通用户篡改的关键变更证据；与 Feed 分离存储、保留和查询 |
 | #147 | ⬜ | Releases 与 assets | tag release、Markdown、受限附件、权限、路径/大小和孤儿清理 |

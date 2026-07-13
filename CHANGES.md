@@ -14,6 +14,7 @@
  - Added `/me`, `/todos`, unified `/notifications`, private repository/team/settings lists, public `/{username}` profiles, Repository Stars, real Packages empty states, and public `/explore` discovery.
  - Added versioned activity projections, permission-rechecked Todo and notification state, daily public repository metrics, privacy-filtered page-view aggregation, immutable `m12.7-v1` recommendation snapshots, Quartz refresh, and deterministic fallback ordering.
  - Added SQLite, SQL Server, and SonnetDB `WorkspaceDashboardDiscovery` migrations plus service, MVC, provider, privacy, concurrency, responsive browser, and route-priority coverage.
+ - Added the real `gitcandy.com` M12.6 production acceptance record covering DNS/TLS, Secure Identity cookies, Web login, private repository authorization, HTTP/SSH clone/fetch/push, Git LFS, public port boundaries, resource limits, secret-leak checks, consistent SonnetDB/repository/key recovery, and image rollback.
  - Added a completed-milestone and documentation index under `docs/roadmap`, preserving the pre-reorganization roadmap as an archived historical snapshot.
  - Added a redesigned public GitCandy product page for anonymous root visits, with a dedicated responsive navigation, product workflow previews, deployment overview, help links, localized English and Simplified Chinese copy, and a new candy-and-Git branch brand mark used across the public page and authenticated application shell.
  - Added the M12.6 SonnetDB production slice: configuration-selected host registration, an independent full-schema migration, Identity/repository smoke coverage, and a `gitcandy.com` Compose profile that reuses the existing sonnet.vip Caddy and internal SonnetDB service.
@@ -31,7 +32,7 @@
  - Removed legacy repository Web, Git Smart HTTP, Git LFS, and SSH addresses. Repository pages now require `/{namespace}/{repository}` and Git transports require `/{namespace}/{repository}.git`; old `/Repository/Detail/{name}`, `/Repository/{browser-action}/{name}`, `/Repository/Issues/{name}`, `/Repository/Pulls/{name}`, `/git/{repository}[.git]`, no-suffix Git remotes, and retained alias addresses return not found.
 
 #### Changed
- - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.5 and M12.7 moved to completion history; M12.6 retains only its unfinished production deployment.
+ - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.7 moved to completion history after production and workspace/discovery acceptance.
  - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users enter the private `/me` workspace.
  - Changed `git-receive-pack` execution to install a controlled GitCandy `pre-receive` bridge. Git continues to stream and quarantine pack data; only bounded ref updates enter the shared policy service.
 
