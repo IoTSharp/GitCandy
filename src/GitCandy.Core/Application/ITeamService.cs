@@ -15,7 +15,7 @@ public interface ITeamService
         bool viewerIsAdministrator,
         CancellationToken cancellationToken = default);
 
-    /// <summary>创建团队，并将创建者设为团队管理员。</summary>
+    /// <summary>创建团队，并将创建者设为 TeamOwner。</summary>
     Task<bool> CreateTeamAsync(
         string name,
         string displayName,
@@ -46,7 +46,9 @@ public enum TeamMemberAction
 {
     Add,
     Remove,
-    MakeAdministrator,
+    MakeTeamOwner,
+    MakeLeader,
+    MakeDeputyLeader,
     MakeMember
 }
 

@@ -2507,15 +2507,20 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Property<long>("TeamId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsAdministrator")
-                        .HasColumnType("INTEGER");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "TeamId");
 
-                    b.HasIndex("TeamId")
-                        .HasDatabaseName("IX_UserTeamRoles_TeamId");
+                    b.HasIndex("TeamId", "Role")
+                        .HasDatabaseName("IX_UserTeamRoles_TeamId_Role");
 
-                    b.ToTable("UserTeamRoles", (string)null);
+                    b.ToTable("UserTeamRoles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserTeamRoles_Role", "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')");
+                        });
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyWebhookDelivery", b =>

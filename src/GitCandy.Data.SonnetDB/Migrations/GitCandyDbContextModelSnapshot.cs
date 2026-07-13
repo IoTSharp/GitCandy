@@ -2507,13 +2507,15 @@ namespace GitCandy.Data.SonnetDB.Migrations
                     b.Property<long>("TeamId")
                         .HasColumnType("INT");
 
-                    b.Property<bool>("IsAdministrator")
-                        .HasColumnType("BOOL");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("STRING");
 
                     b.HasKey("UserId", "TeamId");
 
-                    b.HasIndex("TeamId")
-                        .HasDatabaseName("IX_UserTeamRoles_TeamId");
+                    b.HasIndex("TeamId", "Role")
+                        .HasDatabaseName("IX_UserTeamRoles_TeamId_Role");
 
                     b.ToTable("UserTeamRoles", (string)null);
                 });

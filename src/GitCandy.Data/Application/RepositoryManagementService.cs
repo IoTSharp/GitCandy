@@ -1,5 +1,6 @@
 using GitCandy.Data;
 using GitCandy.Data.Domain;
+using GitCandy.Teams;
 using Microsoft.EntityFrameworkCore;
 
 namespace GitCandy.Application;
@@ -377,7 +378,9 @@ internal sealed class RepositoryManagementService(
             .Where(item => item.NormalizedSlug == normalizedSlug
                 && (item.UserId == creatorUserId
                     || (item.TeamId != null && _dbContext.UserTeamRoles.Any(role =>
-                        role.TeamId == item.TeamId && role.UserId == creatorUserId && role.IsAdministrator))))
+                        role.TeamId == item.TeamId
+                        && role.UserId == creatorUserId
+                        && (role.Role == TeamRole.TeamOwner || role.Role == TeamRole.Leader)))))
             .Select(item => (long?)item.Id)
             .SingleOrDefaultAsync(cancellationToken);
     }

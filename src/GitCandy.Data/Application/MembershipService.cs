@@ -2,6 +2,7 @@ using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Teams;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -74,7 +75,7 @@ internal sealed class MembershipService(
                 on userTeamRole.TeamId equals team.Id
             where team.NormalizedName == normalizedName
                 && userTeamRole.UserId == userId
-                && userTeamRole.IsAdministrator
+                && userTeamRole.Role == TeamRole.TeamOwner
             select userTeamRole)
             .AnyAsync(cancellationToken);
     }

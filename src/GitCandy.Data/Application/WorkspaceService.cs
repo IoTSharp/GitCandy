@@ -3,6 +3,7 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Permissions;
 using GitCandy.Issues;
 using GitCandy.PullRequests;
+using GitCandy.Teams;
 using GitCandy.Workspace;
 using GitCandy.Notifications;
 using GitCandy.Integrations;
@@ -207,7 +208,12 @@ internal sealed class WorkspaceService(
             join teamNamespace in _dbContext.Namespaces.AsNoTracking() on team.Id equals teamNamespace.TeamId
             where role.UserId == userId
             orderby team.NormalizedName
-            select new WorkspaceTeam(team.Id, teamNamespace.Slug, team.DisplayName, team.Description, role.IsAdministrator))
+            select new WorkspaceTeam(
+                team.Id,
+                teamNamespace.Slug,
+                team.DisplayName,
+                team.Description,
+                role.Role == TeamRole.TeamOwner))
             .ToArrayAsync(cancellationToken);
     }
 

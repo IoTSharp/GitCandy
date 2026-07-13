@@ -106,6 +106,12 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_CommitChecks_Repository_Sha_Kind_Context]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_WebhookSubscriptions_RepositoryId_Name]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_Releases_Repository_Tag]");
+        StringAssert.Contains(migrationSql, "[Role] nvarchar(20) NOT NULL DEFAULT N'Member'");
+        StringAssert.Contains(
+            migrationSql,
+            "UPDATE UserTeamRoles SET Role = 'TeamOwner' WHERE IsAdministrator = 1");
+        StringAssert.Contains(migrationSql, "CK_UserTeamRoles_Role");
+        StringAssert.Contains(migrationSql, "IX_UserTeamRoles_TeamId_Role");
         Assert.IsFalse(migrationSql.Contains("CREATE TABLE [Users]", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(migrationSql.Contains("AuthorizationLog", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(migrationSql.Contains("PasswordVersion", StringComparison.OrdinalIgnoreCase));

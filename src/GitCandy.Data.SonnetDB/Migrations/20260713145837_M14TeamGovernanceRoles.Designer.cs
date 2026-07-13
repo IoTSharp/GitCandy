@@ -3,72 +3,70 @@ using System;
 using GitCandy.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace GitCandy.Data.SqlServer.Migrations
+namespace GitCandy.Data.SonnetDB.Migrations
 {
     [DbContext(typeof(GitCandyDbContext))]
-    partial class GitCandyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713145837_M14TeamGovernanceRoles")]
+    partial class M14TeamGovernanceRoles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.9")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyActivityEvent", b =>
                 {
                     b.Property<string>("EventId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("RetainUntilUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<int>("SchemaVersion")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("nvarchar(600)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("EventId");
 
@@ -86,11 +84,11 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyBranchProtectionRequiredCheck", b =>
                 {
                     b.Property<long>("RuleId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Context")
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("RuleId", "Context");
 
@@ -101,47 +99,45 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<bool>("AllowAdministratorBypass")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("AllowDeletions")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("AllowForcePushes")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<bool>("DismissStaleApprovals")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<int>("MergeAccess")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Pattern")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("PushAccess")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("RequireCodeOwnerReviews")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<int>("RequiredApprovals")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("Id");
 
@@ -156,59 +152,57 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Context")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long?>("CredentialId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Sha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("TargetUrl")
                         .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("Id");
 
@@ -226,42 +220,40 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("CredentialId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("CredentialKind")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Detail")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -278,53 +270,51 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<bool>("CanWrite")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
                         .HasMaxLength(47)
-                        .HasColumnType("nchar(47)")
+                        .HasColumnType("STRING")
                         .IsFixedLength();
 
                     b.Property<string>("KeyType")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("PublicKey")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("nvarchar(600)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("Id");
 
@@ -342,42 +332,40 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("DeployKeyId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Detail")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ReferenceName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -391,35 +379,35 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ActorName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("PayloadJson")
                         .IsRequired()
                         .HasMaxLength(32768)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<int>("SchemaVersion")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -433,63 +421,61 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("AssigneeUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("ClosedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<bool>("IsLocked")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<long?>("MilestoneId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("Number")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -515,47 +501,45 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("EditedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("HiddenAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("HiddenByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("IsHidden")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -571,33 +555,31 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<long?>("CommentId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("EditedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("EditorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("PreviousHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("PreviousMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -613,36 +595,34 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("Color")
                         .IsRequired()
                         .HasMaxLength(6)
-                        .HasColumnType("nchar(6)")
+                        .HasColumnType("STRING")
                         .IsFixedLength();
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -656,10 +636,10 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyIssueLabelLink", b =>
                 {
                     b.Property<long>("IssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("LabelId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("IssueId", "LabelId");
 
@@ -672,31 +652,29 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("DueAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("IsClosed")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -710,35 +688,33 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime?>("ReadAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -756,30 +732,28 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("CommitSha")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("DisplayText")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("SourceIssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("TargetIssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("TargetRepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -797,31 +771,29 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("SourceIssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("TargetIssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -839,17 +811,17 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyIssueSubscription", b =>
                 {
                     b.Property<long>("IssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("IsSubscribed")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("IssueId", "UserId");
 
@@ -862,31 +834,29 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("CommentId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Detail")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -905,25 +875,23 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("NormalizedProject")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Project")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -942,36 +910,34 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("NormalizedSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("OwnerType")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -981,13 +947,11 @@ namespace GitCandy.Data.SqlServer.Migrations
 
                     b.HasIndex("TeamId")
                         .IsUnique()
-                        .HasDatabaseName("IX_Namespaces_TeamId")
-                        .HasFilter("[TeamId] IS NOT NULL");
+                        .HasDatabaseName("IX_Namespaces_TeamId");
 
                     b.HasIndex("UserId")
                         .IsUnique()
-                        .HasDatabaseName("IX_Namespaces_UserId")
-                        .HasFilter("[UserId] IS NOT NULL");
+                        .HasDatabaseName("IX_Namespaces_UserId");
 
                     b.ToTable("Namespaces", (string)null);
 
@@ -1007,31 +971,29 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("NormalizedSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("ReleasedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -1048,33 +1010,31 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("NormalizedSlug")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("ClaimType")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("NamespaceAliasId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("NamespaceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("NormalizedSlug");
 
                     b.HasIndex("NamespaceAliasId")
                         .IsUnique()
-                        .HasDatabaseName("IX_NamespaceClaims_NamespaceAliasId")
-                        .HasFilter("[NamespaceAliasId] IS NOT NULL");
+                        .HasDatabaseName("IX_NamespaceClaims_NamespaceAliasId");
 
                     b.HasIndex("NamespaceId")
                         .IsUnique()
-                        .HasDatabaseName("IX_NamespaceClaims_NamespaceId")
-                        .HasFilter("[NamespaceId] IS NOT NULL");
+                        .HasDatabaseName("IX_NamespaceClaims_NamespaceId");
 
                     b.ToTable("NamespaceClaims", (string)null);
 
@@ -1188,65 +1148,63 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("EventId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("ReadAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("nvarchar(600)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -1268,54 +1226,54 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Channel")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("LastAttemptAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("LeaseExpiresAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("NextAttemptAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("NotificationId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ProtectedSecret")
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Recipient")
                         .IsRequired()
                         .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("STRING");
 
                     b.Property<int?>("ResponseStatusCode")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -1333,28 +1291,28 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("EventType")
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("EmailEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("ProtectedWebhookSecret")
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<bool>("WebhookEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("WebhookUrl")
                         .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("UserId", "EventType");
 
@@ -1365,47 +1323,45 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Scopes")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nchar(64)")
+                        .HasColumnType("STRING")
                         .IsFixedLength();
 
                     b.Property<string>("TokenPrefix")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -1423,119 +1379,117 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActivePairKey")
                         .IsRequired()
                         .HasMaxLength(520)
-                        .HasColumnType("nvarchar(520)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("AssigneeUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("ClosedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("CurrentBaseSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("CurrentHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("IsDraft")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("MergeCommitSha")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("MergedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("MergedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("Number")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("OriginalBaseSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("OriginalHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("SourceBranch")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("SourceNamespaceSnapshot")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("SourceRepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("SourceRepositorySnapshot")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("TargetBranch")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -1567,58 +1521,56 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("DismissalReason")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("DismissedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("DismissedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("HeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("ReviewerRequestVersion")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ReviewerUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("SubmittedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -1637,34 +1589,32 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("ThreadId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -1680,90 +1630,88 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("AnchorContext")
                         .IsRequired()
                         .HasMaxLength(8192)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<int?>("CurrentEndLine")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("CurrentHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("CurrentPath")
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("CurrentSide")
                         .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasColumnType("STRING");
 
                     b.Property<int?>("CurrentStartLine")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("IsOutdated")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("IsResolved")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("OriginalBaseSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("OriginalEndLine")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("OriginalHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("OriginalPath")
                         .IsRequired()
                         .HasMaxLength(1024)
-                        .HasColumnType("nvarchar(1024)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("OriginalSide")
                         .IsRequired()
                         .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("OriginalStartLine")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime?>("ResolvedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("ResolvedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -1783,23 +1731,23 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewer", b =>
                 {
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ReviewerUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("RequestedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("RequestedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("PullRequestId", "ReviewerUserId");
 
@@ -1818,28 +1766,26 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Detail")
                         .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -1855,56 +1801,54 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("IsDraft")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("NormalizedTagName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("PublishedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("TagCommitSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("TagName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -1922,34 +1866,34 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("DownloadCount")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("Length")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("ReleaseId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Sha256")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nchar(64)")
+                        .HasColumnType("STRING")
                         .IsFixedLength();
 
                     b.HasKey("Id");
@@ -1965,42 +1909,40 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("EventType")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("IsOverride")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("NewSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("OldSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("SubjectId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<int>("SubjectType")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -2014,58 +1956,56 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<bool>("AllowAnonymousRead")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("AllowAnonymousWrite")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ForkNetworkRoot")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("ForkNetworkRootRepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ForkedFromRepository")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("ForkedFromRepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("IsPrivate")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("StorageName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2090,34 +2030,32 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("NormalizedSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("ReleasedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2135,37 +2073,35 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryClaim", b =>
                 {
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("NormalizedSlug")
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("ClaimType")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("RepositoryAliasId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("NamespaceId", "NormalizedSlug");
 
                     b.HasIndex("RepositoryAliasId")
                         .IsUnique()
-                        .HasDatabaseName("IX_RepositoryClaims_RepositoryAliasId")
-                        .HasFilter("[RepositoryAliasId] IS NOT NULL");
+                        .HasDatabaseName("IX_RepositoryClaims_RepositoryAliasId");
 
                     b.HasIndex("RepositoryId")
                         .IsUnique()
-                        .HasDatabaseName("IX_RepositoryClaims_RepositoryId")
-                        .HasFilter("[RepositoryId] IS NOT NULL");
+                        .HasDatabaseName("IX_RepositoryClaims_RepositoryId");
 
                     b.ToTable("RepositoryClaims", (string)null);
                 });
@@ -2174,16 +2110,16 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<int>("InteractionCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("LastInteractedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("UserId", "RepositoryId");
 
@@ -2198,35 +2134,35 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryMetricDaily", b =>
                 {
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("DayUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<int>("ActiveCommitDays")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<int>("CommitCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("LicenseSpdx")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("StarCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<int>("StarNetGrowth")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long>("SuccessfulDownloadCount")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("SuccessfulGitFetchCount")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("UniquePageViewCount")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("RepositoryId", "DayUtc");
 
@@ -2239,14 +2175,14 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryPageView", b =>
                 {
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("DayUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("VisitorKey")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("RepositoryId", "DayUtc", "VisitorKey");
 
@@ -2260,48 +2196,46 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("AlgorithmVersion")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("CalculatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<double>("CommitScore")
-                        .HasColumnType("float");
+                        .HasColumnType("FLOAT");
 
                     b.Property<double>("DownloadScore")
-                        .HasColumnType("float");
+                        .HasColumnType("FLOAT");
 
                     b.Property<string>("Explanation")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasColumnType("STRING");
 
                     b.Property<double>("PageViewScore")
-                        .HasColumnType("float");
+                        .HasColumnType("FLOAT");
 
                     b.Property<int>("Rank")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("SnapshotId")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<double>("StarScore")
-                        .HasColumnType("float");
+                        .HasColumnType("FLOAT");
 
                     b.Property<double>("TotalScore")
-                        .HasColumnType("float");
+                        .HasColumnType("FLOAT");
 
                     b.HasKey("Id");
 
@@ -2321,13 +2255,13 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("UserId", "RepositoryId");
 
@@ -2341,16 +2275,16 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("Fingerprint")
                         .HasMaxLength(47)
-                        .HasColumnType("nchar(47)")
+                        .HasColumnType("STRING")
                         .IsFixedLength();
 
                     b.Property<DateTime>("ClaimedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("CredentialKind")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Fingerprint");
 
@@ -2361,36 +2295,34 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
                         .HasMaxLength(47)
-                        .HasColumnType("nchar(47)")
+                        .HasColumnType("STRING")
                         .IsFixedLength();
 
                     b.Property<DateTime>("ImportedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("KeyType")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("PublicKey")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("nvarchar(600)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2408,32 +2340,30 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2447,16 +2377,16 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyTeamRepositoryRole", b =>
                 {
                     b.Property<long>("TeamId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("AllowRead")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("AllowWrite")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.HasKey("TeamId", "RepositoryId");
 
@@ -2470,66 +2400,64 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("SnoozedUntilUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasColumnType("STRING");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("nvarchar(600)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -2551,19 +2479,19 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("AllowRead")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("AllowWrite")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("IsOwner")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.HasKey("UserId", "RepositoryId");
 
@@ -2577,74 +2505,71 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("TeamId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("UserId", "TeamId");
 
                     b.HasIndex("TeamId", "Role")
                         .HasDatabaseName("IX_UserTeamRoles_TeamId_Role");
 
-                    b.ToTable("UserTeamRoles", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_UserTeamRoles_Role", "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')");
-                        });
+                    b.ToTable("UserTeamRoles", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyWebhookDelivery", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("AttemptCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("EventId")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime?>("LastAttemptAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("LeaseExpiresAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<DateTime?>("NextAttemptAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("ReplayOfDeliveryId")
                         .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("STRING");
 
                     b.Property<int?>("ResponseStatusCode")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("nvarchar(24)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("SubscriptionId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("Id");
 
@@ -2663,44 +2588,42 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.Property<int>("Events")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ProtectedSecret")
                         .IsRequired()
                         .HasMaxLength(4096)
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<string>("TargetUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
-                        .HasColumnType("nvarchar(2048)");
+                        .HasColumnType("STRING");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("DATETIME");
 
                     b.HasKey("Id");
 
@@ -2714,14 +2637,14 @@ namespace GitCandy.Data.SqlServer.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyWorkItemSequence", b =>
                 {
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("NextNumber")
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("bigint");
+                        .HasColumnType("INT");
 
                     b.HasKey("RepositoryId");
 
@@ -2732,62 +2655,62 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("int");
+                        .HasColumnType("INT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Description")
                         .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("datetimeoffset");
+                        .HasColumnType("DATETIME");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
+                        .HasColumnType("BOOL");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2796,8 +2719,7 @@ namespace GitCandy.Data.SqlServer.Migrations
 
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
-                        .HasDatabaseName("UserNameIndex")
-                        .HasFilter("[NormalizedUserName] IS NOT NULL");
+                        .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -2806,26 +2728,25 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
                     b.HasIndex("NormalizedName")
                         .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
+                        .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles", (string)null);
                 });
@@ -2834,20 +2755,18 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2860,20 +2779,18 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                        .HasColumnType("INT");
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("Id");
 
@@ -2886,19 +2803,19 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("LoginProvider")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ProviderKey")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -2911,11 +2828,11 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("RoleId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -2928,18 +2845,18 @@ namespace GitCandy.Data.SqlServer.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("LoginProvider")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Name")
                         .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
+                        .HasColumnType("STRING");
 
                     b.Property<string>("Value")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("STRING");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 

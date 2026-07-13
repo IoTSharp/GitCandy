@@ -415,7 +415,9 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.Property(role => role.TeamId)
                 .IsRequired();
 
-            entity.Property(role => role.IsAdministrator)
+            entity.Property(role => role.Role)
+                .HasConversion<string>()
+                .HasMaxLength(20)
                 .IsRequired();
 
             entity.HasOne(role => role.User)
@@ -430,8 +432,18 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
                 .IsRequired()
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasIndex(role => role.TeamId)
-                .HasDatabaseName("IX_UserTeamRoles_TeamId");
+            entity.HasIndex(role => new { role.TeamId, role.Role })
+                .HasDatabaseName("IX_UserTeamRoles_TeamId_Role");
+
+            if (!string.Equals(
+                    Database.ProviderName,
+                    "SonnetDB.EntityFrameworkCore",
+                    StringComparison.Ordinal))
+            {
+                entity.ToTable("UserTeamRoles", table => table.HasCheckConstraint(
+                    "CK_UserTeamRoles_Role",
+                    "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')"));
+            }
         });
 
         builder.Entity<GitCandySshKey>(entity =>

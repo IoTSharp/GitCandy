@@ -4,6 +4,7 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Permissions;
 using GitCandy.Data.Sqlite;
+using GitCandy.Teams;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -107,7 +108,7 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
                     "IX_SshKeys_UserId",
                     "IX_UserRepositoryRoles_RepositoryId",
                     "IX_TeamRepositoryRoles_RepositoryId",
-                    "IX_UserTeamRoles_TeamId"
+                    "IX_UserTeamRoles_TeamId_Role"
                 },
                 indexes.ToList());
 
@@ -722,7 +723,7 @@ public sealed class GitCandyDataServiceCollectionExtensionsTests
             {
                 UserId = alice.Id,
                 TeamId = team.Id,
-                IsAdministrator = true
+                Role = TeamRole.TeamOwner
             });
             dbContext.SshKeys.Add(new GitCandySshKey
             {

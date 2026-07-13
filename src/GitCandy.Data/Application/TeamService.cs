@@ -1,5 +1,7 @@
+using System.Data;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
+using GitCandy.Teams;
 using Microsoft.EntityFrameworkCore;
 
 namespace GitCandy.Application;
@@ -64,7 +66,7 @@ internal sealed class TeamService(
                 select new TeamMemberSummary(
                     user.UserName ?? string.Empty,
                     user.DisplayName ?? user.UserName ?? string.Empty,
-                    role.IsAdministrator))
+                    role.Role == TeamRole.TeamOwner))
             .ToArrayAsync(cancellationToken);
         var repositories = await (
                 from role in _dbContext.TeamRepositoryRoles.AsNoTracking()
@@ -115,7 +117,7 @@ internal sealed class TeamService(
         team.UserRoles.Add(new GitCandyUserTeamRole
         {
             UserId = creatorUserId,
-            IsAdministrator = true
+            Role = TeamRole.TeamOwner
         });
         _dbContext.Teams.Add(team);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -177,6 +179,9 @@ internal sealed class TeamService(
         TeamMemberAction action,
         CancellationToken cancellationToken = default)
     {
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(
+            IsolationLevel.Serializable,
+            cancellationToken);
         var normalizedTeamName = GitCandyNameNormalizer.NormalizeTeamName(teamName);
         var teamId = await _dbContext.Teams
             .Where(team => team.NormalizedName == normalizedTeamName)
@@ -201,23 +206,67 @@ internal sealed class TeamService(
                 _dbContext.UserTeamRoles.Add(new GitCandyUserTeamRole
                 {
                     TeamId = teamId.Value,
-                    UserId = userId
+                    UserId = userId,
+                    Role = TeamRole.Member
                 });
                 break;
             case TeamMemberAction.Remove when role is not null:
+                if (!await CanRemoveOwnerRoleAsync(role, cancellationToken))
+                {
+                    return false;
+                }
+
                 _dbContext.UserTeamRoles.Remove(role);
                 break;
-            case TeamMemberAction.MakeAdministrator when role is not null:
-                role.IsAdministrator = true;
+            case TeamMemberAction.MakeTeamOwner when role is not null:
+                role.Role = TeamRole.TeamOwner;
+                break;
+            case TeamMemberAction.MakeLeader when role is not null:
+                if (!await CanRemoveOwnerRoleAsync(role, cancellationToken))
+                {
+                    return false;
+                }
+
+                role.Role = TeamRole.Leader;
+                break;
+            case TeamMemberAction.MakeDeputyLeader when role is not null:
+                if (!await CanRemoveOwnerRoleAsync(role, cancellationToken))
+                {
+                    return false;
+                }
+
+                role.Role = TeamRole.DeputyLeader;
                 break;
             case TeamMemberAction.MakeMember when role is not null:
-                role.IsAdministrator = false;
+                if (!await CanRemoveOwnerRoleAsync(role, cancellationToken))
+                {
+                    return false;
+                }
+
+                role.Role = TeamRole.Member;
                 break;
             default:
                 return false;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return true;
+    }
+
+    private Task<bool> CanRemoveOwnerRoleAsync(
+        GitCandyUserTeamRole role,
+        CancellationToken cancellationToken)
+    {
+        if (role.Role != TeamRole.TeamOwner)
+        {
+            return Task.FromResult(true);
+        }
+
+        return _dbContext.UserTeamRoles.AnyAsync(
+            item => item.TeamId == role.TeamId
+                && item.UserId != role.UserId
+                && item.Role == TeamRole.TeamOwner,
+            cancellationToken);
     }
 }

@@ -1,4 +1,5 @@
 using GitCandy.Data.Identity;
+using GitCandy.Teams;
 
 namespace GitCandy.Data.Domain;
 
@@ -18,9 +19,9 @@ public sealed class GitCandyUserTeamRole
     public long TeamId { get; set; }
 
     /// <summary>
-    /// 是否为团队管理员。
+    /// 团队治理角色。
     /// </summary>
-    public bool IsAdministrator { get; set; }
+    public TeamRole Role { get; set; } = TeamRole.Member;
 
     /// <summary>
     /// Identity 用户；未显式加载导航属性时为空。

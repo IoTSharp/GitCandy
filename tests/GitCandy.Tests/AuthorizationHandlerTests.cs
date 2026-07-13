@@ -4,6 +4,7 @@ using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Teams;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -258,13 +259,13 @@ public sealed class AuthorizationHandlerTests
                 {
                     UserId = OwnerUserId,
                     TeamId = coreTeam.Id,
-                    IsAdministrator = true
+                    Role = TeamRole.TeamOwner
                 },
                 new GitCandyUserTeamRole
                 {
                     UserId = TeamMemberUserId,
                     TeamId = coreTeam.Id,
-                    IsAdministrator = false
+                    Role = TeamRole.Member
                 });
             dbContext.TeamRepositoryRoles.Add(new GitCandyTeamRepositoryRole
             {

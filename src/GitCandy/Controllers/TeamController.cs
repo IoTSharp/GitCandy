@@ -250,7 +250,7 @@ public sealed class TeamController(
         {
             "add" => TeamMemberAction.Add,
             "del" => TeamMemberAction.Remove,
-            "admin" => TeamMemberAction.MakeAdministrator,
+            "admin" => TeamMemberAction.MakeTeamOwner,
             "member" => TeamMemberAction.MakeMember,
             _ => (TeamMemberAction?)null
         };

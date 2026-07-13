@@ -3,6 +3,7 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Permissions;
 using GitCandy.Data.Sqlite;
+using GitCandy.Teams;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -323,13 +324,13 @@ public sealed class GitCandyRepositoryPermissionQueryTests
                 {
                     UserId = AliceUserId,
                     TeamId = coreTeam.Id,
-                    IsAdministrator = true
+                    Role = TeamRole.TeamOwner
                 },
                 new GitCandyUserTeamRole
                 {
                     UserId = BobUserId,
                     TeamId = coreTeam.Id,
-                    IsAdministrator = false
+                    Role = TeamRole.Member
                 });
             dbContext.TeamRepositoryRoles.Add(new GitCandyTeamRepositoryRole
             {

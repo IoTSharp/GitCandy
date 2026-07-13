@@ -28,12 +28,12 @@ public interface IMembershipService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 判断用户是否为指定团队的管理员。
+    /// 判断用户是否为指定团队的 TeamOwner。
     /// </summary>
     /// <param name="teamName">团队名称。</param>
     /// <param name="userId">Identity 用户主键。</param>
     /// <param name="cancellationToken">取消令牌。</param>
-    /// <returns>若用户为团队管理员则为 <see langword="true" />。</returns>
+    /// <returns>若用户为 TeamOwner 则为 <see langword="true" />。</returns>
     Task<bool> IsTeamAdministratorAsync(
         string teamName,
         string userId,

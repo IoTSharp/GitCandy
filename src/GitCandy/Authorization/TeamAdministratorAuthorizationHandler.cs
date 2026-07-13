@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace GitCandy.Authorization;
 
 /// <summary>
-/// 校验团队管理员或系统管理员权限。
+/// 校验 TeamOwner 或系统管理员权限。
 /// </summary>
 public sealed class TeamAdministratorAuthorizationHandler(
     IMembershipService membershipService,

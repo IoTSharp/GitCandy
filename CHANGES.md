@@ -11,6 +11,8 @@
  - Completed M12.7 with the private `/me` workspace, actionable Todos, unified notifications, versioned activity Feed, public profiles, Stars, public metrics, and explainable repository discovery.
 
 #### Added
+ - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
+ - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
  - Added `/me`, `/todos`, unified `/notifications`, private repository/team/settings lists, public `/{username}` profiles, Repository Stars, real Packages empty states, and public `/explore` discovery.
  - Added versioned activity projections, permission-rechecked Todo and notification state, daily public repository metrics, privacy-filtered page-view aggregation, immutable `m12.7-v1` recommendation snapshots, Quartz refresh, and deterministic fallback ordering.
  - Added SQLite, SQL Server, and SonnetDB `WorkspaceDashboardDiscovery` migrations plus service, MVC, provider, privacy, concurrency, responsive browser, and route-priority coverage.
@@ -38,6 +40,7 @@
  - Removed legacy repository Web, Git Smart HTTP, Git LFS, and SSH addresses. Repository pages now require `/{namespace}/{repository}` and Git transports require `/{namespace}/{repository}.git`; old `/Repository/Detail/{name}`, `/Repository/{browser-action}/{name}`, `/Repository/Issues/{name}`, `/Repository/Pulls/{name}`, `/git/{repository}[.git]`, no-suffix Git remotes, and retained alias addresses return not found.
 
 #### Changed
+ - Team creators and legacy team administrators are now TeamOwners; team repository creation recognizes TeamOwner and Leader while repository permissions remain independent from team governance roles.
  - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.7 moved to completion history after production and workspace/discovery acceptance.
  - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users enter the private `/me` workspace.
  - Changed `git-receive-pack` execution to install a controlled GitCandy `pre-receive` bridge. Git continues to stream and quarantine pack data; only bounded ref updates enter the shared policy service.
@@ -187,6 +190,7 @@
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
+ - M14 #150 replaces `UserTeamRoles.IsAdministrator` with a required named role. Existing administrators become TeamOwners and existing non-administrators become Members; downgrade maps only TeamOwner back to administrator and loses Leader/DeputyLeader distinctions. Back up the database before upgrading; see [the M14 #150 migration record](docs/migration/m14-150-team-governance-roles.md).
  - M13 collaboration extensions add `NotificationPreferences`, `NotificationDeliveries`, `Releases`, and `ReleaseAssets`, and backfill existing unified notifications as `Issue` events. Release assets are stored under `CachePath/release-assets` and must be backed up with the database; rollback requires restoring the pre-upgrade database/cache backup with the previous application version.
  - The M12 #134 migrations add nullable Pull Request assignees plus reviewer-request and immutable review-history tables. Existing Pull Requests remain unassigned with no requested reviewers; back up the database before upgrade and restore that backup with the previous application version to roll back. See [the M12 #134 migration record](docs/migration/m12-134-pull-request-review-status.md).
  - The M11 SQLite and SQL Server migrations add Issue collaboration tables and backfill one `WorkItemSequences` row per existing repository without changing Identity, repository storage, Git URLs, or Git wire behavior. Back up the database before upgrade; rollback requires restoring that backup with the previous application version. See [the M11 migration record](docs/migration/m11-issues.md).
