@@ -78,6 +78,9 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE TABLE [IntegrationEvents]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [WebhookSubscriptions]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [WebhookDeliveries]");
+        StringAssert.Contains(migrationSql, "[RequiredApprovals] int NOT NULL");
+        StringAssert.Contains(migrationSql, "[RequireCodeOwnerReviews] bit NOT NULL");
+        StringAssert.Contains(migrationSql, "[DismissStaleApprovals] bit NOT NULL");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_Issues_RepositoryId_Number]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_PullRequests_RepositoryId_Number]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_PullRequests_RepositoryId_ActivePairKey]");

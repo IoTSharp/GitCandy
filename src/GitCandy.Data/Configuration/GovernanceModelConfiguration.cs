@@ -18,6 +18,9 @@ internal static class GovernanceModelConfiguration
             entity.Property(rule => rule.AllowForcePushes).IsRequired();
             entity.Property(rule => rule.AllowDeletions).IsRequired();
             entity.Property(rule => rule.AllowAdministratorBypass).IsRequired();
+            entity.Property(rule => rule.RequiredApprovals).IsRequired();
+            entity.Property(rule => rule.RequireCodeOwnerReviews).IsRequired();
+            entity.Property(rule => rule.DismissStaleApprovals).IsRequired();
             entity.Property(rule => rule.CreatedAtUtc).IsRequired();
             entity.Property(rule => rule.UpdatedAtUtc).IsRequired();
             entity.HasOne(rule => rule.Repository)

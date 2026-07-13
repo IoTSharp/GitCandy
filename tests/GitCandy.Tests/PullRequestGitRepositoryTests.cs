@@ -1,4 +1,5 @@
 using System.Text;
+using GitCandy.Governance;
 using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.PullRequests;
@@ -250,6 +251,33 @@ public sealed class PullRequestGitRepositoryTests
         }
     }
 
+    [TestMethod]
+    public void ReadCodeOwnersSnapshot_WithHeadFile_ReturnsMergeBaseChangedPaths()
+    {
+        var rootPath = TestDirectory.Create();
+        try
+        {
+            CreateBareRepository(rootPath);
+            var service = CreateService(rootPath);
+            var comparison = service.CompareBranches("reviews", "feature", "main");
+            Assert.IsNotNull(comparison);
+
+            var snapshot = service.ReadCodeOwnersSnapshot(
+                "reviews",
+                comparison.BaseSha,
+                comparison.HeadSha);
+
+            Assert.AreEqual(".github/CODEOWNERS", snapshot.SourcePath);
+            StringAssert.Contains(snapshot.Content, "*.md @docs");
+            CollectionAssert.Contains(snapshot.ChangedPaths.ToArray(), "README.md");
+            Assert.IsNull(snapshot.Error);
+        }
+        finally
+        {
+            TestDirectory.Delete(rootPath);
+        }
+    }
+
     private static string CreateBareRepository(string rootPath)
     {
         var workPath = Path.Combine(rootPath, "work");
@@ -268,7 +296,9 @@ public sealed class PullRequestGitRepositoryTests
                 "review@gitcandy.local",
                 new DateTimeOffset(2026, 7, 11, 10, 0, 0, TimeSpan.Zero));
             File.WriteAllText(Path.Combine(workPath, "README.md"), "main\n", Encoding.UTF8);
-            Commands.Stage(repository, "README.md");
+            Directory.CreateDirectory(Path.Combine(workPath, ".github"));
+            File.WriteAllText(Path.Combine(workPath, ".github", "CODEOWNERS"), "*.md @docs\n", Encoding.UTF8);
+            Commands.Stage(repository, ["README.md", ".github/CODEOWNERS"]);
             var initial = repository.Commit("Initial", signature, signature);
             mainSha = initial.Id.Sha;
             var main = repository.CreateBranch("main", initial);

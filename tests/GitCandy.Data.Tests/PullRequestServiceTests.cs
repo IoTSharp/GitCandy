@@ -3,6 +3,7 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
 using GitCandy.Issues;
+using GitCandy.Governance;
 using GitCandy.PullRequests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -698,6 +699,13 @@ public sealed class PullRequestServiceTests
                     : [],
                 DiffTruncated: false);
         }
+
+        public CodeOwnersSnapshot ReadCodeOwnersSnapshot(
+            string repositoryStorageName,
+            string baseSha,
+            string headSha,
+            CancellationToken cancellationToken = default) =>
+            new(null, null, ["README.md"]);
 
         public void UpdatePullRequestHead(
             string repositoryStorageName,

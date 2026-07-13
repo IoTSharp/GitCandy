@@ -11,7 +11,7 @@
 }
 else
 {
-    <div class="table-responsive"><table><thead><tr><th>Pattern</th><th>Direct push</th><th>Web merge</th><th>Required checks</th><th>History changes</th><th>Administrator bypass</th><th></th></tr></thead><tbody>
+    <div class="table-responsive"><table><thead><tr><th>Pattern</th><th>Direct push</th><th>Web merge</th><th>Required checks</th><th>Required review</th><th>History changes</th><th>Administrator bypass</th><th></th></tr></thead><tbody>
     @foreach (var rule in Model.Rules)
     {
         <tr>
@@ -19,6 +19,7 @@ else
             <td>@rule.PushAccess</td>
             <td>@rule.MergeAccess</td>
             <td>@(rule.RequiredChecks.Count == 0 ? "None" : string.Join(", ", rule.RequiredChecks))</td>
+            <td>@rule.RequiredApprovals approval(s) / @(rule.RequireCodeOwnerReviews ? "Code owners" : "Any reviewer") / @(rule.DismissStaleApprovals ? "Fresh head" : "Stale retained")</td>
             <td>@(rule.AllowForcePushes ? "Force allowed" : "No force") / @(rule.AllowDeletions ? "Delete allowed" : "No delete")</td>
             <td>@(rule.AllowAdministratorBypass ? "Allowed" : "Enforced")</td>
             <td><form action="@(Model.CanonicalRepositoryPath)/settings/branch-rules/@rule.Id/delete" method="post" data-confirm="Delete branch rule @rule.Pattern?">@Html.AntiForgeryToken()<button type="submit" class="icon-button" aria-label="Delete branch rule" data-tooltip="Delete rule"><i data-lucide="trash-2"></i></button></form></td>
@@ -36,6 +37,9 @@ else
     <div class="form-field"><label asp-for="Rule.PushAccess"></label><select asp-for="Rule.PushAccess" asp-items="Html.GetEnumSelectList<BranchAccessLevel>()"></select></div>
     <div class="form-field"><label asp-for="Rule.MergeAccess"></label><select asp-for="Rule.MergeAccess" asp-items="Html.GetEnumSelectList<BranchAccessLevel>()"></select></div>
     <div class="form-field"><label asp-for="Rule.RequiredChecks"></label><input asp-for="Rule.RequiredChecks" placeholder="ci/build, security/scan" /><p class="form-hint">Comma-separated status or check contexts. Every context must succeed for the exact target SHA.</p></div>
+    <div class="form-field"><label asp-for="Rule.RequiredApprovals"></label><input asp-for="Rule.RequiredApprovals" type="number" min="0" max="20" /><span asp-validation-for="Rule.RequiredApprovals"></span></div>
+    <label><input asp-for="Rule.RequireCodeOwnerReviews" /> @Html.DisplayNameFor(model => model.Rule.RequireCodeOwnerReviews)</label>
+    <label><input asp-for="Rule.DismissStaleApprovals" /> @Html.DisplayNameFor(model => model.Rule.DismissStaleApprovals)</label>
     <label><input asp-for="Rule.AllowForcePushes" /> @Html.DisplayNameFor(model => model.Rule.AllowForcePushes)</label>
     <label><input asp-for="Rule.AllowDeletions" /> @Html.DisplayNameFor(model => model.Rule.AllowDeletions)</label>
     <label><input asp-for="Rule.AllowAdministratorBypass" /> @Html.DisplayNameFor(model => model.Rule.AllowAdministratorBypass)</label>

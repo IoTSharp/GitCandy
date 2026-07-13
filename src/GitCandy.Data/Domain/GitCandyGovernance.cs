@@ -10,6 +10,9 @@ public sealed class GitCandyBranchProtectionRule
     public bool AllowForcePushes { get; set; }
     public bool AllowDeletions { get; set; }
     public bool AllowAdministratorBypass { get; set; }
+    public int RequiredApprovals { get; set; }
+    public bool RequireCodeOwnerReviews { get; set; }
+    public bool DismissStaleApprovals { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
     public GitCandyRepository? Repository { get; set; }

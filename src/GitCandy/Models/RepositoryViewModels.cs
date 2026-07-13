@@ -227,6 +227,16 @@ public sealed class BranchProtectionFormViewModel
     [Display(Name = "Required checks")]
     public string RequiredChecks { get; set; } = string.Empty;
 
+    [Range(0, 20)]
+    [Display(Name = "Required approvals")]
+    public int RequiredApprovals { get; set; }
+
+    [Display(Name = "Require changed-path code owner review")]
+    public bool RequireCodeOwnerReviews { get; set; }
+
+    [Display(Name = "Dismiss approvals after the Pull Request head changes")]
+    public bool DismissStaleApprovals { get; set; } = true;
+
     public BranchProtectionEdit ToEdit()
     {
         return new BranchProtectionEdit(
@@ -237,6 +247,9 @@ public sealed class BranchProtectionFormViewModel
             AllowForcePushes,
             AllowDeletions,
             AllowAdministratorBypass,
-            RequiredChecks.Split([',', '\r', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+            RequiredChecks.Split([',', '\r', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries),
+            RequiredApprovals,
+            RequireCodeOwnerReviews,
+            DismissStaleApprovals);
     }
 }

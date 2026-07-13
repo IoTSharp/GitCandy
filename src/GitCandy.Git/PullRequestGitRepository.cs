@@ -1,4 +1,6 @@
+using System.Text;
 using GitCandy.Configuration;
+using GitCandy.Governance;
 using GitCandy.PullRequests;
 using LibGit2Sharp;
 using Microsoft.Extensions.Options;
@@ -13,6 +15,7 @@ public sealed partial class PullRequestGitRepository(
 {
     private const string HeadsPrefix = "refs/heads/";
     private const string PullRequestRefPrefix = "refs/pull/";
+    private static readonly string[] CodeOwnersPaths = [".github/CODEOWNERS", "CODEOWNERS", "docs/CODEOWNERS"];
     private readonly IGitServiceFactory _serviceFactory = serviceFactory;
     private readonly IManagedGitRepositoryService _repositoryService = repositoryService;
     private readonly RepositoryBrowserOptions _browserOptions = browserOptions.Value;
@@ -136,6 +139,94 @@ public sealed partial class PullRequestGitRepository(
             commits.Take(commitPageSize).ToArray(),
             files,
             diffTruncated);
+    }
+
+    /// <inheritdoc />
+    public CodeOwnersSnapshot ReadCodeOwnersSnapshot(
+        string repositoryStorageName,
+        string baseSha,
+        string headSha,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(baseSha);
+        ArgumentException.ThrowIfNullOrWhiteSpace(headSha);
+        cancellationToken.ThrowIfCancellationRequested();
+        using var repository = Open(repositoryStorageName);
+        var baseCommit = repository.Lookup<Commit>(baseSha.Trim());
+        var headCommit = repository.Lookup<Commit>(headSha.Trim());
+        if (baseCommit is null || headCommit is null)
+        {
+            return new CodeOwnersSnapshot(null, null, [], "the Pull Request base or head commit is unavailable");
+        }
+
+        var mergeBase = repository.ObjectDatabase.FindMergeBase(baseCommit, headCommit);
+        if (mergeBase is null)
+        {
+            return new CodeOwnersSnapshot(null, null, [], "the Pull Request merge base is unavailable");
+        }
+
+        var changedPaths = new HashSet<string>(StringComparer.Ordinal);
+        var changes = repository.Diff.Compare<TreeChanges>(
+            mergeBase.Tree,
+            headCommit.Tree,
+            new CompareOptions { Similarity = SimilarityOptions.Renames });
+        foreach (var change in changes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            changedPaths.Add(change.Path);
+            if (!string.IsNullOrEmpty(change.OldPath))
+            {
+                changedPaths.Add(change.OldPath);
+            }
+
+            if (changedPaths.Count > CodeOwnersLimits.MaxChangedPaths)
+            {
+                return new CodeOwnersSnapshot(
+                    null,
+                    null,
+                    [],
+                    $"changed paths exceed the {CodeOwnersLimits.MaxChangedPaths} path limit");
+            }
+        }
+
+        foreach (var path in CodeOwnersPaths)
+        {
+            var entry = headCommit.Tree[path];
+            if (entry is null)
+            {
+                continue;
+            }
+
+            if (entry.Mode == Mode.SymbolicLink || entry.Target is not Blob blob)
+            {
+                return new CodeOwnersSnapshot(path, null, changedPaths.ToArray(), "CODEOWNERS must be a regular file");
+            }
+
+            if (blob.Size > CodeOwnersLimits.MaxFileBytes)
+            {
+                return new CodeOwnersSnapshot(
+                    path,
+                    null,
+                    changedPaths.ToArray(),
+                    $"CODEOWNERS exceeds the {CodeOwnersLimits.MaxFileBytes} byte limit");
+            }
+
+            try
+            {
+                using var stream = blob.GetContentStream();
+                using var reader = new StreamReader(
+                    stream,
+                    new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true),
+                    detectEncodingFromByteOrderMarks: true);
+                return new CodeOwnersSnapshot(path, reader.ReadToEnd(), changedPaths.ToArray());
+            }
+            catch (DecoderFallbackException)
+            {
+                return new CodeOwnersSnapshot(path, null, changedPaths.ToArray(), "CODEOWNERS is not valid UTF-8");
+            }
+        }
+
+        return new CodeOwnersSnapshot(null, null, changedPaths.ToArray());
     }
 
     /// <inheritdoc />

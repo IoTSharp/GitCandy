@@ -29,7 +29,8 @@ public enum PullRequestMergeabilityState
     ApprovalRequired,
     ChangesRequested,
     UnresolvedThreads,
-    ChecksBlocked
+    ChecksBlocked,
+    GovernanceBlocked
 }
 
 /// <summary>Pull Request timeline 事件类型。</summary>
@@ -237,7 +238,8 @@ public sealed record PullRequestMergeContext(
     string BaseSha,
     string HeadSha,
     PullRequestMergeMethod Method,
-    string ActorUserId);
+    string ActorUserId,
+    string TargetRepositoryStorageName);
 
 /// <summary>目标 ref 与数据库均提交成功后的 merge 事件。</summary>
 public sealed record PullRequestMergedEvent(

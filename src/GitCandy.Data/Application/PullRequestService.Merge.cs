@@ -1,6 +1,7 @@
 using System.Data;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
+using GitCandy.Governance;
 using GitCandy.PullRequests;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,7 +19,7 @@ internal sealed partial class PullRequestService
         var pullRequest = await LoadMergePullRequestAsync(repositoryId, number, cancellationToken);
         return pullRequest is null
             ? null
-            : BuildMergeability(pullRequest, cancellationToken);
+            : await BuildMergeabilityAsync(pullRequest, cancellationToken);
     }
 
     public async Task<PullRequestMergeResult> MergePullRequestAsync(
@@ -58,7 +59,7 @@ internal sealed partial class PullRequestService
             return new PullRequestMergeResult(PullRequestMutationResult.Conflict);
         }
 
-        var mergeability = BuildMergeability(pullRequest, cancellationToken);
+        var mergeability = await BuildMergeabilityAsync(pullRequest, cancellationToken);
         if (!mergeability.IsMergeable
             || pullRequest.Repository is null
             || pullRequest.SourceRepository is null)
@@ -74,7 +75,8 @@ internal sealed partial class PullRequestService
             pullRequest.CurrentBaseSha,
             pullRequest.CurrentHeadSha,
             command.Method,
-            command.ActorUserId);
+            command.ActorUserId,
+            pullRequest.Repository.StorageName);
         foreach (var hook in _mergeHooks)
         {
             try
@@ -214,7 +216,7 @@ internal sealed partial class PullRequestService
                 item => item.RepositoryId == repositoryId && item.Number == number,
                 cancellationToken);
 
-    private PullRequestMergeability BuildMergeability(
+    private async Task<PullRequestMergeability> BuildMergeabilityAsync(
         GitCandyPullRequest pullRequest,
         CancellationToken cancellationToken)
     {
@@ -246,7 +248,27 @@ internal sealed partial class PullRequestService
             && (!_applicationOptions.DismissStalePullRequestApprovals
                 || string.Equals(item.HeadSha, pullRequest.CurrentHeadSha, StringComparison.Ordinal)));
         var unresolvedThreads = pullRequest.ReviewThreads.Count(item => !item.IsResolved && !item.IsOutdated);
-        var requiredApprovals = Math.Max(0, _applicationOptions.RequiredPullRequestApprovals);
+        var codeOwners = _gitRepository.ReadCodeOwnersSnapshot(
+            pullRequest.Repository.StorageName,
+            pullRequest.CurrentBaseSha,
+            pullRequest.CurrentHeadSha,
+            cancellationToken);
+        var gate = await _pushGate.EvaluateAsync(
+            new GitPushGateRequest(
+                pullRequest.RepositoryId,
+                new GitRefActor("mergeability"),
+                GitRefOperation.Merge,
+                [new GitRefUpdate(
+                    pullRequest.CurrentBaseSha,
+                    pullRequest.CurrentHeadSha,
+                    $"refs/heads/{pullRequest.TargetBranch}")],
+                new GitPushReviewContext(pullRequest.Number, codeOwners),
+                RecordAudit: false,
+                EvaluateAccess: false),
+            cancellationToken);
+        var requiredApprovals = gate.Review?.RequiredApprovals
+            ?? Math.Max(0, _applicationOptions.RequiredPullRequestApprovals);
+        effectiveApprovals = gate.Review?.EffectiveApprovals ?? effectiveApprovals;
         var blockers = new List<(PullRequestMergeabilityState State, string Reason)>();
 
         if (pullRequest.State != PullRequestState.Open) blockers.Add((PullRequestMergeabilityState.Closed, "The Pull Request is not open."));
@@ -258,7 +280,17 @@ internal sealed partial class PullRequestService
         if (git.HasConflicts) blockers.Add((PullRequestMergeabilityState.Conflicting, "The branches have merge conflicts."));
         if (hasChangesRequested) blockers.Add((PullRequestMergeabilityState.ChangesRequested, "A reviewer requested changes."));
         if (unresolvedThreads > 0) blockers.Add((PullRequestMergeabilityState.UnresolvedThreads, $"Resolve {unresolvedThreads} active review thread(s)."));
-        if (effectiveApprovals < requiredApprovals) blockers.Add((PullRequestMergeabilityState.ApprovalRequired, $"{requiredApprovals - effectiveApprovals} more approval(s) required."));
+        foreach (var reason in gate.Reasons)
+        {
+            var state = reason.Contains("required check", StringComparison.Ordinal)
+                ? PullRequestMergeabilityState.ChecksBlocked
+                : reason.Contains("approval", StringComparison.OrdinalIgnoreCase)
+                    || reason.Contains("CODEOWNERS", StringComparison.Ordinal)
+                    || reason.Contains("review", StringComparison.OrdinalIgnoreCase)
+                    ? PullRequestMergeabilityState.ApprovalRequired
+                    : PullRequestMergeabilityState.GovernanceBlocked;
+            blockers.Add((state, reason));
+        }
 
         return new PullRequestMergeability(
             blockers.Count == 0 ? PullRequestMergeabilityState.Mergeable : blockers[0].State,
@@ -270,7 +302,7 @@ internal sealed partial class PullRequestService
             requiredApprovals,
             unresolvedThreads,
             hasChangesRequested,
-            RequiredChecksSatisfied: true,
+            gate.RequiredChecksSatisfied,
             blockers.Select(item => item.Reason).ToArray());
     }
 

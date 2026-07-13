@@ -7,6 +7,7 @@ using GitCandy.Data.Identity;
 using GitCandy.Data.Sqlite;
 using GitCandy.Governance;
 using GitCandy.Integrations;
+using GitCandy.PullRequests;
 using GitCandy.Ssh;
 using System.Net;
 using Microsoft.AspNetCore.Identity;
@@ -265,6 +266,113 @@ public sealed class CredentialGovernanceServiceTests
                 RequiredChecks: ["security/scan"]));
         Assert.IsNotNull(updatedRule);
         CollectionAssert.AreEqual(new[] { "security/scan" }, updatedRule.RequiredChecks.ToArray());
+    }
+
+    [TestMethod]
+    public async Task PushGate_WithRequiredReview_EnforcesChangedPathOwnerAndStaleHead()
+    {
+        await using var fixture = await CredentialFixture.CreateAsync();
+        var oldSha = new string('a', 40);
+        var headSha = new string('b', 40);
+        var pullRequest = new GitCandyPullRequest
+        {
+            RepositoryId = fixture.RepositoryId,
+            SourceRepositoryId = fixture.RepositoryId,
+            SourceNamespaceSnapshot = "owner",
+            SourceRepositorySnapshot = "primary",
+            Number = 1,
+            Title = "Governed change",
+            BodyMarkdown = string.Empty,
+            BodyHtml = string.Empty,
+            AuthorUserId = fixture.OwnerId,
+            SourceBranch = "feature",
+            TargetBranch = "main",
+            OriginalBaseSha = oldSha,
+            OriginalHeadSha = headSha,
+            CurrentBaseSha = oldSha,
+            CurrentHeadSha = headSha,
+            State = PullRequestState.Open,
+            ActivePairKey = "open:1:7:featuremain",
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+            Version = 1
+        };
+        pullRequest.Reviews.Add(new GitCandyPullRequestReview
+        {
+            ReviewerUserId = fixture.CollaboratorId,
+            State = PullRequestReviewState.Approved,
+            HeadSha = headSha,
+            SubmittedAtUtc = DateTime.UtcNow,
+            Version = 1
+        });
+        fixture.DbContext.PullRequests.Add(pullRequest);
+        await fixture.DbContext.SaveChangesAsync();
+        var rule = await fixture.Services.GetRequiredService<IBranchProtectionService>().SaveAsync(
+            fixture.RepositoryId,
+            fixture.OwnerId,
+            new BranchProtectionEdit(
+                null,
+                "main",
+                BranchAccessLevel.RepositoryWrite,
+                BranchAccessLevel.RepositoryWrite,
+                AllowForcePushes: false,
+                AllowDeletions: false,
+                AllowAdministratorBypass: false,
+                RequiredApprovals: 1,
+                RequireCodeOwnerReviews: true,
+                DismissStaleApprovals: true));
+        Assert.IsNotNull(rule);
+        var gate = fixture.Services.GetRequiredService<IGitPushGate>();
+        var update = new GitRefUpdate(oldSha, headSha, "refs/heads/main");
+        var reviewContext = new GitPushReviewContext(
+            1,
+            new CodeOwnersSnapshot("CODEOWNERS", "src/** @collaborator", ["src/App.cs"]));
+
+        var allowed = await gate.EvaluateAsync(new GitPushGateRequest(
+            fixture.RepositoryId,
+            new GitRefActor("owner", fixture.OwnerId),
+            GitRefOperation.Merge,
+            [update],
+            reviewContext));
+        var wrongOwner = await gate.EvaluateAsync(new GitPushGateRequest(
+            fixture.RepositoryId,
+            new GitRefActor("owner", fixture.OwnerId),
+            GitRefOperation.Merge,
+            [update],
+            reviewContext with
+            {
+                CodeOwners = new CodeOwnersSnapshot("CODEOWNERS", "src/** @owner", ["src/App.cs"])
+            }));
+        var directPush = await gate.EvaluateAsync(new GitPushGateRequest(
+            fixture.RepositoryId,
+            new GitRefActor("owner", fixture.OwnerId),
+            GitRefOperation.Push,
+            [update]));
+
+        Assert.IsTrue(allowed.Allowed);
+        Assert.IsFalse(wrongOwner.Allowed);
+        StringAssert.Contains(wrongOwner.Reasons.Single(), "requires approval from @owner");
+        Assert.IsFalse(directPush.Allowed);
+        StringAssert.Contains(directPush.Reasons.Single(), "approved Pull Request");
+
+        var nextHeadSha = new string('c', 40);
+        pullRequest.CurrentHeadSha = nextHeadSha;
+        pullRequest.UpdatedAtUtc = DateTime.UtcNow;
+        pullRequest.Version++;
+        await fixture.DbContext.SaveChangesAsync();
+        var stale = await gate.EvaluateAsync(new GitPushGateRequest(
+            fixture.RepositoryId,
+            new GitRefActor("owner", fixture.OwnerId),
+            GitRefOperation.Merge,
+            [update with { NewObjectId = nextHeadSha }],
+            reviewContext with
+            {
+                CodeOwners = new CodeOwnersSnapshot("CODEOWNERS", "src/** @collaborator", ["src/App.cs"])
+            }));
+
+        Assert.IsFalse(stale.Allowed);
+        Assert.IsTrue(stale.Reasons.Any(item => item.Contains("current head", StringComparison.Ordinal)));
+        Assert.IsFalse(stale.Review!.CodeOwnerReviewsSatisfied);
     }
 
     [TestMethod]

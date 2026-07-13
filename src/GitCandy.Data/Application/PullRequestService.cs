@@ -3,6 +3,7 @@ using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Permissions;
 using GitCandy.Configuration;
+using GitCandy.Governance;
 using GitCandy.Issues;
 using GitCandy.PullRequests;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,7 @@ internal sealed partial class PullRequestService(
     IIssueService issueService,
     IGitCandyRepositoryPermissionQuery permissionQuery,
     IPullRequestGitRepository gitRepository,
+    IGitPushGate pushGate,
     IEnumerable<IPullRequestMergeHook> mergeHooks,
     ILogger<PullRequestService> logger,
     TimeProvider timeProvider,
@@ -28,6 +30,7 @@ internal sealed partial class PullRequestService(
     private readonly IIssueService _issueService = issueService;
     private readonly IGitCandyRepositoryPermissionQuery _permissionQuery = permissionQuery;
     private readonly IPullRequestGitRepository _gitRepository = gitRepository;
+    private readonly IGitPushGate _pushGate = pushGate;
     private readonly IReadOnlyList<IPullRequestMergeHook> _mergeHooks = mergeHooks.ToArray();
     private readonly ILogger<PullRequestService> _logger = logger;
     private readonly TimeProvider _timeProvider = timeProvider;

@@ -17,7 +17,10 @@ public sealed record BranchProtectionEdit(
     bool AllowForcePushes,
     bool AllowDeletions,
     bool AllowAdministratorBypass,
-    IReadOnlyList<string>? RequiredChecks = null);
+    IReadOnlyList<string>? RequiredChecks = null,
+    int RequiredApprovals = 0,
+    bool RequireCodeOwnerReviews = false,
+    bool DismissStaleApprovals = true);
 
 /// <summary>保护分支规则摘要。</summary>
 public sealed record BranchProtectionSummary(
@@ -29,6 +32,9 @@ public sealed record BranchProtectionSummary(
     bool AllowDeletions,
     bool AllowAdministratorBypass,
     IReadOnlyList<string> RequiredChecks,
+    int RequiredApprovals,
+    bool RequireCodeOwnerReviews,
+    bool DismissStaleApprovals,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
@@ -81,10 +87,29 @@ public sealed record GitPushGateRequest(
     long RepositoryId,
     GitRefActor Actor,
     GitRefOperation Operation,
-    IReadOnlyList<GitRefUpdate> Updates);
+    IReadOnlyList<GitRefUpdate> Updates,
+    GitPushReviewContext? Review = null,
+    bool RecordAudit = true,
+    bool EvaluateAccess = true);
+
+/// <summary>Web merge 提供给统一 gate 的不可变 PR 与 changed-path owner 上下文。</summary>
+public sealed record GitPushReviewContext(
+    long PullRequestNumber,
+    CodeOwnersSnapshot CodeOwners);
+
+/// <summary>统一 gate 计算出的有效批准与 CODEOWNERS 状态。</summary>
+public sealed record GitReviewGateStatus(
+    int EffectiveApprovals,
+    int RequiredApprovals,
+    bool CodeOwnerReviewsRequired,
+    bool CodeOwnerReviewsSatisfied);
 
 /// <summary>push gate 结果；Reasons 可直接作为 Git remote 错误，但不包含私有路径或 secret。</summary>
-public sealed record GitPushGateResult(bool Allowed, IReadOnlyList<string> Reasons)
+public sealed record GitPushGateResult(
+    bool Allowed,
+    IReadOnlyList<string> Reasons,
+    bool RequiredChecksSatisfied = true,
+    GitReviewGateStatus? Review = null)
 {
     public static GitPushGateResult Allow { get; } = new(true, []);
 }

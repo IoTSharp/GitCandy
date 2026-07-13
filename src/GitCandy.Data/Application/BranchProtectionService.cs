@@ -5,17 +5,22 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Permissions;
 using GitCandy.Governance;
 using GitCandy.Integrations;
+using GitCandy.PullRequests;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace GitCandy.Application;
 
 internal sealed class BranchProtectionService(
     IDbContextFactory<GitCandyDbContext> dbContextFactory,
-    TimeProvider timeProvider) : IBranchProtectionService, IGitPushGate
+    TimeProvider timeProvider,
+    IOptions<GitCandyApplicationOptions> applicationOptions) : IBranchProtectionService, IGitPushGate
 {
     private const string BranchPrefix = "refs/heads/";
+    private const int MaxRequiredApprovals = 20;
     private readonly IDbContextFactory<GitCandyDbContext> _dbContextFactory = dbContextFactory;
     private readonly TimeProvider _timeProvider = timeProvider;
+    private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
 
     public async Task<IReadOnlyList<BranchProtectionSummary>> GetForRepositoryAsync(
         long repositoryId,
@@ -42,6 +47,7 @@ internal sealed class BranchProtectionService(
         var requiredChecks = NormalizeRequiredChecks(edit.RequiredChecks);
         if (pattern is null
             || requiredChecks is null
+            || edit.RequiredApprovals is < 0 or > MaxRequiredApprovals
             || !Enum.IsDefined(edit.PushAccess)
             || !Enum.IsDefined(edit.MergeAccess))
         {
@@ -87,6 +93,9 @@ internal sealed class BranchProtectionService(
         rule.AllowForcePushes = edit.AllowForcePushes;
         rule.AllowDeletions = edit.AllowDeletions;
         rule.AllowAdministratorBypass = edit.AllowAdministratorBypass;
+        rule.RequiredApprovals = edit.RequiredApprovals;
+        rule.RequireCodeOwnerReviews = edit.RequireCodeOwnerReviews;
+        rule.DismissStaleApprovals = edit.DismissStaleApprovals;
         rule.UpdatedAtUtc = now.UtcDateTime;
         var desiredContexts = requiredChecks.ToHashSet(StringComparer.Ordinal);
         foreach (var existing in rule.RequiredChecks.Where(
@@ -143,10 +152,6 @@ internal sealed class BranchProtectionService(
             .Include(rule => rule.RequiredChecks)
             .Where(rule => rule.RepositoryId == request.RepositoryId)
             .ToArrayAsync(cancellationToken);
-        if (rules.Length == 0)
-        {
-            return GitPushGateResult.Allow;
-        }
 
         var requiredContexts = rules.SelectMany(rule => rule.RequiredChecks)
             .Select(item => item.Context)
@@ -181,6 +186,8 @@ internal sealed class BranchProtectionService(
                 cancellationToken);
         var now = _timeProvider.GetUtcNow();
         var reasons = new List<string>();
+        var requiredChecksSatisfied = true;
+        GitReviewGateStatus? reviewStatus = null;
         foreach (var update in request.Updates)
         {
             if (!update.ReferenceName.StartsWith(BranchPrefix, StringComparison.Ordinal))
@@ -189,38 +196,83 @@ internal sealed class BranchProtectionService(
             }
 
             var branch = update.ReferenceName[BranchPrefix.Length..];
-            foreach (var rule in rules.Where(rule => Matches(rule.Pattern, branch)))
+            var matchingRules = rules.Where(rule => Matches(rule.Pattern, branch)).ToArray();
+            var enforcedRules = new List<GitCandyBranchProtectionRule>(matchingRules.Length);
+            var accessBlocked = false;
+            foreach (var rule in matchingRules)
             {
                 if (isAdministrator && rule.AllowAdministratorBypass)
                 {
-                    AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
-                        "gate.bypass", "success", update.ReferenceName, rule.Pattern, now);
+                    if (request.RecordAudit)
+                    {
+                        AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
+                            "gate.bypass", "success", update.ReferenceName, rule.Pattern, now);
+                    }
                     continue;
                 }
 
-                var blocker = GetBlocker(rule, request.Operation, update, isOwner);
+                enforcedRules.Add(rule);
+
+                var blocker = request.EvaluateAccess
+                    ? GetBlocker(rule, request.Operation, update, isOwner)
+                    : null;
                 if (blocker is not null)
                 {
+                    accessBlocked = true;
                     reasons.Add($"{update.ReferenceName}: {blocker}");
-                    AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
-                        "gate.reject", "denied", update.ReferenceName, blocker, now);
+                    if (request.RecordAudit)
+                    {
+                        AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
+                            "gate.reject", "denied", update.ReferenceName, blocker, now);
+                    }
+                }
+            }
+
+            if (update.IsDelete || accessBlocked)
+            {
+                continue;
+            }
+
+            foreach (var requiredCheck in enforcedRules
+                .SelectMany(rule => rule.RequiredChecks)
+                .DistinctBy(item => item.Context, StringComparer.Ordinal)
+                .OrderBy(item => item.Context, StringComparer.Ordinal))
+            {
+                var targetSha = update.NewObjectId.ToLowerInvariant();
+                if (latestChecks.TryGetValue((targetSha, requiredCheck.Context), out var check)
+                    && check.State == CommitCheckState.Success)
+                {
                     continue;
                 }
-                if (update.IsDelete) continue;
-                foreach (var requiredCheck in rule.RequiredChecks.OrderBy(item => item.Context, StringComparer.Ordinal))
+                requiredChecksSatisfied = false;
+                var checkBlocker = latestChecks.ContainsKey((targetSha, requiredCheck.Context))
+                    ? $"required check '{requiredCheck.Context}' has not succeeded"
+                    : $"required check '{requiredCheck.Context}' is missing";
+                reasons.Add($"{update.ReferenceName}: {checkBlocker}");
+                if (request.RecordAudit)
                 {
-                    var targetSha = update.NewObjectId.ToLowerInvariant();
-                    if (latestChecks.TryGetValue((targetSha, requiredCheck.Context), out var check)
-                        && check.State == CommitCheckState.Success)
-                    {
-                        continue;
-                    }
-                    var checkBlocker = latestChecks.ContainsKey((targetSha, requiredCheck.Context))
-                        ? $"required check '{requiredCheck.Context}' has not succeeded"
-                        : $"required check '{requiredCheck.Context}' is missing";
-                    reasons.Add($"{update.ReferenceName}: {checkBlocker}");
                     AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
                         "gate.reject", "denied", update.ReferenceName, checkBlocker, now);
+                }
+            }
+
+            var review = await EvaluateRequiredReviewsAsync(
+                dbContext,
+                request,
+                update,
+                enforcedRules,
+                cancellationToken);
+            if (review.Status is not null)
+            {
+                reviewStatus = review.Status;
+            }
+            foreach (var reviewBlocker in review.Blockers)
+            {
+                reasons.Add($"{update.ReferenceName}: {reviewBlocker}");
+                if (request.RecordAudit)
+                {
+                    AddAudit(dbContext, request.RepositoryId, request.Actor.UserId, request.Actor.DeployKeyId,
+                        "gate.reject", "denied", update.ReferenceName, reviewBlocker, now);
                 }
             }
         }
@@ -231,8 +283,191 @@ internal sealed class BranchProtectionService(
         }
 
         return reasons.Count == 0
-            ? GitPushGateResult.Allow
-            : new GitPushGateResult(false, reasons.Distinct(StringComparer.Ordinal).ToArray());
+            ? new GitPushGateResult(true, [], requiredChecksSatisfied, reviewStatus)
+            : new GitPushGateResult(
+                false,
+                reasons.Distinct(StringComparer.Ordinal).ToArray(),
+                requiredChecksSatisfied,
+                reviewStatus);
+    }
+
+    private async Task<ReviewGateEvaluation> EvaluateRequiredReviewsAsync(
+        GitCandyDbContext dbContext,
+        GitPushGateRequest request,
+        GitRefUpdate update,
+        IReadOnlyList<GitCandyBranchProtectionRule> rules,
+        CancellationToken cancellationToken)
+    {
+        var branchRequiredApprovals = rules.Count == 0
+            ? 0
+            : rules.Max(static rule => rule.RequiredApprovals);
+        var requireCodeOwners = rules.Any(static rule => rule.RequireCodeOwnerReviews);
+        if (request.Operation != GitRefOperation.Merge)
+        {
+            if (branchRequiredApprovals == 0 && !requireCodeOwners)
+            {
+                return ReviewGateEvaluation.Empty;
+            }
+
+            return new ReviewGateEvaluation(
+                null,
+                ["required reviews can only be satisfied by an approved Pull Request"]);
+        }
+
+        var requiredApprovals = Math.Max(
+            Math.Max(0, _applicationOptions.RequiredPullRequestApprovals),
+            branchRequiredApprovals);
+        if (request.Review is null)
+        {
+            return new ReviewGateEvaluation(
+                new GitReviewGateStatus(0, requiredApprovals, requireCodeOwners, !requireCodeOwners),
+                ["Pull Request review context is missing"]);
+        }
+
+        var pullRequest = await dbContext.PullRequests.AsNoTracking()
+            .Include(item => item.Reviews)
+            .SingleOrDefaultAsync(
+                item => item.RepositoryId == request.RepositoryId
+                    && item.Number == request.Review.PullRequestNumber,
+                cancellationToken);
+        if (pullRequest is null
+            || pullRequest.State != PullRequestState.Open
+            || !string.Equals($"{BranchPrefix}{pullRequest.TargetBranch}", update.ReferenceName, StringComparison.Ordinal)
+            || !string.Equals(pullRequest.CurrentBaseSha, update.OldObjectId, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(pullRequest.CurrentHeadSha, update.NewObjectId, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ReviewGateEvaluation(
+                new GitReviewGateStatus(0, requiredApprovals, requireCodeOwners, !requireCodeOwners),
+                ["Pull Request review context does not match the protected ref update"]);
+        }
+
+        var dismissStale = _applicationOptions.DismissStalePullRequestApprovals
+            || rules.Any(static rule => rule.DismissStaleApprovals);
+        var effectiveApproverIds = pullRequest.Reviews
+            .Where(item => item.DismissedAtUtc is null && item.State != PullRequestReviewState.Commented)
+            .GroupBy(item => item.ReviewerUserId, StringComparer.Ordinal)
+            .Select(group => group.OrderByDescending(item => item.SubmittedAtUtc).ThenByDescending(item => item.Id).First())
+            .Where(item => item.State == PullRequestReviewState.Approved
+                && (!dismissStale || string.Equals(item.HeadSha, pullRequest.CurrentHeadSha, StringComparison.Ordinal))
+                && (_applicationOptions.AllowAuthorApproval
+                    || !string.Equals(item.ReviewerUserId, pullRequest.AuthorUserId, StringComparison.Ordinal)))
+            .Select(item => item.ReviewerUserId)
+            .ToHashSet(StringComparer.Ordinal);
+        var blockers = new List<string>();
+        if (effectiveApproverIds.Count < requiredApprovals)
+        {
+            blockers.Add($"{requiredApprovals - effectiveApproverIds.Count} more approval(s) required for the current head");
+        }
+
+        var codeOwnersSatisfied = true;
+        if (requireCodeOwners)
+        {
+            var evaluation = CodeOwnersParser.Evaluate(request.Review.CodeOwners);
+            if (!evaluation.IsValid)
+            {
+                codeOwnersSatisfied = false;
+                blockers.Add("CODEOWNERS is invalid: " + string.Join("; ", evaluation.Diagnostics.Take(3)));
+            }
+            else
+            {
+                var ownerUserIds = await ResolveCodeOwnerUserIdsAsync(
+                    dbContext,
+                    request.RepositoryId,
+                    evaluation.Assignments.SelectMany(static item => item.Owners),
+                    cancellationToken);
+                foreach (var group in evaluation.Assignments.GroupBy(
+                    static item => $"{item.LineNumber}:{string.Join(',', item.Owners.OrderBy(owner => owner, StringComparer.OrdinalIgnoreCase))}",
+                    StringComparer.Ordinal))
+                {
+                    var first = group.First();
+                    var eligibleOwners = first.Owners
+                        .SelectMany(owner => ownerUserIds.GetValueOrDefault(owner, []))
+                        .ToHashSet(StringComparer.Ordinal);
+                    var paths = group.Select(static item => item.Path).Take(3).ToArray();
+                    var pathDetail = string.Join(", ", paths.Select(static path => $"'{path}'"));
+                    if (group.Count() > paths.Length)
+                    {
+                        pathDetail += $" and {group.Count() - paths.Length} more path(s)";
+                    }
+
+                    if (eligibleOwners.Count == 0)
+                    {
+                        codeOwnersSatisfied = false;
+                        blockers.Add($"CODEOWNERS line {first.LineNumber} has no eligible repository writer for {pathDetail}");
+                    }
+                    else if (!eligibleOwners.Overlaps(effectiveApproverIds))
+                    {
+                        codeOwnersSatisfied = false;
+                        blockers.Add($"CODEOWNERS line {first.LineNumber} requires approval from {string.Join(", ", first.Owners)} for {pathDetail}");
+                    }
+                }
+            }
+        }
+
+        return new ReviewGateEvaluation(
+            new GitReviewGateStatus(
+                effectiveApproverIds.Count,
+                requiredApprovals,
+                requireCodeOwners,
+                codeOwnersSatisfied),
+            blockers);
+    }
+
+    private static async Task<Dictionary<string, HashSet<string>>> ResolveCodeOwnerUserIdsAsync(
+        GitCandyDbContext dbContext,
+        long repositoryId,
+        IEnumerable<string> owners,
+        CancellationToken cancellationToken)
+    {
+        var ownerTokens = owners.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var normalizedNames = ownerTokens
+            .Select(static owner => owner.TrimStart('@').ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        var writableUserIds = dbContext.UserRepositoryRoles.AsNoTracking()
+            .Where(item => item.RepositoryId == repositoryId && item.AllowRead && item.AllowWrite)
+            .Select(item => item.UserId)
+            .Union(
+                from repositoryRole in dbContext.TeamRepositoryRoles.AsNoTracking()
+                join membership in dbContext.UserTeamRoles.AsNoTracking() on repositoryRole.TeamId equals membership.TeamId
+                where repositoryRole.RepositoryId == repositoryId
+                    && repositoryRole.AllowRead
+                    && repositoryRole.AllowWrite
+                select membership.UserId);
+        var users = await dbContext.Users.AsNoTracking()
+            .Where(item => item.NormalizedUserName != null
+                && normalizedNames.Contains(item.NormalizedUserName)
+                && writableUserIds.Contains(item.Id))
+            .Select(item => new { item.Id, item.NormalizedUserName })
+            .ToArrayAsync(cancellationToken);
+        var teamMembers = await (
+            from team in dbContext.Teams.AsNoTracking()
+            join repositoryRole in dbContext.TeamRepositoryRoles.AsNoTracking() on team.Id equals repositoryRole.TeamId
+            join membership in dbContext.UserTeamRoles.AsNoTracking() on team.Id equals membership.TeamId
+            where repositoryRole.RepositoryId == repositoryId
+                && repositoryRole.AllowRead
+                && repositoryRole.AllowWrite
+                && normalizedNames.Contains(team.NormalizedName)
+            select new { membership.UserId, team.NormalizedName })
+            .ToArrayAsync(cancellationToken);
+
+        var result = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var owner in ownerTokens)
+        {
+            var normalized = owner.TrimStart('@').ToUpperInvariant();
+            result[owner] = users.Where(item => string.Equals(item.NormalizedUserName, normalized, StringComparison.Ordinal))
+                .Select(item => item.Id)
+                .Concat(teamMembers.Where(item => string.Equals(item.NormalizedName, normalized, StringComparison.Ordinal))
+                    .Select(item => item.UserId))
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        return result;
+    }
+
+    private sealed record ReviewGateEvaluation(GitReviewGateStatus? Status, IReadOnlyList<string> Blockers)
+    {
+        public static ReviewGateEvaluation Empty { get; } = new(null, []);
     }
 
     private static string? GetBlocker(
@@ -341,6 +576,9 @@ internal sealed class BranchProtectionService(
             rule.AllowAdministratorBypass,
             rule.RequiredChecks.OrderBy(item => item.Context, StringComparer.Ordinal)
                 .Select(item => item.Context).ToArray(),
+            rule.RequiredApprovals,
+            rule.RequireCodeOwnerReviews,
+            rule.DismissStaleApprovals,
             ToDateTimeOffset(rule.CreatedAtUtc),
             ToDateTimeOffset(rule.UpdatedAtUtc));
     }
@@ -369,7 +607,9 @@ internal sealed class BranchProtectionService(
             Action = action,
             Outcome = outcome,
             ReferenceName = referenceName,
-            Detail = detail,
+            Detail = detail.Length <= SchemaLimits.AuditDetail
+                ? detail
+                : detail[..SchemaLimits.AuditDetail],
             OccurredAtUtc = occurredAt.UtcDateTime
         });
     }

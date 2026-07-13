@@ -110,6 +110,9 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("DismissStaleApprovals")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("MergeAccess")
                         .HasColumnType("INTEGER");
 
@@ -122,6 +125,12 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("RequireCodeOwnerReviews")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("RequiredApprovals")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAtUtc")

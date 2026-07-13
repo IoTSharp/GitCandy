@@ -24,6 +24,7 @@
  - Added repository webhooks with versioned envelopes, HMAC-SHA256 signatures, delivery IDs, encrypted one-time secrets, persistent timeout/retry/replay diagnostics, redirect suppression, and DNS/IP SSRF enforcement at configuration and socket-connect time.
  - Added PAT-protected commit status/check APIs with repository authorization, exact commit validation, SHA/context idempotency, per-credential rate limiting, target URL policy, and additive SQLite, SQL Server, and SonnetDB `WebhookAndChecks` migrations.
  - Added exact-SHA required check contexts to branch rules so Git HTTP/SSH pushes and Web merges reject missing or unsuccessful checks without allowing an old head result to satisfy a new update.
+ - Added bounded CODEOWNERS parsing, merge-base changed-path ownership, branch-rule minimum/code-owner reviews, stale-head approval enforcement, and explainable required-review blockers through the existing HTTP/SSH/Web push gate.
  - Added `IoTSharp/SonnetDB` as a source submodule and fixed unique-index NULL semantics in the database engine so EF migration seed rows can contain multiple NULL values while duplicate non-NULL values remain rejected.
 
 #### Removed

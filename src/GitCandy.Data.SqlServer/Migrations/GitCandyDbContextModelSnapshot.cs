@@ -117,6 +117,9 @@ namespace GitCandy.Data.SqlServer.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("DismissStaleApprovals")
+                        .HasColumnType("bit");
+
                     b.Property<int>("MergeAccess")
                         .HasColumnType("int");
 
@@ -130,6 +133,12 @@ namespace GitCandy.Data.SqlServer.Migrations
 
                     b.Property<long>("RepositoryId")
                         .HasColumnType("bigint");
+
+                    b.Property<bool>("RequireCodeOwnerReviews")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RequiredApprovals")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("datetime2");

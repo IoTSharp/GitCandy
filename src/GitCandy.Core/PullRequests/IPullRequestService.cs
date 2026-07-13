@@ -1,3 +1,5 @@
+using GitCandy.Governance;
+
 namespace GitCandy.PullRequests;
 
 /// <summary>Pull Request 创建、查询和基础状态流转应用服务。</summary>
@@ -150,6 +152,13 @@ public interface IPullRequestGitRepository
         int commitPage,
         int commitPageSize,
         bool includeFiles,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>从目标 head 受限读取 CODEOWNERS，并返回 merge-base changed paths。</summary>
+    CodeOwnersSnapshot ReadCodeOwnersSnapshot(
+        string repositoryStorageName,
+        string baseSha,
+        string headSha,
         CancellationToken cancellationToken = default);
 
     /// <summary>验证行范围并从不可变 diff 生成可靠的 hunk context。</summary>

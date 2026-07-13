@@ -3,14 +3,17 @@ using System;
 using GitCandy.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace GitCandy.Data.SonnetDB.Migrations
+namespace GitCandy.Data.Sqlite.Migrations
 {
     [DbContext(typeof(GitCandyDbContext))]
-    partial class GitCandyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260713113920_RequiredReviewsAndCodeOwners")]
+    partial class RequiredReviewsAndCodeOwners
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -19,51 +22,51 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("EventId")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RetainUntilUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("SchemaVersion")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("EventId");
 
@@ -81,11 +84,11 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyBranchProtectionRequiredCheck", b =>
                 {
                     b.Property<long>("RuleId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Context")
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("RuleId", "Context");
 
@@ -96,45 +99,45 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowAdministratorBypass")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowDeletions")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowForcePushes")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("DismissStaleApprovals")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("MergeAccess")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Pattern")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("PushAccess")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("RequireCodeOwnerReviews")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("RequiredApprovals")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -149,57 +152,57 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Context")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("CredentialId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ExternalId")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Sha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("TargetUrl")
                         .HasMaxLength(2048)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -217,40 +220,40 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("CredentialId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("CredentialKind")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Detail")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -267,51 +270,51 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("CanWrite")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
                         .HasMaxLength(47)
-                        .HasColumnType("STRING")
+                        .HasColumnType("TEXT")
                         .IsFixedLength();
 
                     b.Property<string>("KeyType")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -329,40 +332,40 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Action")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("DeployKeyId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Detail")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Outcome")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ReferenceName")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -376,35 +379,35 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ActorName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PayloadJson")
                         .IsRequired()
                         .HasMaxLength(32768)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("SchemaVersion")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -418,61 +421,61 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AssigneeUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ClosedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsLocked")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("MilestoneId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("Number")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -498,45 +501,45 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("EditedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("HiddenAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("HiddenByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsHidden")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -552,31 +555,31 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("CommentId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("EditedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EditorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("PreviousHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PreviousMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -592,34 +595,34 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Color")
                         .IsRequired()
                         .HasMaxLength(6)
-                        .HasColumnType("STRING")
+                        .HasColumnType("TEXT")
                         .IsFixedLength();
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -633,10 +636,10 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyIssueLabelLink", b =>
                 {
                     b.Property<long>("IssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("LabelId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("IssueId", "LabelId");
 
@@ -649,29 +652,29 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DueAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsArchived")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsClosed")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -685,33 +688,33 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ReadAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -729,28 +732,28 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("CommitSha")
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DisplayText")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("SourceIssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("TargetIssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("TargetRepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -768,29 +771,29 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CreatedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("SourceIssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("TargetIssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -808,17 +811,17 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyIssueSubscription", b =>
                 {
                     b.Property<long>("IssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsSubscribed")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("IssueId", "UserId");
 
@@ -831,29 +834,29 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("CommentId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Detail")
                         .HasMaxLength(1000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("IssueId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -872,23 +875,23 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedProject")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Project")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -907,34 +910,34 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("OwnerType")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -968,29 +971,29 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NormalizedSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ReleasedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1007,21 +1010,21 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("NormalizedSlug")
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ClaimType")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("NamespaceAliasId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("NamespaceId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("NormalizedSlug");
 
@@ -1145,58 +1148,58 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EventId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ReadAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1218,45 +1221,45 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ExpiresAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Scopes")
                         .IsRequired()
                         .HasMaxLength(1000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING")
+                        .HasColumnType("TEXT")
                         .IsFixedLength();
 
                     b.Property<string>("TokenPrefix")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1274,117 +1277,117 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActivePairKey")
                         .IsRequired()
                         .HasMaxLength(520)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AssigneeUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ClosedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CurrentBaseSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CurrentHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("IsDraft")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("MergeCommitSha")
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("MergedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("MergedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Number")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("OriginalBaseSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SourceBranch")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("SourceNamespaceSnapshot")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("SourceRepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SourceRepositorySnapshot")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("TargetBranch")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1416,56 +1419,56 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DismissalReason")
                         .HasMaxLength(1000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("DismissedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DismissedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("HeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("ReviewerRequestVersion")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ReviewerUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("SubmittedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1484,32 +1487,32 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyHtml")
                         .IsRequired()
                         .HasMaxLength(131072)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("BodyMarkdown")
                         .IsRequired()
                         .HasMaxLength(65536)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("ThreadId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1525,88 +1528,88 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AnchorContext")
                         .IsRequired()
                         .HasMaxLength(8192)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("AuthorUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("CurrentEndLine")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("CurrentHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CurrentPath")
                         .HasMaxLength(1024)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CurrentSide")
                         .HasMaxLength(8)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("CurrentStartLine")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsOutdated")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsResolved")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("OriginalBaseSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("OriginalEndLine")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("OriginalHeadSha")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalPath")
                         .IsRequired()
                         .HasMaxLength(1024)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("OriginalSide")
                         .IsRequired()
                         .HasMaxLength(8)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("OriginalStartLine")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("ResolvedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ResolvedByUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1626,23 +1629,23 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequestReviewer", b =>
                 {
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ReviewerUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("RequestedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RequestedByUserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("PullRequestId", "ReviewerUserId");
 
@@ -1661,26 +1664,26 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Detail")
                         .HasMaxLength(1000)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("PullRequestId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1696,40 +1699,40 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ActorUserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("EventType")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsOverride")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NewSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("OccurredAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("OldSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("SubjectId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("SubjectType")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -1743,56 +1746,56 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowAnonymousRead")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowAnonymousWrite")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ForkNetworkRoot")
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("ForkNetworkRootRepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ForkedFromRepository")
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("ForkedFromRepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsPrivate")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("StorageName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1817,32 +1820,32 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NormalizedSlug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("ReleasedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -1860,25 +1863,25 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryClaim", b =>
                 {
                     b.Property<long>("NamespaceId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("NormalizedSlug")
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ClaimType")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("RepositoryAliasId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Slug")
                         .IsRequired()
                         .HasMaxLength(50)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("NamespaceId", "NormalizedSlug");
 
@@ -1897,16 +1900,16 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("InteractionCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("LastInteractedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RepositoryId");
 
@@ -1921,35 +1924,35 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryMetricDaily", b =>
                 {
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DayUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ActiveCommitDays")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("CommitCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("LicenseSpdx")
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("StarCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("StarNetGrowth")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("SuccessfulDownloadCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("SuccessfulGitFetchCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("UniquePageViewCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("RepositoryId", "DayUtc");
 
@@ -1962,14 +1965,14 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryPageView", b =>
                 {
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("DayUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("VisitorKey")
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("RepositoryId", "DayUtc", "VisitorKey");
 
@@ -1983,46 +1986,46 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("AlgorithmVersion")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CalculatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<double>("CommitScore")
-                        .HasColumnType("FLOAT");
+                        .HasColumnType("REAL");
 
                     b.Property<double>("DownloadScore")
-                        .HasColumnType("FLOAT");
+                        .HasColumnType("REAL");
 
                     b.Property<string>("Explanation")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<double>("PageViewScore")
-                        .HasColumnType("FLOAT");
+                        .HasColumnType("REAL");
 
                     b.Property<int>("Rank")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SnapshotId")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<double>("StarScore")
-                        .HasColumnType("FLOAT");
+                        .HasColumnType("REAL");
 
                     b.Property<double>("TotalScore")
-                        .HasColumnType("FLOAT");
+                        .HasColumnType("REAL");
 
                     b.HasKey("Id");
 
@@ -2042,13 +2045,13 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RepositoryId");
 
@@ -2062,16 +2065,16 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("Fingerprint")
                         .HasMaxLength(47)
-                        .HasColumnType("STRING")
+                        .HasColumnType("TEXT")
                         .IsFixedLength();
 
                     b.Property<DateTime>("ClaimedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("CredentialKind")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Fingerprint");
 
@@ -2082,34 +2085,34 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Fingerprint")
                         .IsRequired()
                         .HasMaxLength(47)
-                        .HasColumnType("STRING")
+                        .HasColumnType("TEXT")
                         .IsFixedLength();
 
                     b.Property<DateTime>("ImportedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("KeyType")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastUsedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PublicKey")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2127,30 +2130,30 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(20)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2164,16 +2167,16 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyTeamRepositoryRole", b =>
                 {
                     b.Property<long>("TeamId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowRead")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowWrite")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("TeamId", "RepositoryId");
 
@@ -2187,64 +2190,64 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ResourceId")
                         .IsRequired()
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ResourceType")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("SnoozedUntilUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long?>("TeamId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Url")
                         .IsRequired()
                         .HasMaxLength(600)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -2266,19 +2269,19 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowRead")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("AllowWrite")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsOwner")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("UserId", "RepositoryId");
 
@@ -2292,13 +2295,13 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("TeamId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsAdministrator")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("UserId", "TeamId");
 
@@ -2312,49 +2315,49 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AttemptCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("EventId")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LastAttemptAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("LeaseExpiresAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("NextAttemptAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ReplayOfDeliveryId")
                         .HasMaxLength(32)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int?>("ResponseStatusCode")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(24)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("SubscriptionId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -2373,42 +2376,42 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Events")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedName")
                         .IsRequired()
                         .HasMaxLength(100)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProtectedSecret")
                         .IsRequired()
                         .HasMaxLength(4096)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("TargetUrl")
                         .IsRequired()
                         .HasMaxLength(2048)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2422,14 +2425,14 @@ namespace GitCandy.Data.SonnetDB.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyWorkItemSequence", b =>
                 {
                     b.Property<long>("RepositoryId")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("NextNumber")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("RepositoryId");
 
@@ -2440,62 +2443,62 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Description")
                         .HasMaxLength(512)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("DisplayName")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("EmailConfirmed")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("LockoutEnabled")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
-                        .HasColumnType("DATETIME");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedUserName")
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("PhoneNumberConfirmed")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("BOOL");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2513,19 +2516,19 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("NormalizedName")
                         .HasMaxLength(256)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2540,18 +2543,18 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RoleId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2564,18 +2567,18 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("INT");
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("ClaimType")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ClaimValue")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -2588,19 +2591,19 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("LoginProvider")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderKey")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ProviderDisplayName")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("LoginProvider", "ProviderKey");
 
@@ -2613,11 +2616,11 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RoleId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "RoleId");
 
@@ -2630,18 +2633,18 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 {
                     b.Property<string>("UserId")
                         .HasMaxLength(450)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("LoginProvider")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .HasMaxLength(128)
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Value")
-                        .HasColumnType("STRING");
+                        .HasColumnType("TEXT");
 
                     b.HasKey("UserId", "LoginProvider", "Name");
 

@@ -223,6 +223,9 @@ public sealed class MvcPageSmokeTests
                 ["Rule.PushAccess"] = "1",
                 ["Rule.MergeAccess"] = "2",
                 ["Rule.RequiredChecks"] = "ci/build, security/scan",
+                ["Rule.RequiredApprovals"] = "2",
+                ["Rule.RequireCodeOwnerReviews"] = "true",
+                ["Rule.DismissStaleApprovals"] = "true",
                 ["Rule.AllowAdministratorBypass"] = "true"
             });
         Assert.AreEqual(HttpStatusCode.Redirect, branchRuleResponse.StatusCode);
@@ -232,6 +235,7 @@ public sealed class MvcPageSmokeTests
         StringAssert.Contains(branchRulesHtml, "RepositoryOwner");
         StringAssert.Contains(branchRulesHtml, "Nobody");
         StringAssert.Contains(branchRulesHtml, "ci/build, security/scan");
+        StringAssert.Contains(branchRulesHtml, "2 approval(s) / Code owners / Fresh head");
 
         const string webhooksPath = "/m5-admin/m5-repository/settings/webhooks";
         var webhooksHtml = await fixture.GetStringAsync(webhooksPath);
