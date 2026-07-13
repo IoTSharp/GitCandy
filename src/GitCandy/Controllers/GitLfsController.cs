@@ -5,6 +5,7 @@ using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Models;
+using GitCandy.Workspace;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,7 +24,9 @@ public sealed class GitLfsController(
     IGitLfsObjectStore objectStore,
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService,
-    IOptions<GitLfsOptions> options) : ControllerBase
+    IRepositoryMetricRecorder metricRecorder,
+    IOptions<GitLfsOptions> options,
+    ILogger<GitLfsController> logger) : ControllerBase
 {
     private const string LfsJsonMediaType = "application/vnd.git-lfs+json";
     private static readonly ClaimsPrincipal AnonymousPrincipal = new(new ClaimsIdentity());
@@ -33,7 +36,9 @@ public sealed class GitLfsController(
     private readonly IGitLfsObjectStore _objectStore = objectStore;
     private readonly IAuthenticationService _authenticationService = authenticationService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
+    private readonly IRepositoryMetricRecorder _metricRecorder = metricRecorder;
     private readonly GitLfsOptions _options = options.Value;
+    private readonly ILogger<GitLfsController> _logger = logger;
 
     /// <summary>协商 basic upload/download actions。</summary>
     [HttpPost("objects/batch")]
@@ -142,6 +147,11 @@ public sealed class GitLfsController(
         try
         {
             var info = _objectStore.GetInfo(access.Address!.StorageName, oid);
+            if (info is not null)
+            {
+                var repositoryId = access.Address.RepositoryId;
+                Response.OnCompleted(() => RecordSuccessfulDownloadAsync(repositoryId));
+            }
             return info is null
                 ? LfsError(StatusCodes.Status404NotFound, "The LFS object does not exist.")
                 : File(
@@ -152,6 +162,18 @@ public sealed class GitLfsController(
         catch (ArgumentException)
         {
             return LfsError(StatusCodes.Status404NotFound, "The LFS object does not exist.");
+        }
+    }
+
+    private async Task RecordSuccessfulDownloadAsync(long repositoryId)
+    {
+        try
+        {
+            await _metricRecorder.RecordSuccessfulDownloadAsync(repositoryId, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "LFS download metrics could not be recorded for repository {RepositoryId}.", repositoryId);
         }
     }
 

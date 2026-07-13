@@ -2,7 +2,7 @@
 
 更新日期：2026-07-13
 
-本文件只维护尚未完成的工作。已经退出活动路线图的 M0-M12.5、验收结论和专题文档入口见 [已完成里程碑索引](docs/roadmap/completed-milestones.md)；重组前的完整路线图见 [2026-07-13 历史快照](docs/roadmap/roadmap-archive-2026-07-13.md)。
+本文件只维护尚未完成的工作。已经退出活动路线图的 M0-M12.5 和 M12.7、验收结论和专题文档入口见 [已完成里程碑索引](docs/roadmap/completed-milestones.md)；重组前的完整路线图见 [2026-07-13 历史快照](docs/roadmap/roadmap-archive-2026-07-13.md)。
 
 ## 状态与维护规则
 
@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- 当前实施必须先完成生产验收和个人工作台，再进入外部 CI、企业身份、mirror、registry 和代码智能。
+- 当前实施必须先完成生产验收，再进入外部 CI、企业身份、mirror、registry 和代码智能。
 
 ## 已确认的产品决策与冲突处理
 
@@ -41,11 +41,9 @@
 ## 当前实施顺序
 
 1. `#139L`：完成 `gitcandy.com` 真实生产部署验收。
-2. `#139M-#139R`：完成 `/me`、Todo、统一通知、Feed、仓库与团队摘要。
-3. `#139S-#139W`：完成公开个人页、Stars/Packages 边界、公开指标、推荐和浏览器验收。
-4. `#140/#140A/#143`：先建立机器凭据和 push gate，再接 webhook/check。
-5. M13 完成后再进入 M14/M15；M15.5 文档体系在相关产品契约稳定后实施。
-6. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
+2. `#140/#140A/#143`：先建立机器凭据和 push gate，再接 webhook/check。
+3. M13 完成后再进入 M14/M15；M15.5 文档体系在相关产品契约稳定后实施。
+4. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
 
 ## 🚧 Milestone 12.6：SonnetDB 生产部署收口
 
@@ -62,81 +60,6 @@
 - SonnetDB 不暴露公网；token、连接信息和内部地址不进入日志或页面。
 - 数据库、repositories、LFS、SSH host key 和 Data Protection keys 在同一恢复点完成备份、恢复和版本回滚演练。
 - 生产验收记录写入独立部署文档后，M12.6 整体迁入完成历史。
-
-## ⬜ Milestone 12.7：个人工作台、公开个人页与仓库发现
-
-目标：让登录用户进入 GitCandy 后先看到“需要我处理什么、最近在哪里工作、发生了什么”，同时保留独立的公开个人页和公开仓库发现能力。
-
-### 路由与导航契约
-
-| 路径 | 可见性 | 行为 |
-| --- | --- | --- |
-| `/` | 所有人 | 已登录进入 `/me`；未登录进入公开起始页，不产生重定向循环 |
-| `/me` | 仅登录用户 | 私人工作台，不重定向到 `/{username}`；未登录进入登录流程并保留安全本地 `returnUrl` |
-| `/todos` | 仅登录用户 | 完整 Todo 列表；dashboard 只展示摘要和快捷操作 |
-| `/notifications` | 仅登录用户 | 统一个人 inbox；按 unread、原因、资源类型和 team 来源筛选 |
-| `/me/repositories`、`/me/stars`、`/me/packages`、`/me/teams`、`/me/settings` | 仅登录用户 | 私人工作区的完整列表和设置入口；固定路由优先于 namespace/repository 路由 |
-| `/{username}` | 公开 | 公开个人页，默认 `tab=repositories`；只允许 repositories、stars、packages、teams 四个公开 tab |
-| `/explore` | 公开 | 只展示匿名可读的公开仓库；`me`、`todos`、`notifications`、`explore` 进入统一保留 slug |
-
-公开个人页不得显示邮箱、登录状态、安全设置、SSH/PAT、私有团队、私有 package 或不可读仓库。`settings` 不是公开 tab，管理员身份也不能绕过页面的公开字段白名单。
-
-### `/me` 内容顺序
-
-1. **需要我处理**：分配给我的 Issue、请求我评审的 PR、mention、本人受阻 PR、需要处理的团队/仓库请求。
-2. **动态 Feed**：关注、收藏、参与仓库和所属团队的 push、Issue、PR、review、release 等事件。
-3. **需要关注的仓库**：常用或存在待办/未读/受阻事项的仓库，必须展示可解释原因。
-4. **通知摘要**：未读数量和最新投递，完整处理进入 `/notifications`。
-5. **团队动态**：当前用户可见团队的近期活动和待处理事项；它是统一 Feed/Notification 的筛选视图。
-6. **公开仓库推荐**：复用 `/explore` 最近成功快照；数据不足时退化为确定性的近期活跃公开仓库，不伪造个性化。
-
-桌面采用主内容加紧凑侧栏，移动端按上述业务优先级形成单栏；Todo、通知和工作恢复入口必须排在推荐之前。页面不使用营销 hero、装饰性大卡片或嵌套卡片。
-
-### 语义与数据边界
-
-- Todo 保存用户、触发原因、目标资源、状态、snooze 时间和时间戳；目标已解决或权限丢失时自动退出待处理列表，但保留必要审计。
-- Notification 保存接收者、actor、资源稳定 ID、类型、投递原因、team 来源、created/read 时间；读取时重新校验资源权限。
-- Feed 由版本化活动事件投影生成，支持幂等 event ID、分页和 retention；不能在 Web 请求中扫描完整 Git 历史或拼接所有业务表制造时间线。
-- Activity event 可作为 webhook、notification 和推荐采集的输入，但每个消费者维护自己的投递、重试和保留状态。
-- “需要关注的仓库”优先使用 Todo/unread/interaction 信号；公开推荐才使用提交频率、Star、下载和匿名页面访问等热度信号。
-- Repository Stars 使用 Identity user ID + repository ID 唯一约束，star/unstar 幂等；权限撤销、删除用户或删除仓库后不能残留可枚举 metadata。
-- 页面和 service 使用专用投影、稳定分页和确定性次级排序，禁止 Razor N+1、重复枚举和每请求全量统计。
-
-### 公开推荐口径
-
-| 信号 | 口径 |
-| --- | --- |
-| 提交频率 | 默认分支 7/30/90 天有效增量、活跃天数和时间衰减；导入旧历史不在导入日制造峰值 |
-| Star | 唯一用户计数和近期净增长；owner 自己、禁用账号和异常批量账号不参与趋势加权 |
-| 下载 | 只统计成功的 archive、release asset、package、LFS 和 Git 获取聚合；未实现类型不产生虚假计数 |
-| 页面访问 | 只统计成功规范仓库页，按日去重并过滤 bot、健康检查、重复刷新和管理员探测；不保留可反查个人的 IP、Authorization 或完整 User-Agent |
-| License | 仅显式识别的 SPDX/许可证 metadata 可支持“开源”筛选和文案；未知许可证保持“公开仓库” |
-
-`RepositoryMetricDaily` 保存按日聚合，`RepositoryRecommendationSnapshot` 保存算法版本、计算时间、归一化信号、总分、排名和解释标签。Quartz 增量生成不可变快照；Web 只读取最近成功快照，失败时使用上一快照或稳定的最近更新排序。
-
-### M12.7 拆分
-
-| 编号 | 状态 | 主题 | 验收重点 |
-| --- | --- | --- | --- |
-| #139M | ⬜ | `/me` 路由、登录落点与导航 shell | 登录后 `/` 进入 `/me`；固定路由、保留 slug、returnUrl、active state、桌面/移动键盘与焦点行为不抢占 repository URL |
-| #139N | ⬜ | Dashboard application service 与投影契约 | 建立权限过滤、分页、数量上限和取消支持的 dashboard DTO/service；模块独立失败可降级，不在 controller/Razor 执行复杂查询 |
-| #139O | ⬜ | Todo 垂直切片 | Issue assignment、PR review request、mention 和受阻 PR 生成可行动 Todo；完成/恢复/snooze、自动解决、权限撤销、去重和并发闭环 |
-| #139P | ⬜ | 统一通知 inbox 与团队来源 | 将现有 Issue inbox 接入统一模型，提供 unread/filter/read-all 和 team 来源；不重复投递、不泄漏失权资源，为 M13 扩展事件保留稳定契约 |
-| #139Q | ⬜ | 关注与参与 Feed | 建立版本化活动事件和分页 Feed，覆盖仓库/用户/团队关注边界、去重、retention、权限变化和空状态；Feed 不承担 unread 或 audit |
-| #139R | ⬜ | 需要关注的仓库与团队摘要 | 用 Todo、未读、近期交互和 Issue/PR 状态生成可解释列表；团队摘要复用统一来源，不另建团队收件箱 |
-| #139S | ⬜ | 公开个人页与私人工作区列表 | 完成 `/{username}` 公开 shell，以及 `/me/repositories`、teams、settings；公开/本人/管理员字段白名单和 namespace 冲突有集成测试 |
-| #139T | ⬜ | Repository Stars 与 Packages 边界 | 完成 star schema、幂等操作、Stars 页面及真实 Packages 目录/空状态；三 provider migration 和权限变化闭环，不新增假上传接口 |
-| #139U | ⬜ | 公开仓库指标采集 | 建立 commit/Star/download/Git 获取/页面访问日聚合、license metadata、隐私过滤和异常降权；采集不延长 Git 协议响应 |
-| #139V | ⬜ | 推荐算法、快照与 `/explore` | 完成归一化、衰减、冷启动、稳定排序、算法版本、失败回退、搜索筛选、推荐理由和公开候选硬过滤 |
-| #139W | ⬜ | Dashboard/个人页/发现页综合验收 | 覆盖桌面/移动、长文本、键盘、screen reader、空/错误/分页、角色权限、并发、隐私、防刷和大规模查询；构建、测试、migration SQL 与浏览器门禁通过 |
-
-M12.7 完成门槛：
-
-- `/me` 能独立回答“待处理、近期工作、通知、团队和发现”，不是仓库列表的别名。
-- Todo、Notification、Feed 的读写和状态变化互不混淆，并能从同一资源稳定跳转。
-- 访客、本人、团队成员和管理员矩阵证明私人 dashboard、私有仓库/团队/package 和安全资料不越权。
-- 登录与匿名访问 `/explore` 得到相同公开候选边界；推荐可解释、可版本化、可回退且不可由简单刷新直接刷高。
-- `dotnet build GitCandy.slnx`、`dotnet test GitCandy.slnx`、SQLite/SonnetDB smoke、SQL Server migration SQL、MVC 和桌面/移动浏览器测试全部通过。
 
 ## ⬜ Milestone 13：合并治理、外部集成与发布基础
 

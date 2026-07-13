@@ -1,0 +1,5 @@
+@model WorkspaceTeamsViewModel
+@{ ViewData["Title"] = "Your teams"; }
+<header class="page-heading"><div><h1>Your teams</h1><p>Teams that contribute repository and activity context to your workspace.</p></div></header>
+@if (Model.Teams.Count == 0) { <section class="empty-state"><div><i data-lucide="users"></i><h2>No team memberships</h2></div></section> }
+else { <div class="repository-rows">@foreach (var team in Model.Teams) { <article><div><a asp-controller="Team" asp-action="Detail" asp-route-name="@team.Slug"><strong>@team.DisplayName</strong></a><p>@team.Description</p></div>@if (team.IsAdministrator) { <span class="reason-label">Administrator</span> }</article> }</div> }

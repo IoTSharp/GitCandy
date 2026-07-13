@@ -219,3 +219,4 @@ ModelManifest.xml
 CacheVersion
 Information
 .artifacts/
+src/GitCandy.Data.SonnetDB/.data/

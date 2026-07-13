@@ -15,6 +15,69 @@ namespace GitCandy.Data.Sqlite.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyActivityEvent", b =>
+                {
+                    b.Property<string>("EventId")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourceId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RetainUntilUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("TeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("EventId");
+
+                    b.HasIndex("RetainUntilUtc")
+                        .HasDatabaseName("IX_ActivityEvents_RetainUntilUtc");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("RepositoryId", "OccurredAtUtc", "EventId")
+                        .HasDatabaseName("IX_ActivityEvents_Repository_Occurred_Event");
+
+                    b.ToTable("ActivityEvents", (string)null);
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyIssue", b =>
                 {
                     b.Property<long>("Id")
@@ -688,6 +751,30 @@ namespace GitCandy.Data.Sqlite.Migrations
                         },
                         new
                         {
+                            NormalizedSlug = "ME",
+                            ClaimType = 3,
+                            Slug = "me"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "NOTIFICATIONS",
+                            ClaimType = 3,
+                            Slug = "notifications"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "TODOS",
+                            ClaimType = 3,
+                            Slug = "todos"
+                        },
+                        new
+                        {
+                            NormalizedSlug = "EXPLORE",
+                            ClaimType = 3,
+                            Slug = "explore"
+                        },
+                        new
+                        {
                             NormalizedSlug = "REPOSITORY",
                             ClaimType = 3,
                             Slug = "repository"
@@ -716,6 +803,79 @@ namespace GitCandy.Data.Sqlite.Migrations
                             ClaimType = 3,
                             Slug = "team"
                         });
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNotification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ActorUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourceId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RepositoryId");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("UserId", "EventId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Notifications_User_Event");
+
+                    b.HasIndex("UserId", "ReadAtUtc", "CreatedAtUtc")
+                        .HasDatabaseName("IX_Notifications_User_Read_Created");
+
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
@@ -1341,6 +1501,171 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.ToTable("RepositoryClaims", (string)null);
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryInteraction", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("InteractionCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastInteractedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "RepositoryId");
+
+                    b.HasIndex("RepositoryId");
+
+                    b.HasIndex("UserId", "LastInteractedAtUtc")
+                        .HasDatabaseName("IX_RepositoryInteractions_User_Last");
+
+                    b.ToTable("RepositoryInteractions", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryMetricDaily", b =>
+                {
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DayUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ActiveCommitDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CommitCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LicenseSpdx")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("StarCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StarNetGrowth")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SuccessfulDownloadCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("SuccessfulGitFetchCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("UniquePageViewCount")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("RepositoryId", "DayUtc");
+
+                    b.HasIndex("DayUtc")
+                        .HasDatabaseName("IX_RepositoryMetricsDaily_DayUtc");
+
+                    b.ToTable("RepositoryMetricsDaily", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryPageView", b =>
+                {
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("DayUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VisitorKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("RepositoryId", "DayUtc", "VisitorKey");
+
+                    b.HasIndex("DayUtc")
+                        .HasDatabaseName("IX_RepositoryPageViews_DayUtc");
+
+                    b.ToTable("RepositoryPageViews", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryRecommendationSnapshot", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("AlgorithmVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CalculatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("CommitScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("DownloadScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Explanation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("PageViewScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SnapshotId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("StarScore")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("TotalScore")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RepositoryId");
+
+                    b.HasIndex("CalculatedAtUtc", "Rank")
+                        .HasDatabaseName("IX_RecommendationSnapshots_Calculated_Rank");
+
+                    b.HasIndex("SnapshotId", "RepositoryId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RecommendationSnapshots_Snapshot_Repository");
+
+                    b.ToTable("RepositoryRecommendationSnapshots", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryStar", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("UserId", "RepositoryId");
+
+                    b.HasIndex("RepositoryId", "CreatedAtUtc")
+                        .HasDatabaseName("IX_RepositoryStars_Repository_Created");
+
+                    b.ToTable("RepositoryStars", (string)null);
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandySshKey", b =>
                 {
                     b.Property<long>("Id")
@@ -1444,6 +1769,85 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasDatabaseName("IX_TeamRepositoryRoles_RepositoryId");
 
                     b.ToTable("TeamRepositoryRoles", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyTodo", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("RepositoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResourceId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResourceType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SnoozedUntilUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TeamId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RepositoryId");
+
+                    b.HasIndex("TeamId");
+
+                    b.HasIndex("UserId", "Kind", "ResourceType", "ResourceId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Todos_User_Kind_Resource");
+
+                    b.HasIndex("UserId", "Status", "SnoozedUntilUtc", "UpdatedAtUtc")
+                        .HasDatabaseName("IX_Todos_User_Status_Snooze_Updated");
+
+                    b.ToTable("Todos", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyUserRepositoryRole", b =>
@@ -1721,6 +2125,19 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyActivityEvent", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyTeam", null)
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyIssue", b =>
                 {
                     b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Assignee")
@@ -1989,6 +2406,25 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("NamespaceAlias");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyNotification", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyTeam", null)
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyPullRequest", b =>
                 {
                     b.HasOne("GitCandy.Data.Identity.GitCandyUser", "Assignee")
@@ -2214,6 +2650,63 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("RepositoryAlias");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryInteraction", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryMetricDaily", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryPageView", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryRecommendationSnapshot", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryStar", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandySshKey", b =>
                 {
                     b.HasOne("GitCandy.Data.Identity.GitCandyUser", "User")
@@ -2242,6 +2735,25 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("Repository");
 
                     b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyTodo", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepository", null)
+                        .WithMany()
+                        .HasForeignKey("RepositoryId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("GitCandy.Data.Domain.GitCandyTeam", null)
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("GitCandy.Data.Identity.GitCandyUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyUserRepositoryRole", b =>

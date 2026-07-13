@@ -1,9 +1,11 @@
+using System.Security.Cryptography;
 using GitCandy.Application;
 using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Models;
+using GitCandy.Workspace;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +22,10 @@ public sealed class NamespaceRepositoryController(
     IManagedGitRepositoryService managedGitRepositoryService,
     IGitServiceFactory gitServiceFactory,
     IAuthorizationService authorizationService,
-    ICurrentUser currentUser) : CandyControllerBase
+    ICurrentUser currentUser,
+    IRepositoryMetricRecorder metricRecorder,
+    IWorkspaceService workspaceService,
+    ILogger<NamespaceRepositoryController> logger) : CandyControllerBase
 {
     private const string AddressChangedMessage = "This repository address changed. Update your bookmark and Git remote to the canonical URL.";
     private readonly IRepositoryAddressResolver _addressResolver = addressResolver;
@@ -30,6 +35,9 @@ public sealed class NamespaceRepositoryController(
     private readonly IGitServiceFactory _gitServiceFactory = gitServiceFactory;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
+    private readonly IRepositoryMetricRecorder _metricRecorder = metricRecorder;
+    private readonly IWorkspaceService _workspaceService = workspaceService;
+    private readonly ILogger<NamespaceRepositoryController> _logger = logger;
 
     /// <summary>显示规范仓库主页，alias 命中时使用 308 跳转。</summary>
     [HttpGet]
@@ -149,6 +157,11 @@ public sealed class NamespaceRepositoryController(
         Response.Headers.ContentDisposition = $"attachment; filename*=UTF-8''{Uri.EscapeDataString(project)}.zip";
         var result = await _repositoryBrowserService.WriteArchiveAsync(
             _gitServiceFactory.Create(access.Address!.StorageName), revision, Response.Body, cancellationToken);
+        if (result is not null)
+        {
+            var repositoryId = access.Address.RepositoryId;
+            Response.OnCompleted(() => RecordSuccessfulDownloadAsync(repositoryId));
+        }
         return result is null ? NotFound() : new EmptyResult();
     }
 
@@ -182,6 +195,14 @@ public sealed class NamespaceRepositoryController(
             ViewData["CanonicalUrl"] = address.CanonicalPath;
             ViewData["NamespaceSlug"] = address.NamespaceSlug;
             ViewData["RepositorySlug"] = address.RepositorySlug;
+            if (!_currentUser.IsAdministrator && !IsLikelyAutomatedRequest())
+            {
+                var visitorKey = GetOrCreateVisitorKey();
+                if (visitorKey is not null)
+                {
+                    await RecordPageViewAsync(address.RepositoryId, visitorKey, _currentUser.UserId, cancellationToken);
+                }
+            }
             return View(
                 "~/Views/Repository/Tree.cshtml",
                 new RepositoryTreeViewModel
@@ -189,6 +210,9 @@ public sealed class NamespaceRepositoryController(
                     RepositoryName = address.RepositorySlug,
                     NamespaceSlug = address.NamespaceSlug,
                     Description = repository.Description,
+                    CanStar = _currentUser.IsAuthenticated,
+                    IsStarred = _currentUser.UserId is not null
+                        && await _workspaceService.IsStarredAsync(address.RepositoryId, _currentUser.UserId, cancellationToken),
                     CanManage = (await _authorizationService.AuthorizeAsync(
                         User,
                         new RepositoryAuthorizationResource(address.RepositoryId),
@@ -239,5 +263,60 @@ public sealed class NamespaceRepositoryController(
     {
         TempData["CanonicalAddressChanged"] = AddressChangedMessage;
         return new RedirectResult(path + Request.QueryString, permanent: true, preserveMethod: true);
+    }
+
+    private string? GetOrCreateVisitorKey()
+    {
+        const string cookieName = ".GitCandy.Visitor";
+        var key = Request.Cookies[cookieName];
+        if (!string.IsNullOrWhiteSpace(key) && key.Length == 48) return key;
+        key = Convert.ToHexString(RandomNumberGenerator.GetBytes(24));
+        Response.Cookies.Append(cookieName, key, new CookieOptions
+        {
+            Expires = DateTimeOffset.UtcNow.AddYears(1),
+            HttpOnly = true,
+            IsEssential = false,
+            SameSite = SameSiteMode.Lax,
+            Secure = Request.IsHttps
+        });
+        return null;
+    }
+
+    private bool IsLikelyAutomatedRequest()
+    {
+        var userAgent = Request.Headers.UserAgent.ToString();
+        return string.IsNullOrWhiteSpace(userAgent)
+            || userAgent.Contains("bot", StringComparison.OrdinalIgnoreCase)
+            || userAgent.Contains("crawler", StringComparison.OrdinalIgnoreCase)
+            || userAgent.Contains("spider", StringComparison.OrdinalIgnoreCase)
+            || userAgent.Contains("health", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task RecordPageViewAsync(long repositoryId, string visitorKey, string? userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _metricRecorder.RecordPageViewAsync(repositoryId, visitorKey, userId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Repository page-view metrics could not be recorded for repository {RepositoryId}.", repositoryId);
+        }
+    }
+
+    private async Task RecordSuccessfulDownloadAsync(long repositoryId)
+    {
+        try
+        {
+            await _metricRecorder.RecordSuccessfulDownloadAsync(repositoryId, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Repository download metrics could not be recorded for repository {RepositoryId}.", repositoryId);
+        }
     }
 }

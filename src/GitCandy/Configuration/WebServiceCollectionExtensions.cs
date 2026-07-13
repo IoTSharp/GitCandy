@@ -200,6 +200,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IAccountRecoveryThrottle, AccountRecoveryThrottle>();
         services.TryAddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
         services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitTransportActivitySink, GitTransportWorkspaceActivitySink>());
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, RepositoryAuthorizationHandler>());
         services.TryAddEnumerable(
@@ -230,6 +231,7 @@ public static class WebServiceCollectionExtensions
         services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
         services.AddGitCandyGit();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitTransportActivitySink, GitTransportWorkspaceActivitySink>());
         services.AddGitCandyOpenSshAdapter();
         return services;
     }
@@ -237,6 +239,7 @@ public static class WebServiceCollectionExtensions
     private static IServiceCollection AddGitCandyScheduler(this IServiceCollection services)
     {
         services.TryAddTransient<QuartzSchedulerJob>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, WorkspaceProjectionJob>());
 
         services.AddQuartz(options =>
         {

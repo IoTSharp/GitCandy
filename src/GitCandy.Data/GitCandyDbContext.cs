@@ -89,6 +89,14 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyPullRequestTimelineEvent> PullRequestTimelineEvents => Set<GitCandyPullRequestTimelineEvent>();
     public DbSet<GitCandyPullRequestReviewer> PullRequestReviewers => Set<GitCandyPullRequestReviewer>();
     public DbSet<GitCandyPullRequestReview> PullRequestReviews => Set<GitCandyPullRequestReview>();
+    public DbSet<GitCandyTodo> Todos => Set<GitCandyTodo>();
+    public DbSet<GitCandyNotification> Notifications => Set<GitCandyNotification>();
+    public DbSet<GitCandyActivityEvent> ActivityEvents => Set<GitCandyActivityEvent>();
+    public DbSet<GitCandyRepositoryStar> RepositoryStars => Set<GitCandyRepositoryStar>();
+    public DbSet<GitCandyRepositoryInteraction> RepositoryInteractions => Set<GitCandyRepositoryInteraction>();
+    public DbSet<GitCandyRepositoryMetricDaily> RepositoryMetricsDaily => Set<GitCandyRepositoryMetricDaily>();
+    public DbSet<GitCandyRepositoryPageView> RepositoryPageViews => Set<GitCandyRepositoryPageView>();
+    public DbSet<GitCandyRepositoryRecommendationSnapshot> RepositoryRecommendationSnapshots => Set<GitCandyRepositoryRecommendationSnapshot>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -119,6 +127,7 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         builder.ConfigureIssueModel();
         builder.ConfigurePullRequestModel();
         builder.ConfigurePullRequestReviewModel();
+        builder.ConfigureWorkspaceModel();
 
         builder.Entity<GitCandyUser>(entity =>
         {

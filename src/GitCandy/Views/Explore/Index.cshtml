@@ -1,0 +1,7 @@
+@model ExploreViewModel
+@{ ViewData["Title"] = "Explore repositories"; }
+<header class="page-heading"><div><h1>Explore repositories</h1><p>Public repositories ranked from versioned, explainable signals.</p></div></header>
+<form class="explore-filters" method="get"><label><span>Search</span><input type="search" name="search" value="@Model.Query.Search" placeholder="Repository name or description" /></label><label><span>SPDX license</span><input type="text" name="license" value="@Model.Query.License" placeholder="MIT" /></label><button class="btn btn-primary" type="submit"><i data-lucide="search"></i> Search</button></form>
+<div class="explore-status"><span>@Model.Page.Repositories.TotalCount public repositories</span><span>@Model.Page.AlgorithmVersion@if (Model.Page.IsFallback) { <text> · stable fallback</text> }</span></div>
+@if (Model.Page.Repositories.Items.Count == 0) { <section class="empty-state"><div><i data-lucide="search-x"></i><h2>No matching repositories</h2></div></section> }
+else { <div class="repository-rows">@foreach (var item in Model.Page.Repositories.Items) { <article><div><a href="/@item.NamespaceSlug/@item.RepositorySlug"><strong>@item.NamespaceSlug/@item.RepositorySlug</strong></a><p>@item.Description</p></div><div class="repository-meta"><span class="reason-label">@item.Reason</span><span><i data-lucide="star"></i> @item.StarCount</span></div></article> }</div> }

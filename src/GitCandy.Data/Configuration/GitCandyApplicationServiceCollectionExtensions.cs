@@ -5,6 +5,7 @@ using GitCandy.PullRequests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using GitCandy.Configuration;
+using GitCandy.Workspace;
 
 namespace GitCandy.Data.Configuration;
 
@@ -35,6 +36,9 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddSingleton<IIssueMarkdownRenderer, IssueMarkdownRenderer>();
         services.TryAddScoped<IIssueService, IssueService>();
         services.TryAddScoped<IPullRequestService, PullRequestService>();
+        services.TryAddScoped<IWorkspaceService, WorkspaceService>();
+        services.TryAddScoped<IRepositoryMetricRecorder, RepositoryMetricRecorder>();
+        services.TryAddScoped<IWorkspaceActivityPublisher, WorkspaceActivityPublisher>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ISshAccessService, SshAccessService>();
 

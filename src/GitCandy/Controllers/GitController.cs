@@ -7,6 +7,7 @@ using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Issues;
+using GitCandy.Workspace;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
@@ -30,6 +31,7 @@ public sealed class GitController(
     IAuthenticationService authenticationService,
     IAuthorizationService authorizationService,
     IOptions<GitSmartHttpOptions> options,
+    IRepositoryMetricRecorder metricRecorder,
     ILogger<GitController> logger)
     : ControllerBase
 {
@@ -44,6 +46,7 @@ public sealed class GitController(
     private readonly IAuthenticationService _authenticationService = authenticationService;
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly GitSmartHttpOptions _options = options.Value;
+    private readonly IRepositoryMetricRecorder _metricRecorder = metricRecorder;
     private readonly ILogger<GitController> _logger = logger;
 
     /// <summary>
@@ -201,6 +204,12 @@ public sealed class GitController(
                 Response.Body,
                 timeoutSource.Token);
             await Response.Body.FlushAsync(timeoutSource.Token);
+            if (operation.Service == GitTransportService.UploadPack && !operation.AdvertiseRefs)
+            {
+                var repositoryId = address.RepositoryId;
+                var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+                Response.OnCompleted(() => RecordSuccessfulGitFetchAsync(repositoryId, userId));
+            }
             if (operation.Service == GitTransportService.ReceivePack
                 && !operation.AdvertiseRefs
                 && principal.FindFirstValue(ClaimTypes.NameIdentifier) is string actorUserId)
@@ -267,6 +276,18 @@ public sealed class GitController(
             _logger.LogWarning(
                 exception,
                 "Issue closing references could not be processed after a successful push.");
+        }
+    }
+
+    private async Task RecordSuccessfulGitFetchAsync(long repositoryId, string? userId)
+    {
+        try
+        {
+            await _metricRecorder.RecordSuccessfulGitFetchAsync(repositoryId, userId, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Git fetch metrics could not be recorded for repository {RepositoryId}.", repositoryId);
         }
     }
 

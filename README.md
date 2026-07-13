@@ -64,6 +64,12 @@ Issue descriptions and comments use restricted CommonMark with fenced code block
 
 See [the M11 migration record](docs/migration/m11-issues.md) for schema, dependency, backup, and rollback details.
 
+## Personal workspace and discovery
+
+Signed-in users enter the private `/me` workspace, which keeps actionable Todos, followed activity, repositories needing attention, unified notifications, team context, and public recommendations separate from the public `/{username}` profile. `/todos` owns complete/restore/snooze state; reading `/notifications` never completes a Todo.
+
+Public profiles expose only repositories, Stars, Packages, and public team context. `/explore` reads only anonymously accessible repositories from versioned recommendation snapshots, with deterministic fallback ordering. See [the M12.7 acceptance record](docs/migration/m12-7-workspace-discovery.md) for privacy, metrics, migrations, and rollback details.
+
 Canonical repositories expose `/branches`, `/tags`, and `/contributors`. Writers can delete non-default branches and tags through antiforgery-protected forms; ref validation and default-branch protection are enforced again by the Git service.
 
 ## Operations

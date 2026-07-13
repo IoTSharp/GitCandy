@@ -24,6 +24,6 @@ public abstract class CandyControllerBase : Controller
     {
         return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
             ? LocalRedirect(returnUrl)
-            : RedirectToAction("Index", "Repository");
+            : RedirectToAction("Index", "Workspace");
     }
 }

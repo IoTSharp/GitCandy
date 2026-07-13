@@ -63,8 +63,11 @@
                         <i data-lucide="chevron-down"></i>
                     </summary>
                     <div class="popover-menu">
-                        <a asp-controller="Account" asp-action="Detail" asp-route-name="@User.Identity?.Name">
+                        <a asp-route="public-profile" asp-route-username="@User.Identity?.Name">
                             <i data-lucide="user"></i> Profile
+                        </a>
+                        <a asp-controller="Workspace" asp-action="Settings">
+                            <i data-lucide="settings"></i> Workspace settings
                         </a>
                         <a asp-controller="AccountSecurity" asp-action="Security">
                             <i data-lucide="shield"></i> Security
@@ -101,9 +104,32 @@
         <aside id="primary-navigation" class="app-sidebar" aria-label="Primary navigation" aria-hidden="false" data-navigation-drawer>
             <nav>
                 <ul class="nav-list">
+                    @if (isAuthenticated)
+                    {
                     <li>
-                        <a class="nav-link @(currentController == "Repository" ? "is-active" : null)" asp-controller="Repository" asp-action="Index">
+                        <a class="nav-link @(currentController == "Workspace" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "is-active" : null)" asp-controller="Workspace" asp-action="Index">
+                            <i data-lucide="layout-dashboard"></i> Workspace
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link @(currentController == "Workspace" && ViewContext.RouteData.Values["action"]?.ToString() == "Todos" ? "is-active" : null)" asp-controller="Workspace" asp-action="Todos">
+                            <i data-lucide="circle-check-big"></i> Todos
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link @(currentController == "Notification" ? "is-active" : null)" asp-controller="Notification" asp-action="Index">
+                            <i data-lucide="inbox"></i> Notifications
+                        </a>
+                    </li>
+                    }
+                    <li>
+                        <a class="nav-link @(currentController == "Repository" || currentController == "NamespaceRepository" ? "is-active" : null)" asp-controller="Repository" asp-action="Index">
                             <i data-lucide="folder-git-2"></i> @Text["Shared_Repositories"]
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link @(currentController == "Explore" ? "is-active" : null)" asp-controller="Explore" asp-action="Index">
+                            <i data-lucide="compass"></i> Explore
                         </a>
                     </li>
                     <li>

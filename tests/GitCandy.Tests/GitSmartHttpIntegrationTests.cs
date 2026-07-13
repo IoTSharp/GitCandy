@@ -8,6 +8,7 @@ using GitCandy.Controllers;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Workspace;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.EntityFrameworkCore;
 
 namespace GitCandy.Tests;
 
@@ -71,6 +73,7 @@ public sealed class GitSmartHttpIntegrationTests
         Assert.AreEqual(
             LargeFileSize,
             int.Parse(remoteLargeFileSize, CultureInfo.InvariantCulture));
+        Assert.IsTrue(await fixture.HasPushActivityAsync(), "Successful HTTP receive-pack must publish a shared workspace activity event.");
     }
 
     [TestMethod]
@@ -141,6 +144,13 @@ public sealed class GitSmartHttpIntegrationTests
         public string SeedWorkTree { get; }
 
         public string TempRoot { get; }
+
+        public async Task<bool> HasPushActivityAsync()
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            return await dbContext.ActivityEvents.AsNoTracking().AnyAsync(item => item.Type == WorkspaceActivityType.Push);
+        }
 
         public static async Task<GitHttpFixture> CreateAsync()
         {

@@ -69,6 +69,10 @@ public sealed class RepositoryTreeViewModel
 
     public bool CanManage { get; init; }
 
+    public bool CanStar { get; init; }
+
+    public bool IsStarred { get; init; }
+
     public RepositoryTreeResult? Tree { get; init; }
 }
 

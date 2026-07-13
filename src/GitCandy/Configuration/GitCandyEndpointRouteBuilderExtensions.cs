@@ -45,6 +45,11 @@ public static class GitCandyEndpointRouteBuilderExtensions
             .WithStaticAssets();
 
         endpoints.MapControllerRoute(
+            name: "public-profile",
+            pattern: "{username}",
+            defaults: new { controller = "PublicProfile", action = "Index" });
+
+        endpoints.MapControllerRoute(
             name: "namespace-repository-dotgit",
             pattern: "{namespaceSlug}/{project}.git",
             defaults: new { controller = "NamespaceRepository", action = "GitCompatibility" });

@@ -11,11 +11,20 @@
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading">
     <div><h1>@Model.RepositoryName</h1><p>@(string.IsNullOrWhiteSpace(Model.Description) ? tree?.Revision.DisplayName ?? "Empty repository" : Model.Description)</p></div>
-    @if (tree is not null)
+    @if (tree is not null || Model.CanStar)
     {
         <div class="page-actions">
-            <a class="btn" href="@(canonicalUrl is null ? Url.Action("Archive", new { name = Model.RepositoryName, revision = tree.Revision.CommitId }) : $"{canonicalUrl}/archive?revision={Uri.EscapeDataString(tree.Revision.CommitId)}")"><i data-lucide="archive"></i> Archive</a>
-            <a class="btn" href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = tree.Path, revision = tree.Revision.CommitId }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = tree.Path, revision = tree.Revision.CommitId }))"><i data-lucide="link"></i> Permalink</a>
+            @if (Model.CanStar && namespaceSlug is not null && repositorySlug is not null)
+            {
+                <form asp-controller="RepositoryStar" asp-action="Set" asp-route-namespaceSlug="@namespaceSlug" asp-route-project="@repositorySlug" asp-route-starred="@(!Model.IsStarred)" asp-route-returnUrl="@Context.Request.Path" method="post">
+                    <button class="btn" type="submit"><i data-lucide="star"></i> @(Model.IsStarred ? "Unstar" : "Star")</button>
+                </form>
+            }
+            @if (tree is not null)
+            {
+                <a class="btn" href="@(canonicalUrl is null ? Url.Action("Archive", new { name = Model.RepositoryName, revision = tree.Revision.CommitId }) : $"{canonicalUrl}/archive?revision={Uri.EscapeDataString(tree.Revision.CommitId)}")"><i data-lucide="archive"></i> Archive</a>
+                <a class="btn" href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = tree.Path, revision = tree.Revision.CommitId }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = tree.Path, revision = tree.Revision.CommitId }))"><i data-lucide="link"></i> Permalink</a>
+            }
         </div>
     }
 </header>

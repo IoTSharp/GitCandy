@@ -1,0 +1,12 @@
+@model PublicProfileViewModel
+@{ ViewData["Title"] = Model.Profile.DisplayName; var tab = Model.Profile.Tab.ToString().ToLowerInvariant(); }
+<header class="profile-header"><div class="profile-avatar" aria-hidden="true">@Model.Profile.DisplayName[..1].ToUpperInvariant()</div><div><h1>@Model.Profile.DisplayName</h1><p class="profile-handle">@@@Model.Profile.UserName</p>@if (!string.IsNullOrWhiteSpace(Model.Profile.Description)) { <p>@Model.Profile.Description</p> }</div></header>
+<nav class="profile-tabs" aria-label="Public profile"><a class="@(tab == "repositories" ? "is-active" : null)" asp-route="public-profile" asp-route-username="@Model.Profile.UserName" asp-route-tab="repositories">Repositories</a><a class="@(tab == "stars" ? "is-active" : null)" asp-route="public-profile" asp-route-username="@Model.Profile.UserName" asp-route-tab="stars">Stars</a><a class="@(tab == "packages" ? "is-active" : null)" asp-route="public-profile" asp-route-username="@Model.Profile.UserName" asp-route-tab="packages">Packages</a><a class="@(tab == "teams" ? "is-active" : null)" asp-route="public-profile" asp-route-username="@Model.Profile.UserName" asp-route-tab="teams">Teams</a></nav>
+@if (Model.Profile.Tab == GitCandy.Workspace.PublicProfileTab.Teams)
+{ @if (Model.Profile.Teams.Count == 0) { <section class="empty-state"><div><i data-lucide="users"></i><h2>No public teams</h2></div></section> } else { <div class="repository-rows">@foreach (var team in Model.Profile.Teams) { <article><div><strong>@team.DisplayName</strong><p>@team.Description</p></div></article> }</div> } }
+else if (Model.Profile.Tab == GitCandy.Workspace.PublicProfileTab.Packages)
+{ <section class="empty-state"><div><i data-lucide="package-open"></i><h2>No public packages</h2></div></section> }
+else if (Model.Profile.Repositories.Items.Count == 0)
+{ <section class="empty-state"><div><i data-lucide="folder-git-2"></i><h2>No public repositories</h2></div></section> }
+else
+{ <div class="repository-rows">@foreach (var item in Model.Profile.Repositories.Items) { <article><div><a href="/@item.NamespaceSlug/@item.RepositorySlug"><strong>@item.NamespaceSlug/@item.RepositorySlug</strong></a><p>@item.Description</p></div><span><i data-lucide="star"></i> @item.StarCount</span></article> }</div> }

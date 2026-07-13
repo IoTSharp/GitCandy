@@ -46,7 +46,44 @@ public sealed class MvcPageSmokeTests
 
         using var authenticatedResponse = await fixture.Client.GetAsync("/");
         Assert.AreEqual(HttpStatusCode.Redirect, authenticatedResponse.StatusCode);
-        Assert.AreEqual("/Repository", authenticatedResponse.Headers.Location?.OriginalString);
+        Assert.AreEqual("/me", authenticatedResponse.Headers.Location?.OriginalString);
+    }
+
+    [TestMethod]
+    public async Task WorkspaceRoutes_WithAnonymousAuthenticatedAndPublicProfile_KeepPrivacyAndFixedRoutePriority()
+    {
+        await using var fixture = await MvcWebFixture.CreateAsync();
+        await fixture.SeedRepositoriesAsync();
+
+        foreach (var path in new[] { "/me", "/todos", "/notifications", "/me/repositories", "/me/settings" })
+        {
+            using var response = await fixture.Client.GetAsync(path);
+            Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode, path);
+            Assert.IsNotNull(response.Headers.Location);
+            StringAssert.StartsWith(response.Headers.Location.AbsolutePath, "/Account/Login");
+        }
+        var explore = await fixture.GetStringAsync("/explore");
+        StringAssert.Contains(explore, "public-repository");
+        Assert.IsFalse(explore.Contains("private-repository", StringComparison.Ordinal));
+
+        var publicProfile = await fixture.GetStringAsync("/profile-user?tab=repositories");
+        StringAssert.Contains(publicProfile, "Profile User");
+        StringAssert.Contains(publicProfile, "public-repository");
+        Assert.IsFalse(publicProfile.Contains("private-repository", StringComparison.Ordinal));
+        Assert.IsFalse(publicProfile.Contains("profile-user@example.com", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(publicProfile.Contains("SSH keys", StringComparison.OrdinalIgnoreCase));
+        using var invalidTab = await fixture.Client.GetAsync("/profile-user?tab=settings");
+        Assert.AreEqual(HttpStatusCode.NotFound, invalidTab.StatusCode);
+
+        await fixture.CreateAdministratorAsync();
+        await fixture.LoginAsync("m5-admin", AdministratorPassword);
+        var dashboard = await fixture.GetStringAsync("/me");
+        StringAssert.Contains(dashboard, "Needs your attention");
+        StringAssert.Contains(dashboard, "Activity feed");
+        StringAssert.Contains(dashboard, "Public repositories");
+        var administratorView = await fixture.GetStringAsync("/profile-user?tab=repositories");
+        Assert.IsFalse(administratorView.Contains("private-repository", StringComparison.Ordinal));
+        Assert.IsFalse(administratorView.Contains("profile-user@example.com", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]
@@ -319,8 +356,27 @@ public sealed class MvcPageSmokeTests
             };
             Assert.IsTrue((await userManager.CreateAsync(user)).Succeeded);
 
+            var userNamespace = new GitCandyNamespace
+            {
+                OwnerType = NamespaceOwnerType.User,
+                UserId = user.Id,
+                Slug = "profile-user",
+                NormalizedSlug = "PROFILE-USER",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            dbContext.Namespaces.Add(userNamespace);
+            await dbContext.SaveChangesAsync();
+            dbContext.NamespaceClaims.Add(new GitCandyNamespaceClaim
+            {
+                NamespaceId = userNamespace.Id,
+                Slug = userNamespace.Slug,
+                NormalizedSlug = userNamespace.NormalizedSlug,
+                ClaimType = NameClaimType.Current
+            });
+
             var publicRepository = new GitCandyRepository
             {
+                NamespaceId = userNamespace.Id,
                 Name = "public-repository",
                 Description = "Public repository",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -328,6 +384,7 @@ public sealed class MvcPageSmokeTests
             };
             var privateRepository = new GitCandyRepository
             {
+                NamespaceId = userNamespace.Id,
                 Name = "private-repository",
                 Description = "Private repository",
                 CreatedAtUtc = DateTime.UtcNow,
@@ -364,6 +421,12 @@ public sealed class MvcPageSmokeTests
             });
             dbContext.Repositories.AddRange(publicRepository, privateRepository);
             dbContext.Teams.Add(team);
+            await dbContext.SaveChangesAsync();
+            dbContext.RepositoryClaims.AddRange(
+                new GitCandyRepositoryClaim { NamespaceId = userNamespace.Id, RepositoryId = publicRepository.Id,
+                    Slug = publicRepository.Name, NormalizedSlug = publicRepository.NormalizedName, ClaimType = NameClaimType.Current },
+                new GitCandyRepositoryClaim { NamespaceId = userNamespace.Id, RepositoryId = privateRepository.Id,
+                    Slug = privateRepository.Name, NormalizedSlug = privateRepository.NormalizedName, ClaimType = NameClaimType.Current });
             await dbContext.SaveChangesAsync();
         }
 

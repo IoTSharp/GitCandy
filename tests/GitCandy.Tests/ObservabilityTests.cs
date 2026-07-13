@@ -118,6 +118,7 @@ public sealed class ObservabilityTests
                 new LibGit2RepositoryService(pathResolver),
                 new TestExecutableResolver(),
                 Options.Create(new GitSmartHttpOptions()),
+                [],
                 NullLogger<GitProcessTransportBackend>.Instance);
             var missingPath = Path.Combine(repositoryRoot, "private-repository");
             var request = new GitTransportRequest(

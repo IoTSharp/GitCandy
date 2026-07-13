@@ -14,6 +14,7 @@ public sealed class GitProcessTransportBackend(
     IManagedGitRepositoryService repositoryService,
     IGitExecutableResolver executableResolver,
     IOptions<GitSmartHttpOptions> options,
+    IEnumerable<IGitTransportActivitySink> activitySinks,
     ILogger<GitProcessTransportBackend> logger)
     : IGitTransportBackend, IDisposable
 {
@@ -23,6 +24,7 @@ public sealed class GitProcessTransportBackend(
     private readonly IGitExecutableResolver _executableResolver = executableResolver;
     private readonly GitSmartHttpOptions _options = options.Value;
     private readonly ILogger<GitProcessTransportBackend> _logger = logger;
+    private readonly IReadOnlyList<IGitTransportActivitySink> _activitySinks = activitySinks.ToArray();
     private readonly SemaphoreSlim _operationSlots = new(options.Value.MaxConcurrentOperations);
 
     /// <inheritdoc />
@@ -179,6 +181,20 @@ public sealed class GitProcessTransportBackend(
                 request.Repository.RepositoryName,
                 request.ActorName,
                 Stopwatch.GetElapsedTime(startedTimestamp).TotalMilliseconds);
+            foreach (var sink in _activitySinks)
+            {
+                try { await sink.OnCompletedAsync(request, cancellationToken); }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    _logger.LogDebug("Git activity projection was canceled after successful {Service} for {RepositoryName}.",
+                        request.Service, request.Repository.RepositoryName);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogWarning(exception, "Git activity projection failed after successful {Service} for {RepositoryName}.",
+                        request.Service, request.Repository.RepositoryName);
+                }
+            }
             return;
         }
 

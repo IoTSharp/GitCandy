@@ -1,0 +1,5 @@
+@model WorkspaceRepositoriesViewModel
+@{ ViewData["Title"] = Model.Title; }
+<header class="page-heading"><div><h1>@Model.Title</h1><p>@Model.Description</p></div></header>
+@if (Model.Repositories.Count == 0) { <section class="empty-state"><div><i data-lucide="folder-git-2"></i><h2>No repositories</h2></div></section> }
+else { <div class="repository-rows">@foreach (var item in Model.Repositories) { <article><div><a href="/@item.NamespaceSlug/@item.RepositorySlug"><strong>@item.NamespaceSlug/@item.RepositorySlug</strong></a><p>@item.Description</p></div><div class="repository-meta"><span><i data-lucide="star"></i> @item.StarCount</span>@if (item.IsPrivate) { <span>Private</span> }</div></article> }</div> }

@@ -1,0 +1,48 @@
+@model WorkspaceIndexViewModel
+@{ ViewData["Title"] = "Your workspace"; }
+<header class="page-heading workspace-heading">
+    <div><p class="eyebrow">Private workspace</p><h1>@Model.UserName</h1><p>Work that needs your attention, followed by context you can return to.</p></div>
+    <a class="btn" asp-controller="Explore" asp-action="Index"><i data-lucide="compass"></i> Explore</a>
+</header>
+
+<div class="workspace-layout">
+    <div class="workspace-main">
+        <section class="workspace-section" aria-labelledby="todo-heading">
+            <div class="section-heading"><div><h2 id="todo-heading">Needs your attention</h2><span>@Model.Dashboard.Todos.Value.Count open</span></div><a asp-action="Todos">View all</a></div>
+            @if (Model.Dashboard.Todos.Value.Count == 0)
+            { <div class="compact-empty"><i data-lucide="circle-check"></i><span>No pending work.</span></div> }
+            else
+            { <div class="workspace-list">@foreach (var item in Model.Dashboard.Todos.Value) { <article><span class="item-icon"><i data-lucide="circle-dot"></i></span><div><a href="@item.Url"><strong>@item.Title</strong></a><p>@item.Kind · @item.CreatedAtUtc.ToString("u")</p></div><form asp-action="CompleteTodo" asp-route-id="@item.Id" asp-route-version="@item.Version" method="post"><button class="icon-button" type="submit" aria-label="Complete todo" data-tooltip="Complete"><i data-lucide="check"></i></button></form></article> }</div> }
+        </section>
+
+        <section class="workspace-section" aria-labelledby="feed-heading">
+            <div class="section-heading"><div><h2 id="feed-heading">Activity feed</h2><span>Repositories and teams in your context</span></div></div>
+            @if (Model.Dashboard.Feed.Value.Count == 0)
+            { <div class="compact-empty"><i data-lucide="radio"></i><span>No recent activity.</span></div> }
+            else
+            { <div class="workspace-list">@foreach (var item in Model.Dashboard.Feed.Value) { <article><span class="item-icon"><i data-lucide="git-commit-horizontal"></i></span><div><a href="@item.Url"><strong>@item.Title</strong></a><p>@item.Type by @(item.Actor ?? "GitCandy") · @item.OccurredAtUtc.ToString("u")</p></div></article> }</div> }
+        </section>
+
+        <section class="workspace-section" aria-labelledby="attention-heading">
+            <div class="section-heading"><div><h2 id="attention-heading">Repositories to watch</h2><span>Ranked by actionable signals</span></div><a asp-action="Repositories">View all</a></div>
+            <div class="repository-rows">@foreach (var item in Model.Dashboard.AttentionRepositories.Value) { <article><div><a href="/@item.NamespaceSlug/@item.RepositorySlug"><strong>@item.NamespaceSlug/@item.RepositorySlug</strong></a><p>@item.Description</p></div><span class="reason-label">@item.Reason</span></article> }</div>
+        </section>
+    </div>
+
+    <aside class="workspace-sidebar">
+        <section class="workspace-section" aria-labelledby="notification-heading">
+            <div class="section-heading"><div><h2 id="notification-heading">Notifications</h2><span>@Model.Dashboard.UnreadNotificationCount unread</span></div><a asp-controller="Notification" asp-action="Index">Inbox</a></div>
+            @if (Model.Dashboard.Notifications.Value.Count == 0) { <div class="compact-empty"><span>Inbox is clear.</span></div> }
+            else { <div class="sidebar-list">@foreach (var item in Model.Dashboard.Notifications.Value) { <a class="@(item.ReadAtUtc is null ? "is-unread" : null)" href="@item.Url"><strong>@item.Title</strong><span>@item.Reason · @item.CreatedAtUtc.ToString("MMM d")</span></a> }</div> }
+        </section>
+        <section class="workspace-section" aria-labelledby="team-heading">
+            <div class="section-heading"><div><h2 id="team-heading">Teams</h2></div><a asp-action="Teams">View all</a></div>
+            @if (Model.Dashboard.Teams.Value.Count == 0) { <div class="compact-empty"><span>No team memberships.</span></div> }
+            else { <div class="sidebar-list">@foreach (var team in Model.Dashboard.Teams.Value) { <a asp-controller="Team" asp-action="Detail" asp-route-name="@team.Slug"><strong>@team.DisplayName</strong><span>@team.Description</span></a> }</div> }
+        </section>
+        <section class="workspace-section" aria-labelledby="discover-heading">
+            <div class="section-heading"><div><h2 id="discover-heading">Public repositories</h2></div><a asp-controller="Explore" asp-action="Index">Explore</a></div>
+            <div class="sidebar-list">@foreach (var item in Model.Dashboard.Recommendations.Value) { <a href="/@item.NamespaceSlug/@item.RepositorySlug"><strong>@item.NamespaceSlug/@item.RepositorySlug</strong><span>@item.Reason</span></a> }</div>
+        </section>
+    </aside>
+</div>

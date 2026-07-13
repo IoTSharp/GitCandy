@@ -32,6 +32,12 @@ docker pull iotsharp/gitcandy:latest
 
 带 tag 的 GitHub Release 同时提供 Linux/Windows 服务包、migration SQL、Compose 文件和可通过 `docker load` 导入的镜像归档。
 
+## 个人工作台与仓库发现
+
+登录用户默认进入私人 `/me` 工作台，Todo、动态 Feed、需要关注的仓库、统一通知、团队上下文和公开推荐保持独立语义；读取通知不会完成 Todo。`/{username}` 公开个人页只允许 repositories、stars、packages、teams，`/explore` 只读取匿名可访问的公开仓库和版本化推荐快照。
+
+隐私、指标、migration 和回滚说明见 [M12.7 验收记录](docs/migration/m12-7-workspace-discovery.md)。
+
 ## 运维入口
 
 - 存活检查：`/health/live`

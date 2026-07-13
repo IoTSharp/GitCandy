@@ -8,6 +8,8 @@ using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Workspace;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
@@ -65,6 +67,7 @@ public sealed class SshGitIntegrationTests
             useSsh: false);
         var localHead = await fixture.RunGitForOutputAsync(["-C", clonePath, "rev-parse", "HEAD"]);
         Assert.AreEqual(localHead, pushedHead);
+        Assert.IsTrue(await fixture.HasPushActivityAsync(), "Successful SSH receive-pack must publish the shared workspace activity event.");
 
         await fixture.AssertSshCommandRejectedAsync("whoami");
         await fixture.AssertSshCommandRejectedAsync("git-upload-pack '/git/private-demo.git'");
@@ -113,6 +116,13 @@ public sealed class SshGitIntegrationTests
         public string RemoteUrl { get; }
 
         public string CurrentRemoteUrl { get; }
+
+        public async Task<bool> HasPushActivityAsync()
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            return await dbContext.ActivityEvents.AsNoTracking().AnyAsync(item => item.Type == WorkspaceActivityType.Push);
+        }
 
         public static async Task<SshGitFixture> CreateAsync()
         {
