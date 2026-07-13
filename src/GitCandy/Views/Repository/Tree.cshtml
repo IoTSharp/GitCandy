@@ -11,7 +11,7 @@
 <partial name="~/Views/Repository/_RepositoryNavigation.cshtml" model="Model.RepositoryName" />
 <header class="page-heading">
     <div><h1>@Model.RepositoryName</h1><p>@(string.IsNullOrWhiteSpace(Model.Description) ? tree?.Revision.DisplayName ?? "Empty repository" : Model.Description)</p></div>
-    @if (tree is not null || Model.CanStar)
+    @if (tree is not null || Model.CanStar || Model.CanManage)
     {
         <div class="page-actions">
             @if (Model.CanStar && namespaceSlug is not null && repositorySlug is not null)
@@ -24,6 +24,12 @@
             {
                 <a class="btn" href="@(canonicalUrl is null ? Url.Action("Archive", new { name = Model.RepositoryName, revision = tree.Revision.CommitId }) : $"{canonicalUrl}/archive?revision={Uri.EscapeDataString(tree.Revision.CommitId)}")"><i data-lucide="archive"></i> Archive</a>
                 <a class="btn" href="@(canonicalUrl is null ? Url.Action("Tree", new { name = Model.RepositoryName, path = tree.Path, revision = tree.Revision.CommitId }) : Url.RouteUrl("canonical-repository-tree", new { namespaceSlug, project = repositorySlug, path = tree.Path, revision = tree.Revision.CommitId }))"><i data-lucide="link"></i> Permalink</a>
+            }
+            @if (Model.CanManage && namespaceSlug is not null && repositorySlug is not null)
+            {
+                <a class="btn" href="@Url.RouteUrl("canonical-repository-deploy-keys", new { namespaceSlug, project = repositorySlug })"><i data-lucide="key-round"></i> Deploy keys</a>
+                <a class="btn" href="@Url.RouteUrl("canonical-repository-branch-rules", new { namespaceSlug, project = repositorySlug })"><i data-lucide="shield-check"></i> Branch rules</a>
+                <a class="btn" href="@Url.RouteUrl("canonical-repository-webhooks", new { namespaceSlug, project = repositorySlug })"><i data-lucide="webhook"></i> Webhooks</a>
             }
         </div>
     }

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using GitCandy.Git;
+using GitCandy.Integrations;
 using GitCandy.Workspace;
 
 namespace GitCandy.Schedules;
@@ -17,14 +18,27 @@ public sealed class GitTransportWorkspaceActivitySink(
     {
         if (request.Service != GitTransportService.ReceivePack || request.AdvertiseRefs) return;
         var snapshot = _repositoryService.ReadSnapshot(request.Repository, cancellationToken);
-        var refs = snapshot.Branches.Concat(snapshot.Tags)
-            .OrderBy(item => item.CanonicalName, StringComparer.Ordinal)
-            .Select(item => $"{item.CanonicalName}={item.TargetId}")
-            .ToArray();
-        if (refs.Length == 0) return;
-        var stateId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', refs))));
+        var references = new List<IntegrationReference>();
+        foreach (var reference in snapshot.Branches.Concat(snapshot.Tags)
+            .OrderBy(item => item.CanonicalName, StringComparer.Ordinal))
+        {
+            if (reference.TargetId is string targetSha)
+            {
+                references.Add(new IntegrationReference(reference.CanonicalName, targetSha));
+            }
+        }
+        var stateText = string.Join('\n', references.Select(item => $"{item.Name}={item.TargetSha}"));
+        var stateId = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(stateText)));
         await using var scope = _serviceScopeFactory.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<IWorkspaceActivityPublisher>()
-            .PublishPushAsync(request.Repository.RepositoryName, request.ActorName, stateId, cancellationToken);
+        await Task.WhenAll(
+            scope.ServiceProvider.GetRequiredService<IWorkspaceActivityPublisher>()
+                .PublishPushAsync(request.Repository.RepositoryName, request.ActorName, stateId, cancellationToken),
+            scope.ServiceProvider.GetRequiredService<IIntegrationEventPublisher>()
+                .PublishPushAsync(
+                    request.Repository.RepositoryName,
+                    request.ActorName,
+                    stateId,
+                    references,
+                    cancellationToken));
     }
 }

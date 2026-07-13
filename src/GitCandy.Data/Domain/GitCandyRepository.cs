@@ -97,4 +97,14 @@ public sealed class GitCandyRepository
 
     /// <summary>仓库 Pull Requests。</summary>
     public ICollection<GitCandyPullRequest> PullRequests { get; } = [];
+
+    /// <summary>仓库级 SSH deploy keys。</summary>
+    public ICollection<GitCandyDeployKey> DeployKeys { get; } = [];
+
+    /// <summary>保护分支规则。</summary>
+    public ICollection<GitCandyBranchProtectionRule> BranchProtectionRules { get; } = [];
+
+    public ICollection<GitCandyIntegrationEvent> IntegrationEvents { get; } = [];
+    public ICollection<GitCandyWebhookSubscription> WebhookSubscriptions { get; } = [];
+    public ICollection<GitCandyCommitCheck> CommitChecks { get; } = [];
 }

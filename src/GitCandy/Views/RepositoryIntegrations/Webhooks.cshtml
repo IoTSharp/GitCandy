@@ -1,0 +1,59 @@
+@model RepositoryWebhooksViewModel
+@using GitCandy.Integrations
+@{ ViewData["Title"] = $"Webhooks - {Model.RepositoryName}"; }
+<header class="page-heading">
+    <div><h1>Webhooks</h1><p>Signed repository events for @Model.RepositoryName.</p></div>
+    <div class="page-actions"><a href="@Model.CanonicalRepositoryPath" class="btn"><i data-lucide="arrow-left"></i> Repository</a></div>
+</header>
+<h2>Subscriptions</h2>
+@if (Model.Subscriptions.Count == 0)
+{
+    <div class="empty-state"><p>No webhook subscriptions are configured.</p></div>
+}
+else
+{
+    <div class="table-responsive"><table><thead><tr><th>Name</th><th>Target</th><th>Events</th><th>Status</th><th></th></tr></thead><tbody>
+    @foreach (var subscription in Model.Subscriptions)
+    {
+        <tr>
+            <td><strong>@subscription.Name</strong><div class="entity-meta">Created @subscription.CreatedAt.ToString("u")</div></td>
+            <td><code>@subscription.TargetUrl</code></td>
+            <td>@subscription.Events</td>
+            <td>@(subscription.IsActive ? "Active" : "Paused")</td>
+            <td><form action="@(Model.CanonicalRepositoryPath)/settings/webhooks/@subscription.Id/active?value=@(!subscription.IsActive)" method="post">@Html.AntiForgeryToken()<button type="submit" class="icon-button" aria-label="@(subscription.IsActive ? "Pause webhook" : "Enable webhook")" data-tooltip="@(subscription.IsActive ? "Pause" : "Enable")"><i data-lucide="@(subscription.IsActive ? "pause" : "play")"></i></button></form></td>
+        </tr>
+    }
+    </tbody></table></div>
+}
+<h2>Add webhook</h2>
+<form action="@(Model.CanonicalRepositoryPath)/settings/webhooks" method="post" class="account-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <div class="form-field"><label asp-for="Create.Name"></label><input asp-for="Create.Name" autocomplete="off" /></div>
+    <div class="form-field"><label asp-for="Create.TargetUrl"></label><input asp-for="Create.TargetUrl" type="url" placeholder="https://ci.example.com/hooks/gitcandy" /></div>
+    <fieldset><legend>Events</legend>
+        <label><input asp-for="Create.Push" /> @Html.DisplayNameFor(model => model.Create.Push)</label>
+        <label><input asp-for="Create.PullRequestMerged" /> @Html.DisplayNameFor(model => model.Create.PullRequestMerged)</label>
+        <label><input asp-for="Create.CheckUpdated" /> @Html.DisplayNameFor(model => model.Create.CheckUpdated)</label>
+    </fieldset>
+    <button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Add webhook</button>
+</form>
+<h2>Recent deliveries</h2>
+@if (Model.Deliveries.Count == 0)
+{
+    <div class="empty-state"><p>No webhook deliveries are available.</p></div>
+}
+else
+{
+    <div class="table-responsive"><table><thead><tr><th>Delivery</th><th>Event</th><th>State</th><th>Attempts</th><th>Response</th><th></th></tr></thead><tbody>
+    @foreach (var delivery in Model.Deliveries)
+    {
+        <tr>
+            <td><code>@delivery.DeliveryId</code><div class="entity-meta">@delivery.CreatedAt.ToString("u")</div></td>
+            <td>@delivery.EventType</td><td>@delivery.State</td><td>@delivery.AttemptCount</td>
+            <td>@(delivery.ResponseStatusCode?.ToString() ?? delivery.ErrorCode ?? "Pending")</td>
+            <td><form action="@(Model.CanonicalRepositoryPath)/settings/webhooks/deliveries/@delivery.DeliveryId/replay" method="post">@Html.AntiForgeryToken()<button type="submit" class="icon-button" aria-label="Replay webhook delivery" data-tooltip="Replay"><i data-lucide="rotate-cw"></i></button></form></td>
+        </tr>
+    }
+    </tbody></table></div>
+}

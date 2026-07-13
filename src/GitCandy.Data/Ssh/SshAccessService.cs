@@ -3,6 +3,8 @@ using GitCandy.Application;
 using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Permissions;
+using GitCandy.Credentials;
+using GitCandy.Data.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace GitCandy.Ssh;
@@ -30,21 +32,26 @@ internal sealed class SshAccessService(
 
         var fingerprint = Convert.ToBase64String(SHA256.HashData(publicKey)).TrimEnd('=');
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var key = await dbContext.SshKeys
+        var userKey = await dbContext.SshKeys
             .Include(item => item.User)
             .SingleOrDefaultAsync(
                 item => item.Fingerprint == fingerprint && item.KeyType == keyType,
                 cancellationToken);
-        if (key is null || !MatchesStoredKey(key.PublicKey, publicKey))
+        if (userKey is not null && MatchesStoredKey(userKey.PublicKey, publicKey))
         {
-            return null;
+            return (await CreateUserAuthorizedKeyAsync(
+                dbContext,
+                userKey,
+                recordUsage,
+                cancellationToken))?.Principal;
         }
 
-        return (await CreateAuthorizedKeyAsync(
-            dbContext,
-            key,
-            recordUsage,
-            cancellationToken))?.Principal;
+        var deployKey = await dbContext.DeployKeys.SingleOrDefaultAsync(
+            item => item.Fingerprint == fingerprint && item.KeyType == keyType,
+            cancellationToken);
+        return deployKey is null || !MatchesStoredKey(deployKey.PublicKey, publicKey)
+            ? null
+            : (await CreateDeployAuthorizedKeyAsync(dbContext, deployKey, recordUsage, cancellationToken))?.Principal;
     }
 
     /// <inheritdoc />
@@ -62,45 +69,99 @@ internal sealed class SshAccessService(
         }
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var key = await dbContext.SshKeys
+        var userKey = await dbContext.SshKeys
             .Include(item => item.User)
             .SingleOrDefaultAsync(
                 item => item.Fingerprint == normalizedFingerprint,
                 cancellationToken);
-        return key is null
+        if (userKey is not null)
+        {
+            return await CreateUserAuthorizedKeyAsync(dbContext, userKey, recordUsage, cancellationToken);
+        }
+
+        var deployKey = await dbContext.DeployKeys.SingleOrDefaultAsync(
+            item => item.Fingerprint == normalizedFingerprint,
+            cancellationToken);
+        return deployKey is null
             ? null
-            : await CreateAuthorizedKeyAsync(dbContext, key, recordUsage, cancellationToken);
+            : await CreateDeployAuthorizedKeyAsync(dbContext, deployKey, recordUsage, cancellationToken);
     }
 
-    private static async Task<SshAuthorizedKey?> CreateAuthorizedKeyAsync(
+    private async Task<SshAuthorizedKey?> CreateDeployAuthorizedKeyAsync(
         GitCandyDbContext dbContext,
-        GitCandy.Data.Domain.GitCandySshKey key,
+        GitCandyDeployKey key,
         bool recordUsage,
         CancellationToken cancellationToken)
     {
+        var now = _timeProvider.GetUtcNow();
+        if (key.RevokedAtUtc is not null
+            || key.ExpiresAtUtc is DateTime expiresAtUtc && expiresAtUtc <= now.UtcDateTime)
+        {
+            return null;
+        }
+
+        if (recordUsage)
+        {
+            key.LastUsedAtUtc = now.UtcDateTime;
+            dbContext.CredentialAuditEvents.Add(new GitCandyCredentialAuditEvent
+            {
+                CredentialKind = CredentialClaimTypes.DeployKey,
+                CredentialId = key.Id,
+                RepositoryId = key.RepositoryId,
+                Action = "authenticate",
+                Outcome = "success",
+                Detail = key.CanWrite ? "write" : "read",
+                OccurredAtUtc = now.UtcDateTime
+            });
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return new SshAuthorizedKey(
+            new SshPrincipal(
+                UserId: null,
+                UserName: $"deploy-key:{key.Name}",
+                IsAdministrator: false,
+                DeployKeyId: key.Id,
+                RepositoryId: key.RepositoryId,
+                CanWrite: key.CanWrite),
+            key.KeyType,
+            key.PublicKey,
+            key.Fingerprint);
+    }
+
+    private async Task<SshAuthorizedKey?> CreateUserAuthorizedKeyAsync(
+        GitCandyDbContext dbContext,
+        GitCandySshKey key,
+        bool recordUsage,
+        CancellationToken cancellationToken)
+    {
+        var now = _timeProvider.GetUtcNow();
+
         var userName = key.User?.UserName;
         if (userName is null)
         {
             return null;
         }
 
+        var userId = key.UserId;
+
         var normalizedAdministratorRole = RoleNames.Administrator.ToUpperInvariant();
         var isAdministrator = await (
             from userRole in dbContext.UserRoles.AsNoTracking()
             join role in dbContext.Roles.AsNoTracking() on userRole.RoleId equals role.Id
-            where userRole.UserId == key.UserId
+            where userRole.UserId == userId
                 && role.NormalizedName == normalizedAdministratorRole
             select userRole)
             .AnyAsync(cancellationToken);
 
         if (recordUsage)
         {
-            key.LastUsedAtUtc = DateTime.UtcNow;
+            key.LastUsedAtUtc = now.UtcDateTime;
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         return new SshAuthorizedKey(
-            new SshPrincipal(key.UserId, userName, isAdministrator),
+            new SshPrincipal(userId, userName, isAdministrator),
             key.KeyType,
             key.PublicKey,
             key.Fingerprint);
@@ -114,17 +175,28 @@ internal sealed class SshAccessService(
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(principal);
+        if (principal.DeployKeyId is not null)
+        {
+            return principal.RepositoryId == repositoryId
+                && (!requiresWrite || principal.CanWrite);
+        }
+
+        if (principal.UserId is not string userId)
+        {
+            return false;
+        }
+
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var permissionQuery = new GitCandyRepositoryPermissionQuery(dbContext);
         return requiresWrite
             ? await permissionQuery.CanWriteRepositoryAsync(
                 repositoryId,
-                principal.UserId,
+                userId,
                 principal.IsAdministrator,
                 cancellationToken)
             : await permissionQuery.CanReadRepositoryAsync(
                 repositoryId,
-                principal.UserId,
+                userId,
                 principal.IsAdministrator,
                 cancellationToken);
     }

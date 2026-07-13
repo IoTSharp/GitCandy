@@ -139,6 +139,10 @@ Pull Request review 策略也位于 `GitCandy:Application`：
 | `DismissStalePullRequestApprovals` | `true` | source head 更新后，旧 head 上的 approve 是否不再作为有效批准；历史 review 始终保留 |
 | `RequiredPullRequestApprovals` | `1` | merge/squash 前所需的当前有效 approve 数；设为 `0` 可关闭该基础门禁，M13 branch policy 会在此基础上扩展 |
 
+Webhook delivery 由 `GitCandy:Webhooks` 配置。生产默认只允许公网 HTTPS target，`AllowHttpTargets=false`、`AllowPrivateNetworkTargets=false`；DNS/IP 策略在 subscription 保存和实际 socket 连接时都会执行，且不会跟随 redirect。`RequestTimeout`、`ConnectTimeout`、`MaxAttempts`、`DeliveryBatchSize`、`MaxResponseBytes` 和 `MaxSubscriptionsPerRepository` 控制有界资源使用。`AllowHttpTargets` 与 `AllowPrivateNetworkTargets` 只应用于受控本地 fixture；生产启用会扩大 SSRF 和内网访问面，必须另行评审并限制应用出站网络。
+
+Webhook signing secret 由 Data Protection key ring 加密保存且只在创建页显示一次，因此 `DataProtectionKeysPath` 与数据库必须一致备份/恢复。丢失 key ring 后旧 subscription 无法继续签名，应暂停并重新创建，而不是在日志或配置中回显 secret。
+
 `CachePath/lfs` 虽位于 cache 根，但保存不可重建的 LFS 内容寻址对象，必须纳入持久卷、备份/恢复和容量告警；其他普通 cache 仍可重建。
 
 ### Identity 和 OpenID Connect

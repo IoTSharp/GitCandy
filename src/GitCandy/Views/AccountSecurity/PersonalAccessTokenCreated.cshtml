@@ -1,0 +1,9 @@
+@model GitCandy.Credentials.CreatedPersonalAccessToken
+@{ ViewData["Title"] = "Personal access token created"; }
+<header class="page-heading"><div><h1>Personal access token created</h1><p>@Model.Summary.Name</p></div></header>
+<div class="alert alert-warning" role="alert">This token is shown once. Store it in the calling system's secret store.</div>
+<div class="input-group">
+    <input id="created-personal-access-token" type="text" value="@Model.Token" readonly autocomplete="off" aria-label="Personal access token" />
+    <span class="input-group-btn"><button type="button" class="btn" data-copy-target="#created-personal-access-token" data-label="Copy token" data-copied="Copied" data-tooltip="Copy token" aria-label="Copy token"><i data-lucide="copy"></i></button></span>
+</div>
+<p><a asp-action="PersonalAccessTokens" class="btn"><i data-lucide="arrow-left"></i> Back to tokens</a></p>

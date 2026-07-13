@@ -10,6 +10,9 @@ public static class GitCandyAuthenticationSchemes
     /// </summary>
     public const string GitBasic = "GitCandy.GitBasic";
 
+    /// <summary>HTTP API 使用的 Bearer PAT 认证方案。</summary>
+    public const string PersonalAccessToken = "GitCandy.PersonalAccessToken";
+
     /// <summary>
     /// 可选的通用 OpenID Connect Web 登录方案。
     /// </summary>

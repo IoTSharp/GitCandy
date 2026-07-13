@@ -6,6 +6,7 @@ using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Models;
 using GitCandy.Workspace;
+using GitCandy.Credentials;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -326,6 +327,16 @@ public sealed class GitLfsController(
         }
 
         var principal = authentication.Principal ?? AnonymousPrincipal;
+        var requiredScope = requireWrite
+            ? PersonalAccessTokenScopes.GitWrite
+            : PersonalAccessTokenScopes.GitRead;
+        if (!principal.HasPersonalAccessTokenScope(requiredScope))
+        {
+            return new RepositoryAccess(
+                principal,
+                null,
+                StatusCode(StatusCodes.Status403Forbidden));
+        }
         RepositoryAddressResolution? address;
         try
         {

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text;
 using GitCandy.Git;
 using GitCandy.Issues;
+using GitCandy.Credentials;
 using Microsoft.DevTunnels.Ssh;
 using Microsoft.DevTunnels.Ssh.Events;
 using Microsoft.DevTunnels.Ssh.Messages;
@@ -132,12 +133,17 @@ internal sealed class GitSshSession : IDisposable
             var authenticationType = args.AuthenticationType == SshAuthenticationType.ClientPublicKey
                 ? "GitCandy.Ssh.PublicKey"
                 : null;
-            var identity = new ClaimsIdentity(
-                [
-                    new Claim(ClaimTypes.NameIdentifier, principal.UserId),
-                    new Claim(ClaimTypes.Name, principal.UserName)
-                ],
-                authenticationType);
+            var claims = new List<Claim> { new(ClaimTypes.Name, principal.UserName) };
+            if (principal.UserId is string userId)
+            {
+                claims.Add(new Claim(ClaimTypes.NameIdentifier, userId));
+            }
+            if (principal.DeployKeyId is long deployKeyId)
+            {
+                claims.Add(new Claim(CredentialClaimTypes.CredentialKind, CredentialClaimTypes.DeployKey));
+                claims.Add(new Claim(CredentialClaimTypes.CredentialId, deployKeyId.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            }
+            var identity = new ClaimsIdentity(claims, authenticationType);
             return new ClaimsPrincipal(identity);
         }
         catch (OperationCanceledException) when (linkedCancellation.IsCancellationRequested)
@@ -292,8 +298,7 @@ internal sealed class GitSshSession : IDisposable
                 repository,
                 address.RepositoryId,
                 parsedCommand.Service,
-                principal.UserId,
-                principal.UserName,
+                new GitTransportActor(principal.UserName, principal.UserId, principal.DeployKeyId),
                 _gitProtocolVersion,
                 address.UsedAlias ? address.CanonicalPath : null);
         }
@@ -337,13 +342,16 @@ internal sealed class GitSshSession : IDisposable
                 StatelessRpc: false,
                 AdvertiseRefs: false,
                 command.ProtocolVersion,
-                command.ActorName);
+                command.Actor.Name,
+                command.RepositoryId,
+                command.Actor);
             await _transportBackend.ExecuteAsync(
                 request,
                 input,
                 output,
                 _sessionCancellation.Token);
-            if (command.Service == GitTransportService.ReceivePack)
+            if (command.Service == GitTransportService.ReceivePack
+                && command.Actor.UserId is not null)
             {
                 await ApplyClosingReferencesAsync(command);
             }
@@ -422,7 +430,7 @@ internal sealed class GitSshSession : IDisposable
             {
                 await _issueService.ApplyClosingReferencesAsync(
                     command.RepositoryId,
-                    command.ActorUserId,
+                    command.Actor.UserId!,
                     commit.Message,
                     commit.Id,
                     timeout.Token);
@@ -440,8 +448,7 @@ internal sealed class GitSshSession : IDisposable
         GitRepositoryContext Repository,
         long RepositoryId,
         GitTransportService Service,
-        string ActorUserId,
-        string ActorName,
+        GitTransportActor Actor,
         string? ProtocolVersion,
         string? CanonicalPath);
 }

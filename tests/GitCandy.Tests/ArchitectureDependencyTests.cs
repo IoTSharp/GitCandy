@@ -118,6 +118,7 @@ public sealed class ArchitectureDependencyTests
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             Path.Combine(sourceRoot, "GitCandy.Git", "GitProcessTransportBackend.cs"),
+            Path.Combine(sourceRoot, "GitCandy.Git", "GitReceiveHook.cs"),
             Path.Combine(sourceRoot, "GitCandy", "Operations", "GitBackendHealthCheck.cs")
         };
         var processMarkers = new[] { "new Process", "Process.Start", "new ProcessStartInfo" };

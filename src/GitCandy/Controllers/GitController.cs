@@ -8,6 +8,7 @@ using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Issues;
 using GitCandy.Workspace;
+using GitCandy.Credentials;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
@@ -95,6 +96,13 @@ public sealed class GitController(
         }
 
         var principal = authenticationResult.Principal ?? AnonymousPrincipal;
+        var requiredScope = operation.Service == GitTransportService.ReceivePack
+            ? PersonalAccessTokenScopes.GitWrite
+            : PersonalAccessTokenScopes.GitRead;
+        if (!principal.HasPersonalAccessTokenScope(requiredScope))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden);
+        }
         RepositoryAddressResolution? address;
         try
         {
@@ -199,7 +207,11 @@ public sealed class GitController(
                     StatelessRpc: true,
                     operation.AdvertiseRefs,
                     protocolVersion,
-                    principal.Identity?.Name ?? "anonymous"),
+                    principal.Identity?.Name ?? "anonymous",
+                    address.RepositoryId,
+                    new GitTransportActor(
+                        principal.Identity?.Name ?? "anonymous",
+                        principal.FindFirstValue(ClaimTypes.NameIdentifier))),
                 input,
                 Response.Body,
                 timeoutSource.Token);

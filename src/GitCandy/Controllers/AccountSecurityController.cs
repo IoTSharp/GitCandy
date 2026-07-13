@@ -5,6 +5,7 @@ using GitCandy.Authentication;
 using GitCandy.Configuration;
 using GitCandy.Data.Identity;
 using GitCandy.Models.Account;
+using GitCandy.Credentials;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -19,12 +20,98 @@ public sealed class AccountSecurityController(
     UserManager<GitCandyUser> userManager,
     SignInManager<GitCandyUser> signInManager,
     INamespaceProvisioningService namespaceProvisioningService,
-    IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
+    IOptions<GitCandyApplicationOptions> applicationOptions,
+    IPersonalAccessTokenService personalAccessTokenService) : CandyControllerBase
 {
     private readonly UserManager<GitCandyUser> _userManager = userManager;
     private readonly SignInManager<GitCandyUser> _signInManager = signInManager;
     private readonly INamespaceProvisioningService _namespaceProvisioningService = namespaceProvisioningService;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
+    private readonly IPersonalAccessTokenService _personalAccessTokenService = personalAccessTokenService;
+
+    [HttpGet("PersonalAccessTokens")]
+    [Authorize]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<IActionResult> PersonalAccessTokens(CancellationToken cancellationToken)
+    {
+        var userId = _userManager.GetUserId(User);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Challenge();
+        }
+
+        return View(new PersonalAccessTokensViewModel
+        {
+            Tokens = await _personalAccessTokenService.GetForUserAsync(userId, cancellationToken)
+        });
+    }
+
+    [HttpPost("PersonalAccessTokens")]
+    [Authorize]
+    [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+    public async Task<IActionResult> CreatePersonalAccessToken(
+        [Bind(Prefix = "Create")] CreatePersonalAccessTokenViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var userId = _userManager.GetUserId(User);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Challenge();
+        }
+
+        var scopes = model.GetScopes();
+        if (scopes.Count == 0)
+        {
+            ModelState.AddModelError(string.Empty, "Select at least one scope.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return View(nameof(PersonalAccessTokens), new PersonalAccessTokensViewModel
+            {
+                Create = model,
+                Tokens = await _personalAccessTokenService.GetForUserAsync(userId, cancellationToken)
+            });
+        }
+
+        DateTimeOffset? expiresAt = model.ExpiresAtUtc is null
+            ? null
+            : new DateTimeOffset(DateTime.SpecifyKind(model.ExpiresAtUtc.Value, DateTimeKind.Utc));
+        var created = await _personalAccessTokenService.CreateAsync(
+            userId,
+            model.Name,
+            scopes,
+            expiresAt,
+            cancellationToken);
+        if (created is null)
+        {
+            ModelState.AddModelError(string.Empty, "The token name, scopes, or expiry is invalid.");
+            return View(nameof(PersonalAccessTokens), new PersonalAccessTokensViewModel
+            {
+                Create = model,
+                Tokens = await _personalAccessTokenService.GetForUserAsync(userId, cancellationToken)
+            });
+        }
+
+        return View("PersonalAccessTokenCreated", created);
+    }
+
+    [HttpPost("PersonalAccessTokens/{tokenId:long}/revoke")]
+    [Authorize]
+    public async Task<IActionResult> RevokePersonalAccessToken(
+        long tokenId,
+        CancellationToken cancellationToken)
+    {
+        var userId = _userManager.GetUserId(User);
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Challenge();
+        }
+
+        return await _personalAccessTokenService.RevokeAsync(userId, tokenId, cancellationToken)
+            ? RedirectToAction(nameof(PersonalAccessTokens))
+            : NotFound();
+    }
 
     [HttpGet("Security")]
     [Authorize]

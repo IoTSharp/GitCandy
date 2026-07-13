@@ -5,6 +5,7 @@ using GitCandy.Authentication;
 using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Identity;
+using GitCandy.Credentials;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -35,6 +36,49 @@ public sealed class GitBasicAuthenticationHandlerTests
         Assert.AreEqual(
             BasicAuthenticationFixture.UserId,
             result.Principal?.FindFirstValue(ClaimTypes.NameIdentifier));
+    }
+
+    [TestMethod]
+    public async Task AuthenticateAsync_WithGitScopedPersonalAccessToken_ReturnsMachineCredentialClaims()
+    {
+        await using var fixture = await BasicAuthenticationFixture.CreateAsync();
+        var token = await fixture.CreateTokenAsync(PersonalAccessTokenScopes.GitRead);
+
+        var result = await fixture.AuthenticateAsync("git-user", token.Token);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(
+            CredentialClaimTypes.PersonalAccessToken,
+            result.Principal?.FindFirstValue(CredentialClaimTypes.CredentialKind));
+        Assert.IsTrue(result.Principal?.HasClaim(
+            CredentialClaimTypes.Scope,
+            PersonalAccessTokenScopes.GitRead));
+        Assert.AreEqual(token.Summary.Id.ToString(), result.Principal?.FindFirstValue(CredentialClaimTypes.CredentialId));
+    }
+
+    [TestMethod]
+    public async Task AuthenticateAsync_WithPersonalAccessTokenForDifferentUser_ReturnsFailure()
+    {
+        await using var fixture = await BasicAuthenticationFixture.CreateAsync();
+        var token = await fixture.CreateTokenAsync(PersonalAccessTokenScopes.GitRead);
+
+        var result = await fixture.AuthenticateAsync("someone-else", token.Token);
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(0, (await fixture.GetLockoutStateAsync()).AccessFailedCount);
+    }
+
+    [TestMethod]
+    public async Task PersonalAccessTokenScheme_WithApiScope_AuthenticatesBearerWithoutCookie()
+    {
+        await using var fixture = await BasicAuthenticationFixture.CreateAsync();
+        var token = await fixture.CreateTokenAsync(PersonalAccessTokenScopes.ApiRead);
+
+        var result = await fixture.AuthenticateBearerAsync(token.Token);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(GitCandyAuthenticationSchemes.PersonalAccessToken, result.Ticket?.AuthenticationScheme);
+        Assert.IsTrue(result.Principal?.HasClaim(CredentialClaimTypes.Scope, PersonalAccessTokenScopes.ApiRead));
     }
 
     [TestMethod]
@@ -165,6 +209,28 @@ public sealed class GitBasicAuthenticationHandlerTests
             return await authenticationService.AuthenticateAsync(
                 context,
                 GitCandyAuthenticationSchemes.GitBasic);
+        }
+
+        public async Task<AuthenticateResult> AuthenticateBearerAsync(string token)
+        {
+            await using var scope = ServiceProvider.CreateAsyncScope();
+            var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+            context.Request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token).ToString();
+            return await scope.ServiceProvider.GetRequiredService<IAuthenticationService>().AuthenticateAsync(
+                context,
+                GitCandyAuthenticationSchemes.PersonalAccessToken);
+        }
+
+        public async Task<CreatedPersonalAccessToken> CreateTokenAsync(params string[] scopes)
+        {
+            await using var scope = ServiceProvider.CreateAsyncScope();
+            var token = await scope.ServiceProvider.GetRequiredService<IPersonalAccessTokenService>().CreateAsync(
+                UserId,
+                "test token",
+                scopes,
+                DateTimeOffset.UtcNow.AddHours(1));
+            Assert.IsNotNull(token);
+            return token;
         }
 
         public async Task<(int AccessFailedCount, DateTimeOffset? LockoutEnd)> GetLockoutStateAsync()

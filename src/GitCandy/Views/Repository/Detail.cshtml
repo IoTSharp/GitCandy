@@ -16,6 +16,8 @@
     {
         <div class="page-actions">
             <a asp-action="Coop" asp-route-name="@Model.Repository.Name" class="btn"><i data-lucide="users"></i> Relationships</a>
+            <a asp-action="DeployKeys" asp-route-name="@Model.Repository.Name" class="btn"><i data-lucide="key-round"></i> Deploy keys</a>
+            <a asp-action="BranchProtections" asp-route-name="@Model.Repository.Name" class="btn"><i data-lucide="shield-check"></i> Branch rules</a>
             <a asp-action="Edit" asp-route-name="@Model.Repository.Name" class="btn btn-primary"><i data-lucide="settings"></i> Edit</a>
         </div>
     }

@@ -1,9 +1,12 @@
 using System.Globalization;
 using System.Net;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using GitCandy.Application;
 using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Caching;
+using GitCandy.Credentials;
 using GitCandy.Data;
 using GitCandy.Data.Configuration;
 using GitCandy.Data.Identity;
@@ -13,10 +16,12 @@ using GitCandy.Diagnostics;
 using GitCandy.Git;
 using GitCandy.Identity;
 using GitCandy.IdentityServices;
+using GitCandy.Integrations;
 using GitCandy.Operations;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
+using GitCandy.Web.Integrations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +29,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -74,6 +80,7 @@ public static class WebServiceCollectionExtensions
                 ResolveDataProtectionKeysPath(configuration, contentRootPath)));
         services.AddGitSmartHttpOptions(configuration);
         services.AddRepositoryBrowserOptions(configuration);
+        services.AddGitCandyWebhooks(configuration);
         var identitySettings = AddGitCandyIdentityOptions(services, configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
@@ -86,6 +93,7 @@ public static class WebServiceCollectionExtensions
 
         services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
+        ConfigureReceiveHook(services, configuration);
         services.AddGitCandyGit();
         services.AddGitCandyHealthChecks();
 
@@ -110,6 +118,9 @@ public static class WebServiceCollectionExtensions
         var authentication = services.AddAuthentication()
             .AddScheme<AuthenticationSchemeOptions, GitBasicAuthenticationHandler>(
                 GitCandyAuthenticationSchemes.GitBasic,
+                _ => { })
+            .AddScheme<AuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
+                GitCandyAuthenticationSchemes.PersonalAccessToken,
                 _ => { });
 
         if (identitySettings.OpenIdConnect.Enabled)
@@ -178,6 +189,35 @@ public static class WebServiceCollectionExtensions
                 AuthorizationPolicies.CurrentUser,
                 policy => policy.RequireAuthenticatedUser()
                     .AddRequirements(new CurrentUserRequirement()));
+            options.AddPolicy(
+                AuthorizationPolicies.ApiRead,
+                policy => policy.AddAuthenticationSchemes(GitCandyAuthenticationSchemes.PersonalAccessToken)
+                    .RequireAuthenticatedUser()
+                    .RequireClaim(CredentialClaimTypes.Scope, PersonalAccessTokenScopes.ApiRead));
+            options.AddPolicy(
+                AuthorizationPolicies.ApiWrite,
+                policy => policy.AddAuthenticationSchemes(GitCandyAuthenticationSchemes.PersonalAccessToken)
+                    .RequireAuthenticatedUser()
+                    .RequireClaim(CredentialClaimTypes.Scope, PersonalAccessTokenScopes.ApiWrite));
+        });
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(ApiRateLimitPolicies.Write, context =>
+            {
+                var credentialId = context.User.FindFirstValue(CredentialClaimTypes.CredentialId)
+                    ?? context.Connection.RemoteIpAddress?.ToString()
+                    ?? "unknown";
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    credentialId,
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        AutoReplenishment = true,
+                        PermitLimit = 120,
+                        QueueLimit = 0,
+                        Window = TimeSpan.FromMinutes(1)
+                    });
+            });
         });
 
         services.AddMemoryCache();
@@ -230,16 +270,46 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
         services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
+        ConfigureReceiveHook(services, configuration);
         services.AddGitCandyGit();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitTransportActivitySink, GitTransportWorkspaceActivitySink>());
         services.AddGitCandyOpenSshAdapter();
         return services;
     }
 
+    /// <summary>注册 Git pre-receive 短生命周期子命令需要的数据与 gate 服务。</summary>
+    public static IServiceCollection AddGitCandyReceiveHookCommand(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddGitCandyApplicationOptions(configuration);
+        services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
+        services.AddConfiguredGitCandyData(configuration);
+        services.AddGitCandyApplicationServices();
+        ConfigureReceiveHook(services, configuration);
+        services.AddGitCandyGit();
+        return services;
+    }
+
+    private static void ConfigureReceiveHook(IServiceCollection services, IConfiguration configuration)
+    {
+        var database = GitCandyDatabaseOptionsReader.Read(configuration);
+        services.Configure<GitReceiveHookOptions>(options =>
+        {
+            options.CommandAssemblyPath = typeof(WebServiceCollectionExtensions).Assembly.Location;
+            options.DatabaseProvider = database.Provider.ToString();
+            options.DatabaseConnectionString = database.ConnectionString;
+        });
+    }
+
     private static IServiceCollection AddGitCandyScheduler(this IServiceCollection services)
     {
         services.TryAddTransient<QuartzSchedulerJob>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, WorkspaceProjectionJob>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, WebhookDeliveryJob>());
 
         services.AddQuartz(options =>
         {
@@ -263,6 +333,42 @@ public static class WebServiceCollectionExtensions
             options.WaitForJobsToComplete = true;
         });
 
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyWebhooks(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<WebhookOptions>()
+            .Bind(configuration.GetSection(WebhookOptions.SectionName))
+            .Validate(options => options.RequestTimeout > TimeSpan.Zero, "RequestTimeout must be positive.")
+            .Validate(options => options.ConnectTimeout > TimeSpan.Zero, "ConnectTimeout must be positive.")
+            .Validate(options => options.MaxAttempts is >= 1 and <= 20, "MaxAttempts must be between 1 and 20.")
+            .Validate(options => options.DeliveryBatchSize is >= 1 and <= 200, "DeliveryBatchSize must be between 1 and 200.")
+            .Validate(options => options.MaxResponseBytes is >= 0 and <= 65536, "MaxResponseBytes is invalid.")
+            .Validate(options => options.MaxSubscriptionsPerRepository is >= 1 and <= 200, "MaxSubscriptionsPerRepository is invalid.")
+            .ValidateOnStart();
+        services.TryAddSingleton<IWebhookSecretProtector, WebhookSecretProtector>();
+        services.TryAddSingleton<IOutboundTargetPolicy, OutboundTargetPolicy>();
+        services.TryAddSingleton<IWebhookSender, WebhookSender>();
+        services.AddHttpClient(WebhookSender.HttpClientName, client =>
+            client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(provider =>
+            {
+                var options = provider.GetRequiredService<IOptions<WebhookOptions>>().Value;
+                var targetPolicy = provider.GetRequiredService<IOutboundTargetPolicy>();
+                return new SocketsHttpHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseProxy = false,
+                    ConnectTimeout = options.ConnectTimeout,
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    MaxConnectionsPerServer = 4,
+                    ConnectCallback = (context, cancellationToken) =>
+                        targetPolicy.ConnectAsync(context.DnsEndPoint, cancellationToken)
+                };
+            });
         return services;
     }
 

@@ -3,6 +3,7 @@ using GitCandy.Configuration;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
+using GitCandy.Credentials;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -224,7 +225,8 @@ internal sealed class UserAdministrationService(
         }
 
         var fingerprint = Convert.ToBase64String(SHA256.HashData(keyBytes)).TrimEnd('=');
-        if (await _dbContext.SshKeys.AnyAsync(key => key.Fingerprint == fingerprint, cancellationToken))
+        if (await _dbContext.SshKeys.AnyAsync(key => key.Fingerprint == fingerprint, cancellationToken)
+            || await _dbContext.DeployKeys.AnyAsync(key => key.Fingerprint == fingerprint, cancellationToken))
         {
             return null;
         }
@@ -236,6 +238,12 @@ internal sealed class UserAdministrationService(
             PublicKey = parts[1],
             Fingerprint = fingerprint,
             ImportedAtUtc = DateTime.UtcNow
+        });
+        _dbContext.SshFingerprintClaims.Add(new GitCandySshFingerprintClaim
+        {
+            Fingerprint = fingerprint,
+            CredentialKind = CredentialClaimTypes.UserSshKey,
+            ClaimedAtUtc = DateTime.UtcNow
         });
         await _dbContext.SaveChangesAsync(cancellationToken);
         return fingerprint;
@@ -262,6 +270,13 @@ internal sealed class UserAdministrationService(
         }
 
         _dbContext.SshKeys.Remove(key);
+        var claim = await _dbContext.SshFingerprintClaims.SingleOrDefaultAsync(
+            item => item.Fingerprint == fingerprint,
+            cancellationToken);
+        if (claim is not null)
+        {
+            _dbContext.SshFingerprintClaims.Remove(claim);
+        }
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }

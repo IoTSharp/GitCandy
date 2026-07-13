@@ -133,7 +133,12 @@ public sealed class OpenSshAdapter(
                 StatelessRpc: false,
                 AdvertiseRefs: false,
                 gitProtocol,
-                key.Principal.UserName);
+                key.Principal.UserName,
+                address.RepositoryId,
+                new GitTransportActor(
+                    key.Principal.UserName,
+                    key.Principal.UserId,
+                    key.Principal.DeployKeyId));
             await _transportBackend.ExecuteAsync(request, input, output, cancellationToken);
             return 0;
         }

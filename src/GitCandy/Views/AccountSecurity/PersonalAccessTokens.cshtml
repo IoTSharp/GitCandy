@@ -1,0 +1,40 @@
+@model PersonalAccessTokensViewModel
+@{ ViewData["Title"] = "Personal access tokens"; }
+<header class="page-heading">
+    <div><h1>Personal access tokens</h1><p>Use scoped credentials for API and Git clients.</p></div>
+    <div class="page-actions"><a asp-action="Security" class="btn"><i data-lucide="arrow-left"></i> Account security</a></div>
+</header>
+@if (Model.Tokens.Count == 0)
+{
+    <div class="empty-state"><p>No personal access tokens have been created.</p></div>
+}
+else
+{
+    <div class="table-responsive"><table><thead><tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Last used</th><th>Status</th><th></th></tr></thead><tbody>
+    @foreach (var token in Model.Tokens)
+    {
+        var expired = token.ExpiresAt is not null && token.ExpiresAt <= DateTimeOffset.UtcNow;
+        <tr>
+            <td><strong>@token.Name</strong><div class="entity-meta">Created @token.CreatedAt.ToString("u")</div></td>
+            <td><code>@token.TokenPrefix...</code></td>
+            <td>@string.Join(", ", token.Scopes)</td>
+            <td>@(token.LastUsedAt?.ToString("u") ?? "Never")</td>
+            <td>@(token.RevokedAt is not null ? "Revoked" : expired ? "Expired" : token.ExpiresAt is null ? "Active" : $"Expires {token.ExpiresAt:u}")</td>
+            <td>@if (token.RevokedAt is null && !expired) { <form asp-action="RevokePersonalAccessToken" asp-route-tokenId="@token.Id" method="post" data-confirm="Revoke @token.Name?"><button type="submit" class="icon-button" aria-label="Revoke token" data-tooltip="Revoke token"><i data-lucide="ban"></i></button></form> }</td>
+        </tr>
+    }
+    </tbody></table></div>
+}
+<h2>Create token</h2>
+<form asp-action="CreatePersonalAccessToken" method="post" class="account-form">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <div class="form-field"><label asp-for="Create.Name"></label><input asp-for="Create.Name" autocomplete="off" /></div>
+    <div class="form-field"><label asp-for="Create.ExpiresAtUtc"></label><input asp-for="Create.ExpiresAtUtc" /></div>
+    <fieldset><legend>Scopes</legend>
+        <label><input asp-for="Create.ApiRead" /> @Html.DisplayNameFor(model => model.Create.ApiRead)</label>
+        <label><input asp-for="Create.ApiWrite" /> @Html.DisplayNameFor(model => model.Create.ApiWrite)</label>
+        <label><input asp-for="Create.GitRead" /> @Html.DisplayNameFor(model => model.Create.GitRead)</label>
+        <label><input asp-for="Create.GitWrite" /> @Html.DisplayNameFor(model => model.Create.GitWrite)</label>
+    </fieldset>
+    <button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Create token</button>
+</form>

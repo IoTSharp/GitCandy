@@ -29,6 +29,8 @@ public static class GitCandyGitServiceCollectionExtensions
         services.TryAddScoped<GitCandy.Application.IRepositoryLifecycleService, RepositoryLifecycleService>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
         services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
+        services.TryAddSingleton<IGitReceiveHookLauncher, GitReceiveHookLauncher>();
+        services.TryAddTransient<IGitReceiveHookRunner, GitReceiveHookRunner>();
 
         return services;
     }

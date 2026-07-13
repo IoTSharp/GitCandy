@@ -5,6 +5,8 @@ using GitCandy.Profiling;
 using Microsoft.Extensions.Options;
 
 var openSshRequested = OpenSshCommandLine.IsRequested(args);
+var receiveHookRequested = args.Length == 1
+    && string.Equals(args[0], "--git-pre-receive", StringComparison.Ordinal);
 var migrationOnlyRequested = args.Length == 1
     && string.Equals(args[0], "--migrate", StringComparison.Ordinal);
 OpenSshInvocation? openSshInvocation = null;
@@ -14,7 +16,8 @@ if (openSshRequested && !OpenSshCommandLine.TryParse(args, out openSshInvocation
     return 2;
 }
 
-var builder = openSshRequested
+var commandModeRequested = openSshRequested || receiveHookRequested;
+var builder = commandModeRequested
     ? WebApplication.CreateBuilder(new WebApplicationOptions
     {
         Args = [],
@@ -24,11 +27,14 @@ var builder = openSshRequested
             ?? Environments.Production
     })
     : WebApplication.CreateBuilder(args);
-if (openSshRequested)
+if (commandModeRequested)
 {
     builder.Logging.ClearProviders();
-    builder.Logging.AddConsole(options =>
-        options.LogToStandardErrorThreshold = LogLevel.Trace);
+    if (openSshRequested)
+    {
+        builder.Logging.AddConsole(options =>
+            options.LogToStandardErrorThreshold = LogLevel.Trace);
+    }
 }
 
 // Keep ASPNETCORE_HTTP_PORTS and other host settings as production overrides for JSON defaults.
@@ -38,6 +44,10 @@ builder.Host.UseWindowsService(options => options.ServiceName = "GitCandy");
 if (openSshRequested)
 {
     builder.Services.AddGitCandyOpenSshCommand(builder.Configuration);
+}
+else if (receiveHookRequested)
+{
+    builder.Services.AddGitCandyReceiveHookCommand(builder.Configuration);
 }
 else
 {
@@ -63,6 +73,42 @@ if (openSshRequested)
             openSshInvocation!,
             scope.ServiceProvider,
             cancellation.Token);
+    }
+    finally
+    {
+        Console.CancelKeyPress -= cancelHandler;
+    }
+}
+
+if (receiveHookRequested)
+{
+    Environment.SetEnvironmentVariable("ConnectionStrings__GitCandy", null);
+    Environment.SetEnvironmentVariable("GitCandy__Database__Provider", null);
+    using var cancellation = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+    {
+        eventArgs.Cancel = true;
+        cancellation.Cancel();
+    };
+    Console.CancelKeyPress += cancelHandler;
+    try
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        try
+        {
+            return await scope.ServiceProvider.GetRequiredService<GitCandy.Git.IGitReceiveHookRunner>()
+                .ExecuteAsync(Console.In, Console.Error, cancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("GitCandy push gate was canceled.");
+            return 1;
+        }
+        catch
+        {
+            Console.Error.WriteLine("GitCandy push gate failed safely.");
+            return 1;
+        }
     }
     finally
     {
@@ -97,6 +143,7 @@ app.UseRequestTimeouts();
 app.UseRequestLocalization();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapStaticAssets();
 app.MapGitCandyHealthChecks();

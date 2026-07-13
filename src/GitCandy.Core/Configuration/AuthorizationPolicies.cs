@@ -34,4 +34,10 @@ public static class AuthorizationPolicies
     /// 当前用户自身或系统管理员策略。
     /// </summary>
     public const string CurrentUser = "GitCandy.CurrentUser";
+
+    /// <summary>只允许带 <c>api:read</c> scope 的 PAT。</summary>
+    public const string ApiRead = "GitCandy.Api.Read";
+
+    /// <summary>只允许带 <c>api:write</c> scope 的 PAT。</summary>
+    public const string ApiWrite = "GitCandy.Api.Write";
 }

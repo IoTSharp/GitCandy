@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GitCandy.Credentials;
 
 namespace GitCandy.Models.Account;
 
@@ -73,6 +74,45 @@ public sealed class SetPasswordViewModel
     [Compare(nameof(NewPassword))]
     [Display(Name = "Confirm new password")]
     public string ConfirmPassword { get; set; } = string.Empty;
+}
+
+public sealed class PersonalAccessTokensViewModel
+{
+    public IReadOnlyList<PersonalAccessTokenSummary> Tokens { get; init; } = [];
+    public CreatePersonalAccessTokenViewModel Create { get; init; } = new();
+}
+
+public sealed class CreatePersonalAccessTokenViewModel
+{
+    [Required]
+    [StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [Display(Name = "Expires at (UTC)")]
+    [DataType(DataType.DateTime)]
+    public DateTime? ExpiresAtUtc { get; set; }
+
+    [Display(Name = "Read API")]
+    public bool ApiRead { get; set; }
+
+    [Display(Name = "Write API")]
+    public bool ApiWrite { get; set; }
+
+    [Display(Name = "Clone and fetch Git repositories")]
+    public bool GitRead { get; set; }
+
+    [Display(Name = "Push Git repositories")]
+    public bool GitWrite { get; set; }
+
+    public IReadOnlyList<string> GetScopes()
+    {
+        var scopes = new List<string>(4);
+        if (ApiRead) scopes.Add(PersonalAccessTokenScopes.ApiRead);
+        if (ApiWrite) scopes.Add(PersonalAccessTokenScopes.ApiWrite);
+        if (GitRead) scopes.Add(PersonalAccessTokenScopes.GitRead);
+        if (GitWrite) scopes.Add(PersonalAccessTokenScopes.GitWrite);
+        return scopes;
+    }
 }
 
 public sealed class ExternalLoginConfirmationViewModel

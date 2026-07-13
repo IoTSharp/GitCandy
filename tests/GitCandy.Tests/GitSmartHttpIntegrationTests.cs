@@ -1,5 +1,8 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using GitCandy.Application;
@@ -9,6 +12,9 @@ using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Workspace;
+using GitCandy.Governance;
+using GitCandy.Credentials;
+using GitCandy.Integrations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -74,6 +80,7 @@ public sealed class GitSmartHttpIntegrationTests
             LargeFileSize,
             int.Parse(remoteLargeFileSize, CultureInfo.InvariantCulture));
         Assert.IsTrue(await fixture.HasPushActivityAsync(), "Successful HTTP receive-pack must publish a shared workspace activity event.");
+        Assert.IsTrue(await fixture.HasPushIntegrationEventAsync(), "Successful HTTP receive-pack must enqueue a versioned integration event.");
     }
 
     [TestMethod]
@@ -91,6 +98,182 @@ public sealed class GitSmartHttpIntegrationTests
         Assert.AreEqual(System.Net.HttpStatusCode.NotFound, legacyResponse.StatusCode);
         Assert.AreEqual(System.Net.HttpStatusCode.NotFound, noSuffixResponse.StatusCode);
         Assert.AreEqual(System.Net.HttpStatusCode.NotFound, aliasResponse.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task GitSmartHttp_WithProtectedMain_RejectsReceivePackBeforeRefUpdate()
+    {
+        await using var fixture = await GitHttpFixture.CreateAsync();
+        var clonePath = Path.Combine(fixture.TempRoot, "clones", "protected-main");
+        await fixture.RunGitAsync(["clone", $"{fixture.BaseAddress}m6-owner/public-demo.git", clonePath]);
+        await fixture.RunGitAsync(["-C", clonePath, "config", "user.name", "Gate Test"]);
+        await fixture.RunGitAsync(["-C", clonePath, "config", "user.email", "gate@example.com"]);
+        File.AppendAllText(Path.Combine(clonePath, "README.md"), "blocked push\n", Encoding.UTF8);
+        await fixture.RunGitAsync(["-C", clonePath, "add", "README.md"]);
+        await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", "blocked protected push"]);
+        var originalHead = await fixture.RunGitForOutputAsync(
+            ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]);
+        await fixture.ProtectMainAsync();
+
+        var push = await fixture.RunGitExpectFailureAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/main"],
+            useOwnerCredentials: true);
+
+        StringAssert.Contains(push.StandardError, "GitCandy push rejected");
+        var currentHead = await fixture.RunGitForOutputAsync(
+            ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]);
+        Assert.AreEqual(originalHead, currentHead);
+    }
+
+    [TestMethod]
+    public async Task GitSmartHttp_WithPersonalAccessToken_SeparatesReadAndWriteScopes()
+    {
+        await using var fixture = await GitHttpFixture.CreateAsync();
+        var clonePath = Path.Combine(fixture.TempRoot, "clones", "pat-scopes");
+        var readToken = await fixture.CreatePersonalAccessTokenAsync(PersonalAccessTokenScopes.GitRead);
+        await fixture.RunGitWithTokenAsync(
+            ["clone", $"{fixture.BaseAddress}m6-owner/public-demo.git", clonePath],
+            readToken);
+        await fixture.RunGitAsync(["-C", clonePath, "config", "user.name", "PAT Test"]);
+        await fixture.RunGitAsync(["-C", clonePath, "config", "user.email", "pat@example.com"]);
+        File.AppendAllText(Path.Combine(clonePath, "README.md"), "pat scopes\n", Encoding.UTF8);
+        await fixture.RunGitAsync(["-C", clonePath, "add", "README.md"]);
+        await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", "PAT scope test"]);
+
+        var denied = await fixture.RunGitWithTokenExpectFailureAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/pat-scope"],
+            readToken);
+        Assert.IsTrue(
+            denied.StandardError.Contains("403", StringComparison.Ordinal)
+            || denied.StandardError.Contains("forbidden", StringComparison.OrdinalIgnoreCase));
+
+        var writeToken = await fixture.CreatePersonalAccessTokenAsync(PersonalAccessTokenScopes.GitWrite);
+        await fixture.RunGitWithTokenAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/pat-scope"],
+            writeToken);
+        var remote = await fixture.RunGitForOutputAsync(
+            ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/pat-scope"]);
+        Assert.AreEqual(
+            await fixture.RunGitForOutputAsync(["-C", clonePath, "rev-parse", "HEAD"]),
+            remote);
+    }
+
+    [TestMethod]
+    public async Task CommitCheckApi_WithPatScopes_UpsertsExactShaAndRejectsBlockedTarget()
+    {
+        await using var fixture = await GitHttpFixture.CreateAsync();
+        var sha = await fixture.RunGitForOutputAsync(
+            ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]);
+        var readToken = await fixture.CreatePersonalAccessTokenAsync(PersonalAccessTokenScopes.ApiRead);
+        var writeToken = await fixture.CreatePersonalAccessTokenAsync(PersonalAccessTokenScopes.ApiWrite);
+        using var client = new HttpClient { BaseAddress = new Uri(fixture.BaseAddress) };
+        var path = $"api/v1/repositories/m6-owner/public-demo/commits/{sha}/statuses";
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", readToken);
+        using var denied = await client.PostAsJsonAsync(path, new
+        {
+            context = "ci/build",
+            state = "success",
+            description = "passed"
+        });
+        Assert.AreEqual(HttpStatusCode.Forbidden, denied.StatusCode);
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", writeToken);
+        using var pending = await client.PostAsJsonAsync(path, new
+        {
+            context = "ci/build",
+            state = "pending",
+            description = "running",
+            externalId = "build-42"
+        });
+        Assert.AreEqual(HttpStatusCode.OK, pending.StatusCode);
+        using var success = await client.PostAsJsonAsync(path, new
+        {
+            context = "ci/build",
+            state = "success",
+            description = "passed",
+            externalId = "build-42"
+        });
+        Assert.AreEqual(HttpStatusCode.OK, success.StatusCode);
+        Assert.AreEqual(1, await fixture.CountCommitChecksAsync(sha));
+        using var checkRun = await client.PostAsJsonAsync(
+            $"api/v1/repositories/m6-owner/public-demo/commits/{sha}/checks",
+            new
+            {
+                name = "security/scan",
+                state = "in_progress",
+                summary = "scanning",
+                externalId = "scan-42"
+            });
+        Assert.AreEqual(HttpStatusCode.OK, checkRun.StatusCode);
+        Assert.AreEqual(2, await fixture.CountCommitChecksAsync(sha));
+
+        using var blockedTarget = await client.PostAsJsonAsync(path, new
+        {
+            context = "security/scan",
+            state = "success",
+            targetUrl = "http://127.0.0.1/internal"
+        });
+        Assert.AreEqual(HttpStatusCode.UnprocessableEntity, blockedTarget.StatusCode);
+        using var stale = await client.PostAsJsonAsync(
+            $"api/v1/repositories/m6-owner/public-demo/commits/{new string('f', 40)}/statuses",
+            new { context = "ci/build", state = "success" });
+        Assert.AreEqual(HttpStatusCode.NotFound, stale.StatusCode);
+        var rateLimited = false;
+        for (var attempt = 0; attempt < 130; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync(path, new { });
+            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            {
+                rateLimited = true;
+                break;
+            }
+        }
+        Assert.IsTrue(rateLimited, "API write requests must be rate limited per credential.");
+
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", readToken);
+        using var get = await client.GetAsync(
+            $"api/v1/repositories/m6-owner/public-demo/commits/{sha}/checks");
+        Assert.AreEqual(HttpStatusCode.OK, get.StatusCode);
+        StringAssert.Contains(await get.Content.ReadAsStringAsync(), "\"state\":\"success\"");
+    }
+
+    [TestMethod]
+    public async Task GitSmartHttp_WithRequiredCheck_AllowsCheckedShaAndRejectsNextHead()
+    {
+        await using var fixture = await GitHttpFixture.CreateAsync();
+        var clonePath = Path.Combine(fixture.TempRoot, "clones", "required-check");
+        await fixture.RunGitAsync(["clone", $"{fixture.BaseAddress}m6-owner/public-demo.git", clonePath]);
+        await fixture.RunGitAsync(["-C", clonePath, "config", "user.name", "CI Gate Test"]);
+        await fixture.RunGitAsync(["-C", clonePath, "config", "user.email", "ci-gate@example.com"]);
+        File.AppendAllText(Path.Combine(clonePath, "README.md"), "checked head\n", Encoding.UTF8);
+        await fixture.RunGitAsync(["-C", clonePath, "add", "README.md"]);
+        await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", "checked head"]);
+        await fixture.RunGitAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/ci-candidate"],
+            useOwnerCredentials: true);
+        var checkedSha = await fixture.RunGitForOutputAsync(["-C", clonePath, "rev-parse", "HEAD"]);
+        await fixture.ProtectMainWithRequiredCheckAsync("ci/build");
+        var token = await fixture.CreatePersonalAccessTokenAsync(PersonalAccessTokenScopes.ApiWrite);
+        Assert.AreEqual(HttpStatusCode.OK, await fixture.PostStatusAsync(checkedSha, token, "success"));
+
+        await fixture.RunGitAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/main"],
+            useOwnerCredentials: true);
+        File.AppendAllText(Path.Combine(clonePath, "README.md"), "unchecked head\n", Encoding.UTF8);
+        await fixture.RunGitAsync(["-C", clonePath, "add", "README.md"]);
+        await fixture.RunGitAsync(["-C", clonePath, "commit", "-m", "unchecked head"]);
+        await fixture.RunGitAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/ci-candidate"],
+            useOwnerCredentials: true);
+        var rejected = await fixture.RunGitExpectFailureAsync(
+            ["-C", clonePath, "push", "origin", "HEAD:refs/heads/main"],
+            useOwnerCredentials: true);
+
+        StringAssert.Contains(rejected.StandardError, "required check 'ci/build' is missing");
+        Assert.AreEqual(
+            checkedSha,
+            await fixture.RunGitForOutputAsync(
+                ["--git-dir", fixture.BareRepositoryPath, "rev-parse", "refs/heads/main"]));
     }
 
     private static async Task WriteRandomFileAsync(string path, int size)
@@ -126,13 +309,15 @@ public sealed class GitSmartHttpIntegrationTests
             string baseAddress,
             string bareRepositoryPath,
             string seedWorkTree,
-            string tempRoot)
+            string tempRoot,
+            long repositoryId)
         {
             App = app;
             BaseAddress = baseAddress;
             BareRepositoryPath = bareRepositoryPath;
             SeedWorkTree = seedWorkTree;
             TempRoot = tempRoot;
+            RepositoryId = repositoryId;
         }
 
         private WebApplication App { get; }
@@ -145,11 +330,96 @@ public sealed class GitSmartHttpIntegrationTests
 
         public string TempRoot { get; }
 
+        public long RepositoryId { get; }
+
+        public async Task ProtectMainAsync()
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            var ownerId = await db.Users.Where(user => user.NormalizedUserName == "M6-OWNER")
+                .Select(user => user.Id)
+                .SingleAsync();
+            var saved = await scope.ServiceProvider.GetRequiredService<IBranchProtectionService>().SaveAsync(
+                RepositoryId,
+                ownerId,
+                new BranchProtectionEdit(
+                    null,
+                    "main",
+                    BranchAccessLevel.Nobody,
+                    BranchAccessLevel.RepositoryOwner,
+                    AllowForcePushes: false,
+                    AllowDeletions: false,
+                    AllowAdministratorBypass: false));
+            Assert.IsNotNull(saved);
+        }
+
+        public async Task ProtectMainWithRequiredCheckAsync(string context)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            var ownerId = await db.Users.Where(user => user.NormalizedUserName == "M6-OWNER")
+                .Select(user => user.Id)
+                .SingleAsync();
+            var saved = await scope.ServiceProvider.GetRequiredService<IBranchProtectionService>().SaveAsync(
+                RepositoryId,
+                ownerId,
+                new BranchProtectionEdit(
+                    null,
+                    "main",
+                    BranchAccessLevel.RepositoryOwner,
+                    BranchAccessLevel.RepositoryOwner,
+                    AllowForcePushes: false,
+                    AllowDeletions: false,
+                    AllowAdministratorBypass: false,
+                    RequiredChecks: [context]));
+            Assert.IsNotNull(saved);
+        }
+
+        public async Task<string> CreatePersonalAccessTokenAsync(string scopeName)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var ownerId = await scope.ServiceProvider.GetRequiredService<GitCandyDbContext>().Users
+                .Where(user => user.NormalizedUserName == "M6-OWNER")
+                .Select(user => user.Id)
+                .SingleAsync();
+            var token = await scope.ServiceProvider.GetRequiredService<IPersonalAccessTokenService>().CreateAsync(
+                ownerId,
+                "integration token",
+                [scopeName],
+                DateTimeOffset.UtcNow.AddHours(1));
+            Assert.IsNotNull(token);
+            return token.Token;
+        }
+
         public async Task<bool> HasPushActivityAsync()
         {
             await using var scope = App.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
             return await dbContext.ActivityEvents.AsNoTracking().AnyAsync(item => item.Type == WorkspaceActivityType.Push);
+        }
+
+        public async Task<bool> HasPushIntegrationEventAsync()
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            return await dbContext.IntegrationEvents.AsNoTracking().AnyAsync(item => item.Type == "push" && item.SchemaVersion == 1);
+        }
+
+        public async Task<int> CountCommitChecksAsync(string sha)
+        {
+            await using var scope = App.Services.CreateAsyncScope();
+            return await scope.ServiceProvider.GetRequiredService<GitCandyDbContext>().CommitChecks.AsNoTracking()
+                .CountAsync(item => item.RepositoryId == RepositoryId && item.Sha == sha);
+        }
+
+        public async Task<HttpStatusCode> PostStatusAsync(string sha, string token, string state)
+        {
+            using var client = new HttpClient { BaseAddress = new Uri(BaseAddress) };
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await client.PostAsJsonAsync(
+                $"api/v1/repositories/m6-owner/public-demo/commits/{sha}/statuses",
+                new { context = "ci/build", state, description = "fixture" });
+            return response.StatusCode;
         }
 
         public static async Task<GitHttpFixture> CreateAsync()
@@ -199,8 +469,10 @@ public sealed class GitSmartHttpIntegrationTests
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseRateLimiter();
             app.MapGitCandyCompatibilityRoutes();
 
+            long repositoryId = 0;
             try
             {
                 await using (var scope = app.Services.CreateAsyncScope())
@@ -241,6 +513,7 @@ public sealed class GitSmartHttpIntegrationTests
                     });
                     dbContext.Repositories.Add(repository);
                     await dbContext.SaveChangesAsync();
+                    repositoryId = repository.Id;
                     var utcNow = DateTime.UtcNow;
                     var namespaceAlias = new GitCandyNamespaceAlias
                     {
@@ -306,7 +579,8 @@ public sealed class GitSmartHttpIntegrationTests
                     baseAddress,
                     bareRepositoryPath,
                     seedWorkTree,
-                    tempRoot);
+                    tempRoot,
+                    repositoryId);
             }
             catch
             {
@@ -329,6 +603,25 @@ public sealed class GitSmartHttpIntegrationTests
             return result.StandardOutput.Trim();
         }
 
+        public Task<GitProcessResult> RunGitExpectFailureAsync(
+            IReadOnlyList<string> arguments,
+            bool useOwnerCredentials = false)
+        {
+            return RunGitProcessAsync(arguments, useOwnerCredentials, expectSuccess: false);
+        }
+
+        public Task RunGitWithTokenAsync(IReadOnlyList<string> arguments, string token)
+        {
+            return RunGitProcessAsync(arguments, credentialSecret: token);
+        }
+
+        public Task<GitProcessResult> RunGitWithTokenExpectFailureAsync(
+            IReadOnlyList<string> arguments,
+            string token)
+        {
+            return RunGitProcessAsync(arguments, expectSuccess: false, credentialSecret: token);
+        }
+
         public async ValueTask DisposeAsync()
         {
             await App.StopAsync();
@@ -338,7 +631,9 @@ public sealed class GitSmartHttpIntegrationTests
 
         private static async Task<GitProcessResult> RunGitProcessAsync(
             IReadOnlyList<string> arguments,
-            bool useOwnerCredentials = false)
+            bool useOwnerCredentials = false,
+            bool expectSuccess = true,
+            string? credentialSecret = null)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -366,10 +661,10 @@ public sealed class GitSmartHttpIntegrationTests
                 startInfo.Environment.Remove(traceVariable);
             }
 
-            if (useOwnerCredentials)
+            if (useOwnerCredentials || credentialSecret is not null)
             {
                 var credentials = Convert.ToBase64String(
-                    Encoding.UTF8.GetBytes($"{OwnerUserName}:{OwnerPassword}"));
+                    Encoding.UTF8.GetBytes($"{OwnerUserName}:{credentialSecret ?? OwnerPassword}"));
                 startInfo.Environment["GIT_CONFIG_COUNT"] = "1";
                 startInfo.Environment["GIT_CONFIG_KEY_0"] = "http.extraHeader";
                 startInfo.Environment["GIT_CONFIG_VALUE_0"] = $"Authorization: Basic {credentials}";
@@ -382,10 +677,17 @@ public sealed class GitSmartHttpIntegrationTests
             await process.WaitForExitAsync().WaitAsync(TimeSpan.FromMinutes(2));
             var standardOutput = await standardOutputTask;
             var standardError = await standardErrorTask;
-            Assert.AreEqual(
-                0,
-                process.ExitCode,
-                $"git {arguments.FirstOrDefault()} failed: {standardError}");
+            if (expectSuccess)
+            {
+                Assert.AreEqual(
+                    0,
+                    process.ExitCode,
+                    $"git {arguments.FirstOrDefault()} failed: {standardError}");
+            }
+            else
+            {
+                Assert.AreNotEqual(0, process.ExitCode, "The protected push unexpectedly succeeded.");
+            }
             return new GitProcessResult(standardOutput, standardError);
         }
     }

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using GitCandy.Application;
 using GitCandy.Data.Identity;
+using GitCandy.Credentials;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -21,7 +22,8 @@ public sealed class GitBasicAuthenticationHandler(
     IMembershipService membershipService,
     SignInManager<GitCandyUser> signInManager,
     IUserClaimsPrincipalFactory<GitCandyUser> claimsPrincipalFactory,
-    IOptions<IdentityOptions> identityOptions)
+    IOptions<IdentityOptions> identityOptions,
+    IPersonalAccessTokenService personalAccessTokenService)
     : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     private const string ChallengeValue = "Basic realm=\"GitCandy\", charset=\"UTF-8\"";
@@ -29,6 +31,7 @@ public sealed class GitBasicAuthenticationHandler(
     private readonly SignInManager<GitCandyUser> _signInManager = signInManager;
     private readonly IUserClaimsPrincipalFactory<GitCandyUser> _claimsPrincipalFactory = claimsPrincipalFactory;
     private readonly IdentityOptions _identityOptions = identityOptions.Value;
+    private readonly IPersonalAccessTokenService _personalAccessTokenService = personalAccessTokenService;
 
     /// <inheritdoc />
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -64,6 +67,24 @@ public sealed class GitBasicAuthenticationHandler(
 
         var userNameOrEmail = credentials[..separatorIndex];
         var password = credentials[(separatorIndex + 1)..];
+
+        if (password.StartsWith("gcpat_", StringComparison.Ordinal))
+        {
+            var tokenPrincipal = await _personalAccessTokenService.AuthenticateAsync(
+                password,
+                Context.RequestAborted);
+            if (tokenPrincipal is null
+                || !string.Equals(tokenPrincipal.UserName, userNameOrEmail, StringComparison.OrdinalIgnoreCase)
+                || (!tokenPrincipal.Scopes.Contains(PersonalAccessTokenScopes.GitRead)
+                    && !tokenPrincipal.Scopes.Contains(PersonalAccessTokenScopes.GitWrite)))
+            {
+                return AuthenticateResult.Fail("Invalid credentials.");
+            }
+
+            return AuthenticateResult.Success(new AuthenticationTicket(
+                CredentialPrincipalFactory.Create(tokenPrincipal, Scheme.Name),
+                Scheme.Name));
+        }
 
         var user = await _membershipService.FindUserAsync(userNameOrEmail, Context.RequestAborted);
         if (user is null)

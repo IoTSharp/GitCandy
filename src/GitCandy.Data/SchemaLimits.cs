@@ -29,4 +29,24 @@ internal static class SchemaLimits
     public const int PullRequestPairKey = 520;
     public const int GitPath = 1024;
     public const int ReviewAnchorContext = 8192;
+    public const int CredentialName = 100;
+    public const int Sha256Hash = 64;
+    public const int TokenPrefix = 16;
+    public const int CredentialScopes = 1000;
+    public const int CredentialKind = 32;
+    public const int AuditAction = 64;
+    public const int AuditOutcome = 32;
+    public const int AuditDetail = 1000;
+    public const int IntegrationEventId = 64;
+    public const int IntegrationEventType = 32;
+    public const int IntegrationActorName = 100;
+    public const int IntegrationPayload = 32768;
+    public const int IntegrationName = 100;
+    public const int TargetUrl = 2048;
+    public const int ProtectedSecret = 4096;
+    public const int WebhookDeliveryId = 32;
+    public const int WebhookErrorCode = 64;
+    public const int CheckContext = 100;
+    public const int CheckDescription = 500;
+    public const int CheckExternalId = 128;
 }

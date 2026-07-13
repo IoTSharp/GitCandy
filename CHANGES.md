@@ -17,6 +17,13 @@
  - Added a completed-milestone and documentation index under `docs/roadmap`, preserving the pre-reorganization roadmap as an archived historical snapshot.
  - Added a redesigned public GitCandy product page for anonymous root visits, with a dedicated responsive navigation, product workflow previews, deployment overview, help links, localized English and Simplified Chinese copy, and a new candy-and-Git branch brand mark used across the public page and authenticated application shell.
  - Added the M12.6 SonnetDB production slice: configuration-selected host registration, an independent full-schema migration, Identity/repository smoke coverage, and a `gitcandy.com` Compose profile that reuses the existing sonnet.vip Caddy and internal SonnetDB service.
+ - Added scoped Personal Access Tokens with hash-only persistence, one-time display, expiry, revocation, last-used tracking, credential audit, Bearer API policies, and separate API/Git read/write scopes.
+ - Added repository deploy keys with read-only/read-write access, global SSH fingerprint claims, expiry, revocation, last-used tracking, repository-owner management UI, and built-in/OpenSSH machine-principal authorization.
+ - Added branch protection rules and a shared push gate for Git HTTP, built-in SSH, OpenSSH, Web PR merge, and Web branch deletion, including push/merge access levels, force/delete policy, explicit administrator bypass, and governance audit events.
+ - Added additive SQLite, SQL Server, and SonnetDB `MachineCredentialsAndPushGate` migrations plus real PAT scope, protected receive-pack, HTTP large-pack, and SSH clone/fetch/push coverage.
+ - Added repository webhooks with versioned envelopes, HMAC-SHA256 signatures, delivery IDs, encrypted one-time secrets, persistent timeout/retry/replay diagnostics, redirect suppression, and DNS/IP SSRF enforcement at configuration and socket-connect time.
+ - Added PAT-protected commit status/check APIs with repository authorization, exact commit validation, SHA/context idempotency, per-credential rate limiting, target URL policy, and additive SQLite, SQL Server, and SonnetDB `WebhookAndChecks` migrations.
+ - Added exact-SHA required check contexts to branch rules so Git HTTP/SSH pushes and Web merges reject missing or unsuccessful checks without allowing an old head result to satisfy a new update.
  - Added `IoTSharp/SonnetDB` as a source submodule and fixed unique-index NULL semantics in the database engine so EF migration seed rows can contain multiple NULL values while duplicate non-NULL values remain rejected.
 
 #### Removed
@@ -25,6 +32,7 @@
 #### Changed
  - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.5 and M12.7 moved to completion history; M12.6 retains only its unfinished production deployment.
  - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users enter the private `/me` workspace.
+ - Changed `git-receive-pack` execution to install a controlled GitCandy `pre-receive` bridge. Git continues to stream and quarantine pack data; only bounded ref updates enter the shared policy service.
 
 #### Fixed
  - Fixed repository UI routing so create/list/detail/code navigation emits canonical `/{namespace}/{repository}` URLs and HTTPS clone addresses use `/{namespace}/{repository}.git`.

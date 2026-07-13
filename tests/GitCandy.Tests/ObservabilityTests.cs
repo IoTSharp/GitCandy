@@ -119,6 +119,7 @@ public sealed class ObservabilityTests
                 new TestExecutableResolver(),
                 Options.Create(new GitSmartHttpOptions()),
                 [],
+                new TestReceiveHookLauncher(),
                 NullLogger<GitProcessTransportBackend>.Instance);
             var missingPath = Path.Combine(repositoryRoot, "private-repository");
             var request = new GitTransportRequest(
@@ -175,6 +176,13 @@ public sealed class ObservabilityTests
         ReadOnlySpan<KeyValuePair<string, object?>> tags)
     {
         return tags.ToArray();
+    }
+
+    private sealed class TestReceiveHookLauncher : IGitReceiveHookLauncher
+    {
+        public void Configure(ProcessStartInfo startInfo, GitTransportRequest request)
+        {
+        }
     }
 
     private sealed record Measurement(

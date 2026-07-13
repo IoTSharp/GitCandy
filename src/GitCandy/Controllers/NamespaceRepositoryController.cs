@@ -6,6 +6,7 @@ using GitCandy.Configuration;
 using GitCandy.Git;
 using GitCandy.Models;
 using GitCandy.Workspace;
+using GitCandy.Governance;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
@@ -25,6 +26,7 @@ public sealed class NamespaceRepositoryController(
     ICurrentUser currentUser,
     IRepositoryMetricRecorder metricRecorder,
     IWorkspaceService workspaceService,
+    IGitPushGate pushGate,
     ILogger<NamespaceRepositoryController> logger) : CandyControllerBase
 {
     private const string AddressChangedMessage = "This repository address changed. Update your bookmark and Git remote to the canonical URL.";
@@ -37,6 +39,7 @@ public sealed class NamespaceRepositoryController(
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly IRepositoryMetricRecorder _metricRecorder = metricRecorder;
     private readonly IWorkspaceService _workspaceService = workspaceService;
+    private readonly IGitPushGate _pushGate = pushGate;
     private readonly ILogger<NamespaceRepositoryController> _logger = logger;
 
     /// <summary>显示规范仓库主页，alias 命中时使用 308 跳转。</summary>
@@ -92,6 +95,19 @@ public sealed class NamespaceRepositoryController(
         if (access.Result is not null) return access.Result;
         try
         {
+            if (string.IsNullOrWhiteSpace(_currentUser.UserId)) return Forbid();
+            var repository = _gitServiceFactory.Create(access.Address!.StorageName);
+            var branch = _repositoryBrowserService.ReadBranches(repository, cancellationToken)
+                .SingleOrDefault(item => string.Equals(item.Name, name, StringComparison.Ordinal));
+            if (branch is null) return NotFound();
+            var gate = await _pushGate.EvaluateAsync(
+                new GitPushGateRequest(
+                    access.Address.RepositoryId,
+                    new GitRefActor(_currentUser.UserName ?? _currentUser.UserId, UserId: _currentUser.UserId),
+                    GitRefOperation.WebDelete,
+                    [new GitRefUpdate(branch.CommitId, new string('0', branch.CommitId.Length), $"refs/heads/{name}")]),
+                cancellationToken);
+            if (!gate.Allowed) return Conflict(string.Join("; ", gate.Reasons));
             _managedGitRepositoryService.DeleteBranch(_gitServiceFactory.Create(access.Address!.StorageName), name, cancellationToken);
             return Redirect($"{access.Address.CanonicalPath}/branches");
         }

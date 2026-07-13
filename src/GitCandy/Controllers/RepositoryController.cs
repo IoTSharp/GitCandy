@@ -2,7 +2,9 @@ using GitCandy.Application;
 using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Configuration;
+using GitCandy.Credentials;
 using GitCandy.Git;
+using GitCandy.Governance;
 using GitCandy.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -23,7 +25,9 @@ public sealed class RepositoryController(
     IGitServiceFactory gitServiceFactory,
     IAuthorizationService authorizationService,
     ICurrentUser currentUser,
-    IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
+    IOptions<GitCandyApplicationOptions> applicationOptions,
+    IDeployKeyService deployKeyService,
+    IBranchProtectionService branchProtectionService) : CandyControllerBase
 {
     private const string ResolvedRepositoryItemKey = "GitCandy.ResolvedRepository";
     private readonly IRepositoryService _repositoryService = repositoryService;
@@ -37,6 +41,322 @@ public sealed class RepositoryController(
     private readonly IAuthorizationService _authorizationService = authorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
+    private readonly IDeployKeyService _deployKeyService = deployKeyService;
+    private readonly IBranchProtectionService _branchProtectionService = branchProtectionService;
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> BranchProtections(string name, CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        var repository = GetResolvedRepository();
+        return View(new RepositoryBranchProtectionsViewModel
+        {
+            NamespaceSlug = repository.NamespaceSlug,
+            RepositoryName = repository.RepositorySlug,
+            Rules = await _branchProtectionService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+            Rule = new BranchProtectionFormViewModel { RepositoryName = repository.RepositorySlug }
+        });
+    }
+
+    [HttpGet("/{namespaceSlug}/{project}/settings/branch-rules", Name = "canonical-repository-branch-rules")]
+    [Authorize]
+    public async Task<IActionResult> CanonicalBranchProtections(
+        string namespaceSlug,
+        string project,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        var repository = GetResolvedRepository();
+        return View(nameof(BranchProtections), new RepositoryBranchProtectionsViewModel
+        {
+            NamespaceSlug = repository.NamespaceSlug,
+            RepositoryName = repository.RepositorySlug,
+            Rules = await _branchProtectionService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+            Rule = new BranchProtectionFormViewModel { RepositoryName = repository.RepositorySlug }
+        });
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> SaveBranchProtection(
+        [Bind(Prefix = "Rule")] BranchProtectionFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(model.RepositoryName, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        return await SaveBranchProtectionAsync(GetResolvedRepository(), model, cancellationToken);
+    }
+
+    [HttpPost("/{namespaceSlug}/{project}/settings/branch-rules")]
+    [Authorize]
+    public async Task<IActionResult> SaveCanonicalBranchProtection(
+        string namespaceSlug,
+        string project,
+        [Bind(Prefix = "Rule")] BranchProtectionFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        return await SaveBranchProtectionAsync(GetResolvedRepository(), model, cancellationToken);
+    }
+
+    private async Task<IActionResult> SaveBranchProtectionAsync(
+        RepositoryAddressResolution repository,
+        BranchProtectionFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return await RenderBranchProtectionsAsync(repository, model, cancellationToken);
+        }
+
+        var saved = await _branchProtectionService.SaveAsync(
+            repository.RepositoryId,
+            _currentUser.UserId,
+            model.ToEdit(),
+            cancellationToken);
+        if (saved is null)
+        {
+            ModelState.AddModelError(string.Empty, "The branch pattern or access rule is invalid or duplicated.");
+            return await RenderBranchProtectionsAsync(repository, model, cancellationToken);
+        }
+
+        return Redirect($"{repository.CanonicalPath}/settings/branch-rules");
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> DeleteBranchProtection(
+        string name,
+        long ruleId,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        var repository = GetResolvedRepository();
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId)) return Forbid();
+        return await _branchProtectionService.DeleteAsync(
+            repository.RepositoryId,
+            ruleId,
+            _currentUser.UserId,
+            cancellationToken)
+            ? Redirect($"{repository.CanonicalPath}/settings/branch-rules")
+            : NotFound();
+    }
+
+    [HttpPost("/{namespaceSlug}/{project}/settings/branch-rules/{ruleId:long}/delete")]
+    [Authorize]
+    public async Task<IActionResult> DeleteCanonicalBranchProtection(
+        string namespaceSlug,
+        string project,
+        long ruleId,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        var repository = GetResolvedRepository();
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId)) return Forbid();
+        return await _branchProtectionService.DeleteAsync(
+            repository.RepositoryId,
+            ruleId,
+            _currentUser.UserId,
+            cancellationToken)
+            ? Redirect($"{repository.CanonicalPath}/settings/branch-rules")
+            : NotFound();
+    }
+
+    private async Task<IActionResult> RenderBranchProtectionsAsync(
+        RepositoryAddressResolution repository,
+        BranchProtectionFormViewModel model,
+        CancellationToken cancellationToken)
+    {
+        return View(nameof(BranchProtections), new RepositoryBranchProtectionsViewModel
+        {
+            NamespaceSlug = repository.NamespaceSlug,
+            RepositoryName = repository.RepositorySlug,
+            Rules = await _branchProtectionService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+            Rule = model
+        });
+    }
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> DeployKeys(string name, CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var repository = GetResolvedRepository();
+        return View(new RepositoryDeployKeysViewModel
+        {
+            NamespaceSlug = repository.NamespaceSlug,
+            RepositoryName = repository.RepositorySlug,
+            Keys = await _deployKeyService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+            Create = new AddDeployKeyViewModel { RepositoryName = repository.RepositorySlug }
+        });
+    }
+
+    [HttpGet("/{namespaceSlug}/{project}/settings/deploy-keys", Name = "canonical-repository-deploy-keys")]
+    [Authorize]
+    public async Task<IActionResult> CanonicalDeployKeys(
+        string namespaceSlug,
+        string project,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        var repository = GetResolvedRepository();
+        return View(nameof(DeployKeys), new RepositoryDeployKeysViewModel
+        {
+            NamespaceSlug = repository.NamespaceSlug,
+            RepositoryName = repository.RepositorySlug,
+            Keys = await _deployKeyService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+            Create = new AddDeployKeyViewModel { RepositoryName = repository.RepositorySlug }
+        });
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> AddDeployKey(
+        [Bind(Prefix = "Create")] AddDeployKeyViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(model.RepositoryName, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        return await AddDeployKeyAsync(GetResolvedRepository(), model, cancellationToken);
+    }
+
+    [HttpPost("/{namespaceSlug}/{project}/settings/deploy-keys")]
+    [Authorize]
+    public async Task<IActionResult> AddCanonicalDeployKey(
+        string namespaceSlug,
+        string project,
+        [Bind(Prefix = "Create")] AddDeployKeyViewModel model,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        return await AddDeployKeyAsync(GetResolvedRepository(), model, cancellationToken);
+    }
+
+    private async Task<IActionResult> AddDeployKeyAsync(
+        RepositoryAddressResolution repository,
+        AddDeployKeyViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return View(nameof(DeployKeys), new RepositoryDeployKeysViewModel
+            {
+                NamespaceSlug = repository.NamespaceSlug,
+                RepositoryName = repository.RepositorySlug,
+                Keys = await _deployKeyService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+                Create = model
+            });
+        }
+
+        DateTimeOffset? expiresAt = model.ExpiresAtUtc is null
+            ? null
+            : new DateTimeOffset(DateTime.SpecifyKind(model.ExpiresAtUtc.Value, DateTimeKind.Utc));
+        var created = await _deployKeyService.CreateAsync(
+            repository.RepositoryId,
+            _currentUser.UserId,
+            model.Name,
+            model.PublicKey,
+            model.CanWrite,
+            expiresAt,
+            cancellationToken);
+        if (created is null)
+        {
+            ModelState.AddModelError(string.Empty, "The public key is invalid, already registered, or expired.");
+            return View(nameof(DeployKeys), new RepositoryDeployKeysViewModel
+            {
+                NamespaceSlug = repository.NamespaceSlug,
+                RepositoryName = repository.RepositorySlug,
+                Keys = await _deployKeyService.GetForRepositoryAsync(repository.RepositoryId, cancellationToken),
+                Create = model
+            });
+        }
+
+        return Redirect($"{repository.CanonicalPath}/settings/deploy-keys");
+    }
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> RevokeDeployKey(
+        string name,
+        long keyId,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(name, AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        var repository = GetResolvedRepository();
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return Forbid();
+        }
+
+        return await _deployKeyService.RevokeAsync(
+            repository.RepositoryId,
+            keyId,
+            _currentUser.UserId,
+            cancellationToken)
+            ? Redirect($"{repository.CanonicalPath}/settings/deploy-keys")
+            : NotFound();
+    }
+
+    [HttpPost("/{namespaceSlug}/{project}/settings/deploy-keys/{keyId:long}/revoke")]
+    [Authorize]
+    public async Task<IActionResult> RevokeCanonicalDeployKey(
+        string namespaceSlug,
+        string project,
+        long keyId,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireRepositoryAsync(
+            namespaceSlug,
+            project,
+            AuthorizationPolicies.RepositoryOwner);
+        if (denied is not null) return denied;
+        var repository = GetResolvedRepository();
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId)) return Forbid();
+        return await _deployKeyService.RevokeAsync(
+            repository.RepositoryId,
+            keyId,
+            _currentUser.UserId,
+            cancellationToken)
+            ? Redirect($"{repository.CanonicalPath}/settings/deploy-keys")
+            : NotFound();
+    }
 
     [HttpGet]
     [AllowAnonymous]

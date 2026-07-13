@@ -1,0 +1,43 @@
+@model RepositoryBranchProtectionsViewModel
+@using GitCandy.Governance
+@{ ViewData["Title"] = $"Branch rules - {Model.RepositoryName}"; }
+<header class="page-heading">
+    <div><h1>Branch rules</h1><p>Server-side push and merge policy for @Model.RepositoryName.</p></div>
+    <div class="page-actions"><a href="@Model.CanonicalRepositoryPath" class="btn"><i data-lucide="arrow-left"></i> Repository</a></div>
+</header>
+@if (Model.Rules.Count == 0)
+{
+    <div class="empty-state"><p>No protected branch rules are configured.</p></div>
+}
+else
+{
+    <div class="table-responsive"><table><thead><tr><th>Pattern</th><th>Direct push</th><th>Web merge</th><th>Required checks</th><th>History changes</th><th>Administrator bypass</th><th></th></tr></thead><tbody>
+    @foreach (var rule in Model.Rules)
+    {
+        <tr>
+            <td><code>@rule.Pattern</code></td>
+            <td>@rule.PushAccess</td>
+            <td>@rule.MergeAccess</td>
+            <td>@(rule.RequiredChecks.Count == 0 ? "None" : string.Join(", ", rule.RequiredChecks))</td>
+            <td>@(rule.AllowForcePushes ? "Force allowed" : "No force") / @(rule.AllowDeletions ? "Delete allowed" : "No delete")</td>
+            <td>@(rule.AllowAdministratorBypass ? "Allowed" : "Enforced")</td>
+            <td><form action="@(Model.CanonicalRepositoryPath)/settings/branch-rules/@rule.Id/delete" method="post" data-confirm="Delete branch rule @rule.Pattern?">@Html.AntiForgeryToken()<button type="submit" class="icon-button" aria-label="Delete branch rule" data-tooltip="Delete rule"><i data-lucide="trash-2"></i></button></form></td>
+        </tr>
+    }
+    </tbody></table></div>
+}
+<h2>Add rule</h2>
+<form action="@(Model.CanonicalRepositoryPath)/settings/branch-rules" method="post" class="account-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <input asp-for="Rule.Id" type="hidden" />
+    <input asp-for="Rule.RepositoryName" type="hidden" />
+    <div class="form-field"><label asp-for="Rule.Pattern"></label><input asp-for="Rule.Pattern" placeholder="main or release/*" /></div>
+    <div class="form-field"><label asp-for="Rule.PushAccess"></label><select asp-for="Rule.PushAccess" asp-items="Html.GetEnumSelectList<BranchAccessLevel>()"></select></div>
+    <div class="form-field"><label asp-for="Rule.MergeAccess"></label><select asp-for="Rule.MergeAccess" asp-items="Html.GetEnumSelectList<BranchAccessLevel>()"></select></div>
+    <div class="form-field"><label asp-for="Rule.RequiredChecks"></label><input asp-for="Rule.RequiredChecks" placeholder="ci/build, security/scan" /><p class="form-hint">Comma-separated status or check contexts. Every context must succeed for the exact target SHA.</p></div>
+    <label><input asp-for="Rule.AllowForcePushes" /> @Html.DisplayNameFor(model => model.Rule.AllowForcePushes)</label>
+    <label><input asp-for="Rule.AllowDeletions" /> @Html.DisplayNameFor(model => model.Rule.AllowDeletions)</label>
+    <label><input asp-for="Rule.AllowAdministratorBypass" /> @Html.DisplayNameFor(model => model.Rule.AllowAdministratorBypass)</label>
+    <button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Save rule</button>
+</form>

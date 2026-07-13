@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using GitCandy.Application;
+using GitCandy.Credentials;
 using GitCandy.Git;
+using GitCandy.Governance;
 
 namespace GitCandy.Models;
 
@@ -150,4 +152,91 @@ public sealed class RepositoryTeamRoleCommand
     public string Act { get; set; } = string.Empty;
 
     public bool Value { get; set; }
+}
+
+public sealed class RepositoryDeployKeysViewModel
+{
+    public required string NamespaceSlug { get; init; }
+    public required string RepositoryName { get; init; }
+    public IReadOnlyList<DeployKeySummary> Keys { get; init; } = [];
+    public AddDeployKeyViewModel Create { get; init; } = new();
+
+    public string CanonicalRepositoryPath =>
+        $"/{Uri.EscapeDataString(NamespaceSlug)}/{Uri.EscapeDataString(RepositoryName)}";
+}
+
+public sealed class AddDeployKeyViewModel
+{
+    [Required]
+    public string RepositoryName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100)]
+    public string Name { get; set; } = string.Empty;
+
+    [Required]
+    [Display(Name = "OpenSSH public key")]
+    public string PublicKey { get; set; } = string.Empty;
+
+    [Display(Name = "Allow push")]
+    public bool CanWrite { get; set; }
+
+    [Display(Name = "Expires at (UTC)")]
+    [DataType(DataType.DateTime)]
+    public DateTime? ExpiresAtUtc { get; set; }
+}
+
+public sealed class RepositoryBranchProtectionsViewModel
+{
+    public required string NamespaceSlug { get; init; }
+    public required string RepositoryName { get; init; }
+    public IReadOnlyList<BranchProtectionSummary> Rules { get; init; } = [];
+    public BranchProtectionFormViewModel Rule { get; init; } = new();
+
+    public string CanonicalRepositoryPath =>
+        $"/{Uri.EscapeDataString(NamespaceSlug)}/{Uri.EscapeDataString(RepositoryName)}";
+}
+
+public sealed class BranchProtectionFormViewModel
+{
+    public long? Id { get; set; }
+
+    [Required]
+    public string RepositoryName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(255)]
+    [Display(Name = "Branch pattern")]
+    public string Pattern { get; set; } = string.Empty;
+
+    [Display(Name = "Direct push access")]
+    public BranchAccessLevel PushAccess { get; set; } = BranchAccessLevel.RepositoryWrite;
+
+    [Display(Name = "Web merge access")]
+    public BranchAccessLevel MergeAccess { get; set; } = BranchAccessLevel.RepositoryWrite;
+
+    [Display(Name = "Allow force pushes")]
+    public bool AllowForcePushes { get; set; }
+
+    [Display(Name = "Allow branch deletion")]
+    public bool AllowDeletions { get; set; }
+
+    [Display(Name = "Allow administrators to bypass this rule")]
+    public bool AllowAdministratorBypass { get; set; }
+
+    [Display(Name = "Required checks")]
+    public string RequiredChecks { get; set; } = string.Empty;
+
+    public BranchProtectionEdit ToEdit()
+    {
+        return new BranchProtectionEdit(
+            Id,
+            Pattern,
+            PushAccess,
+            MergeAccess,
+            AllowForcePushes,
+            AllowDeletions,
+            AllowAdministratorBypass,
+            RequiredChecks.Split([',', '\r', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+    }
 }

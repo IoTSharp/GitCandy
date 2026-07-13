@@ -48,8 +48,11 @@ import {
   Moon,
   Plus,
   PackageOpen,
+  Pause,
   Pencil,
+  Play,
   RotateCcw,
+  RotateCw,
   Radio,
   Search,
   SearchX,
@@ -67,6 +70,7 @@ import {
   UserRound,
   UserRoundCog,
   Users,
+  Webhook,
   X,
   createIcons
 } from "lucide";
@@ -359,8 +363,11 @@ createIcons({
     Moon,
     Plus,
     PackageOpen,
+    Pause,
     Pencil,
+    Play,
     RotateCcw,
+    RotateCw,
     Radio,
     Search,
     SearchX,
@@ -378,6 +385,7 @@ createIcons({
     UserRound,
     UserRoundCog,
     Users,
+    Webhook,
     X
   },
   attrs: { "aria-hidden": "true", "stroke-width": 1.8 }

@@ -1,0 +1,38 @@
+@model RepositoryDeployKeysViewModel
+@{ ViewData["Title"] = $"Deploy keys - {Model.RepositoryName}"; }
+<header class="page-heading">
+    <div><h1>Deploy keys</h1><p>Repository-scoped SSH credentials for @Model.RepositoryName.</p></div>
+    <div class="page-actions"><a href="@Model.CanonicalRepositoryPath" class="btn"><i data-lucide="arrow-left"></i> Repository</a></div>
+</header>
+@if (Model.Keys.Count == 0)
+{
+    <div class="empty-state"><p>No deploy keys are registered.</p></div>
+}
+else
+{
+    <div class="table-responsive"><table><thead><tr><th>Name</th><th>Fingerprint</th><th>Access</th><th>Last used</th><th>Status</th><th></th></tr></thead><tbody>
+    @foreach (var key in Model.Keys)
+    {
+        var expired = key.ExpiresAt is not null && key.ExpiresAt <= DateTimeOffset.UtcNow;
+        <tr>
+            <td><strong>@key.Name</strong><div class="entity-meta">Added @key.CreatedAt.ToString("u")</div></td>
+            <td><code>SHA256:@key.Fingerprint</code></td>
+            <td>@(key.CanWrite ? "Read / write" : "Read only")</td>
+            <td>@(key.LastUsedAt?.ToString("u") ?? "Never")</td>
+            <td>@(key.RevokedAt is not null ? "Revoked" : expired ? "Expired" : key.ExpiresAt is null ? "Active" : $"Expires {key.ExpiresAt:u}")</td>
+            <td>@if (key.RevokedAt is null && !expired) { <form action="@(Model.CanonicalRepositoryPath)/settings/deploy-keys/@key.Id/revoke" method="post" data-confirm="Revoke @key.Name?">@Html.AntiForgeryToken()<button type="submit" class="icon-button" aria-label="Revoke deploy key" data-tooltip="Revoke key"><i data-lucide="ban"></i></button></form> }</td>
+        </tr>
+    }
+    </tbody></table></div>
+}
+<h2>Add deploy key</h2>
+<form action="@(Model.CanonicalRepositoryPath)/settings/deploy-keys" method="post" class="account-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <input asp-for="Create.RepositoryName" type="hidden" />
+    <div class="form-field"><label asp-for="Create.Name"></label><input asp-for="Create.Name" autocomplete="off" /></div>
+    <div class="form-field"><label asp-for="Create.PublicKey"></label><textarea asp-for="Create.PublicKey" rows="4" spellcheck="false"></textarea><p class="form-hint">Public key only. A key can belong to one GitCandy identity.</p></div>
+    <div class="form-field"><label asp-for="Create.ExpiresAtUtc"></label><input asp-for="Create.ExpiresAtUtc" /></div>
+    <label><input asp-for="Create.CanWrite" /> @Html.DisplayNameFor(model => model.Create.CanWrite)</label>
+    <button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Add deploy key</button>
+</form>

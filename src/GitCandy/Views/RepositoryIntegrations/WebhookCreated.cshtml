@@ -1,0 +1,9 @@
+@model CreatedWebhookViewModel
+@{ ViewData["Title"] = "Webhook created"; }
+<header class="page-heading"><div><h1>Webhook created</h1><p>@Model.Created.Subscription.Name</p></div></header>
+<div class="alert alert-warning" role="alert">This signing secret is shown once. Store it in the receiver's secret store.</div>
+<div class="input-group">
+    <input id="created-webhook-secret" type="text" value="@Model.Created.Secret" readonly autocomplete="off" aria-label="Webhook signing secret" />
+    <span class="input-group-btn"><button type="button" class="btn" data-copy-target="#created-webhook-secret" data-label="Copy secret" data-copied="Copied" data-tooltip="Copy secret" aria-label="Copy secret"><i data-lucide="copy"></i></button></span>
+</div>
+<p><a href="@Model.WebhooksPath" class="btn"><i data-lucide="arrow-left"></i> Back to webhooks</a></p>

@@ -97,6 +97,17 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyRepositoryMetricDaily> RepositoryMetricsDaily => Set<GitCandyRepositoryMetricDaily>();
     public DbSet<GitCandyRepositoryPageView> RepositoryPageViews => Set<GitCandyRepositoryPageView>();
     public DbSet<GitCandyRepositoryRecommendationSnapshot> RepositoryRecommendationSnapshots => Set<GitCandyRepositoryRecommendationSnapshot>();
+    public DbSet<GitCandyPersonalAccessToken> PersonalAccessTokens => Set<GitCandyPersonalAccessToken>();
+    public DbSet<GitCandyCredentialAuditEvent> CredentialAuditEvents => Set<GitCandyCredentialAuditEvent>();
+    public DbSet<GitCandyDeployKey> DeployKeys => Set<GitCandyDeployKey>();
+    public DbSet<GitCandySshFingerprintClaim> SshFingerprintClaims => Set<GitCandySshFingerprintClaim>();
+    public DbSet<GitCandyBranchProtectionRule> BranchProtectionRules => Set<GitCandyBranchProtectionRule>();
+    public DbSet<GitCandyGovernanceAuditEvent> GovernanceAuditEvents => Set<GitCandyGovernanceAuditEvent>();
+    public DbSet<GitCandyBranchProtectionRequiredCheck> BranchProtectionRequiredChecks => Set<GitCandyBranchProtectionRequiredCheck>();
+    public DbSet<GitCandyIntegrationEvent> IntegrationEvents => Set<GitCandyIntegrationEvent>();
+    public DbSet<GitCandyWebhookSubscription> WebhookSubscriptions => Set<GitCandyWebhookSubscription>();
+    public DbSet<GitCandyWebhookDelivery> WebhookDeliveries => Set<GitCandyWebhookDelivery>();
+    public DbSet<GitCandyCommitCheck> CommitChecks => Set<GitCandyCommitCheck>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -128,6 +139,9 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         builder.ConfigurePullRequestModel();
         builder.ConfigurePullRequestReviewModel();
         builder.ConfigureWorkspaceModel();
+        builder.ConfigureCredentialModel();
+        builder.ConfigureGovernanceModel();
+        builder.ConfigureIntegrationModel();
 
         builder.Entity<GitCandyUser>(entity =>
         {

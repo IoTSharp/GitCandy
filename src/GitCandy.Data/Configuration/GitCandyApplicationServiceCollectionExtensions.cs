@@ -4,6 +4,9 @@ using GitCandy.Issues;
 using GitCandy.PullRequests;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using GitCandy.Credentials;
+using GitCandy.Governance;
+using GitCandy.Integrations;
 using GitCandy.Configuration;
 using GitCandy.Workspace;
 
@@ -41,6 +44,18 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<IWorkspaceActivityPublisher, WorkspaceActivityPublisher>();
         services.TryAddSingleton(TimeProvider.System);
         services.TryAddSingleton<ISshAccessService, SshAccessService>();
+        services.TryAddSingleton<IPersonalAccessTokenService, PersonalAccessTokenService>();
+        services.TryAddSingleton<IDeployKeyService, DeployKeyService>();
+        services.TryAddSingleton<BranchProtectionService>();
+        services.TryAddSingleton<IBranchProtectionService>(provider => provider.GetRequiredService<BranchProtectionService>());
+        services.TryAddSingleton<IGitPushGate>(provider => provider.GetRequiredService<BranchProtectionService>());
+        services.TryAddSingleton<IWebhookService, WebhookService>();
+        services.TryAddSingleton<IIntegrationEventPublisher, IntegrationEventPublisher>();
+        services.TryAddSingleton<ICommitCheckService, CommitCheckService>();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IPullRequestMergeHook, BranchProtectionPullRequestMergeHook>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Scoped<IPullRequestMergeHook, WebhookPullRequestMergeHook>());
 
         return services;
     }

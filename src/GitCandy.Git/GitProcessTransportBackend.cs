@@ -15,6 +15,7 @@ public sealed class GitProcessTransportBackend(
     IGitExecutableResolver executableResolver,
     IOptions<GitSmartHttpOptions> options,
     IEnumerable<IGitTransportActivitySink> activitySinks,
+    IGitReceiveHookLauncher receiveHookLauncher,
     ILogger<GitProcessTransportBackend> logger)
     : IGitTransportBackend, IDisposable
 {
@@ -25,6 +26,7 @@ public sealed class GitProcessTransportBackend(
     private readonly GitSmartHttpOptions _options = options.Value;
     private readonly ILogger<GitProcessTransportBackend> _logger = logger;
     private readonly IReadOnlyList<IGitTransportActivitySink> _activitySinks = activitySinks.ToArray();
+    private readonly IGitReceiveHookLauncher _receiveHookLauncher = receiveHookLauncher;
     private readonly SemaphoreSlim _operationSlots = new(options.Value.MaxConcurrentOperations);
 
     /// <inheritdoc />
@@ -234,6 +236,11 @@ public sealed class GitProcessTransportBackend(
         if (request.ProtocolVersion is not null)
         {
             startInfo.Environment["GIT_PROTOCOL"] = request.ProtocolVersion;
+        }
+
+        if (request.Service == GitTransportService.ReceivePack && !request.AdvertiseRefs)
+        {
+            _receiveHookLauncher.Configure(startInfo, request);
         }
 
         return startInfo;

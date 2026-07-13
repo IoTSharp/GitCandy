@@ -195,7 +195,67 @@ public sealed class MvcPageSmokeTests
             repositoryHtml,
             $"{fixture.Client.BaseAddress}m5-admin/m5-repository.git");
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/issues\"");
+        StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/deploy-keys\"");
+        StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/branch-rules\"");
+        StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/webhooks\"");
         Assert.IsFalse(repositoryHtml.Contains("/git/m5-repository.git", StringComparison.Ordinal));
+
+        var deployKeysHtml = await fixture.GetStringAsync(
+            "/m5-admin/m5-repository/settings/deploy-keys");
+        StringAssert.Contains(deployKeysHtml, "Add deploy key");
+        StringAssert.Contains(
+            deployKeysHtml,
+            "action=\"/m5-admin/m5-repository/settings/deploy-keys\"");
+        StringAssert.Contains(deployKeysHtml, "name=\"__RequestVerificationToken\"");
+
+        const string branchRulesPath = "/m5-admin/m5-repository/settings/branch-rules";
+        var branchRulesHtml = await fixture.GetStringAsync(branchRulesPath);
+        StringAssert.Contains(branchRulesHtml, "Add rule");
+        StringAssert.Contains(branchRulesHtml, "name=\"__RequestVerificationToken\"");
+        var branchRuleToken = await fixture.GetAntiforgeryTokenAsync(branchRulesPath);
+        using var branchRuleResponse = await fixture.PostFormAsync(
+            branchRulesPath,
+            branchRuleToken,
+            new Dictionary<string, string>
+            {
+                ["Rule.RepositoryName"] = "m5-repository",
+                ["Rule.Pattern"] = "main",
+                ["Rule.PushAccess"] = "1",
+                ["Rule.MergeAccess"] = "2",
+                ["Rule.RequiredChecks"] = "ci/build, security/scan",
+                ["Rule.AllowAdministratorBypass"] = "true"
+            });
+        Assert.AreEqual(HttpStatusCode.Redirect, branchRuleResponse.StatusCode);
+        Assert.AreEqual(branchRulesPath, branchRuleResponse.Headers.Location?.OriginalString);
+        branchRulesHtml = await fixture.GetStringAsync(branchRulesPath);
+        StringAssert.Contains(branchRulesHtml, "<code>main</code>");
+        StringAssert.Contains(branchRulesHtml, "RepositoryOwner");
+        StringAssert.Contains(branchRulesHtml, "Nobody");
+        StringAssert.Contains(branchRulesHtml, "ci/build, security/scan");
+
+        const string webhooksPath = "/m5-admin/m5-repository/settings/webhooks";
+        var webhooksHtml = await fixture.GetStringAsync(webhooksPath);
+        StringAssert.Contains(webhooksHtml, "Add webhook");
+        StringAssert.Contains(webhooksHtml, $"action=\"{webhooksPath}\"");
+        StringAssert.Contains(webhooksHtml, "name=\"__RequestVerificationToken\"");
+        var webhookToken = await fixture.GetAntiforgeryTokenAsync(webhooksPath);
+        using var webhookResponse = await fixture.PostFormAsync(
+            webhooksPath,
+            webhookToken,
+            new Dictionary<string, string>
+            {
+                ["Create.Name"] = "external-ci",
+                ["Create.TargetUrl"] = "https://8.8.8.8/hooks/gitcandy",
+                ["Create.Push"] = "true",
+                ["Create.PullRequestMerged"] = "true"
+            });
+        Assert.AreEqual(HttpStatusCode.OK, webhookResponse.StatusCode);
+        var webhookCreatedHtml = await webhookResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(webhookCreatedHtml, "This signing secret is shown once");
+        StringAssert.Contains(webhookCreatedHtml, "whsec_");
+        webhooksHtml = await fixture.GetStringAsync(webhooksPath);
+        StringAssert.Contains(webhooksHtml, "external-ci");
+        Assert.IsFalse(webhooksHtml.Contains("whsec_", StringComparison.Ordinal));
 
         using var repositoryListResponse = await fixture.Client.GetAsync("/Repository");
         Assert.AreEqual(HttpStatusCode.OK, repositoryListResponse.StatusCode);
