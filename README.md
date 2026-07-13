@@ -75,7 +75,8 @@ Canonical repositories expose `/branches`, `/tags`, and `/contributors`. Writers
 - Detailed deployment, configuration, backup, restore, and rollback guide: [docs/deployment.md](docs/deployment.md)
 - Database provider notes: [docs/database-providers.md](docs/database-providers.md)
 - `gitcandy.com` on the existing sonnet.vip host: [deploy/sonnet-vip/README.md](deploy/sonnet-vip/README.md)
-- Migration roadmap: [ROADMAP.md](ROADMAP.md)
+- Active product roadmap: [ROADMAP.md](ROADMAP.md)
+- Completed milestones and documentation index: [docs/roadmap/completed-milestones.md](docs/roadmap/completed-milestones.md)
 - Changes: [CHANGES.md](CHANGES.md)
 
 ## Development

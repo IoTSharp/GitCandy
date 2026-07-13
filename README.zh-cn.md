@@ -41,7 +41,8 @@ docker pull iotsharp/gitcandy:latest
 - 部署、配置、备份、恢复与回滚：[docs/deployment.md](docs/deployment.md)
 - 数据库 provider 说明：[docs/database-providers.md](docs/database-providers.md)
 - 复用 sonnet.vip 现有 Caddy/SonnetDB 部署 `gitcandy.com`：[deploy/sonnet-vip/README.md](deploy/sonnet-vip/README.md)
-- 迁移路线图：[ROADMAP.md](ROADMAP.md)
+- 活动产品路线图：[ROADMAP.md](ROADMAP.md)
+- 已完成里程碑与文档索引：[docs/roadmap/completed-milestones.md](docs/roadmap/completed-milestones.md)
 - 变更记录：[CHANGES.md](CHANGES.md)
 
 ## 开发

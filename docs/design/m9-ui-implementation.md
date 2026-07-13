@@ -1,6 +1,6 @@
 # M9 #096 / #100-#105 UI 实施记录
 
-状态：`#096`、`#100`、`#102`、`#103`、`#104`、`#105` 已完成；`#101` 现有仓库元数据页面已完成，代码树、提交与 diff 因活动主线尚无对应读取 action/service 而保持进行中。
+状态：`#096`、`#100-#105` 已完成。`#101` 所需代码树、提交与 diff 后端已由 M9 `#106-#108` 补齐，本文件下方的“当时尚无读取服务”仅保留为实施顺序记录。
 
 对应 ROADMAP：Milestone 9 / `#096`、`#100`、`#101`、`#102`、`#103`、`#104`、`#105`
 
@@ -36,7 +36,7 @@ npm run build
 
 仓库 UI 已迁移列表、空状态、可见性、详情、Smart HTTP clone URL、创建/编辑、用户/团队关系和删除确认。公开 route values、表单字段、antiforgery 和 repository policy 未改变。
 
-活动 ASP.NET Core 主线当前没有返回 tree、commit、diff 数据的 controller action 或应用服务；现有 `RepositoryController.Tree` 只重定向到详情页。为避免无效导航和把后端迁移混入 UI 任务，本次没有伪造 Code/Commits/Diff 页面。`#101` 在这些读取能力作为独立垂直切片落地后才能最终关闭。
+本 UI 切片实施时，ASP.NET Core 主线还没有返回 tree、commit、diff 数据的 controller action 或应用服务，因此当时没有伪造 Code/Commits/Diff 页面。后续 M9 `#106-#108` 已按独立垂直切片补齐读取服务、页面和边界测试，`#101` 随之关闭。
 
 账户 UI 覆盖登录、注册、资料、密码、Identity security、外部登录、恢复码和 SSH public key；团队/管理 UI 覆盖用户、团队、成员角色、团队关系和只读运行配置。认证 cookie、Identity、SSH key 校验和服务端授权没有改变。
 

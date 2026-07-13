@@ -10,6 +10,7 @@
  - Completed the M11-M12 collaboration baseline with Issues, Markdown discussions, labels, milestones, notifications, Pull Requests, cross-fork sources, inline review, approvals, mergeability, merge commits, and squash.
 
 #### Added
+ - Added a completed-milestone and documentation index under `docs/roadmap`, preserving the pre-reorganization roadmap as an archived historical snapshot.
  - Added a redesigned public GitCandy product page for anonymous root visits, with a dedicated responsive navigation, product workflow previews, deployment overview, help links, localized English and Simplified Chinese copy, and a new candy-and-Git branch brand mark used across the public page and authenticated application shell.
  - Added the M12.6 SonnetDB production slice: configuration-selected host registration, an independent full-schema migration, Identity/repository smoke coverage, and a `gitcandy.com` Compose profile that reuses the existing sonnet.vip Caddy and internal SonnetDB service.
  - Added `IoTSharp/SonnetDB` as a source submodule and fixed unique-index NULL semantics in the database engine so EF migration seed rows can contain multiple NULL values while duplicate non-NULL values remain rejected.
@@ -18,6 +19,7 @@
  - Removed legacy repository Web, Git Smart HTTP, Git LFS, and SSH addresses. Repository pages now require `/{namespace}/{repository}` and Git transports require `/{namespace}/{repository}.git`; old `/Repository/Detail/{name}`, `/Repository/{browser-action}/{name}`, `/Repository/Issues/{name}`, `/Repository/Pulls/{name}`, `/git/{repository}[.git]`, no-suffix Git remotes, and retained alias addresses return not found.
 
 #### Changed
+ - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.5 moved to completion history; M12.6 retains only its unfinished production deployment; M12.7 now defines `/me` as the private signed-in dashboard and separates Todo, Notification, Feed, public profile, and public repository discovery semantics.
  - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users continue directly to the repository workspace.
 
 #### Fixed

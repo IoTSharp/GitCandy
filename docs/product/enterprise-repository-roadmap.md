@@ -2,7 +2,7 @@
 
 评估日期：2026-07-11
 
-本文补充 `ROADMAP.md` 中的 M10、M14 和 M15，明确 GitCandy 面向企业内部 Git 管理时的仓库 URL、名称变更、团队角色、企业身份和远程仓库同步边界。本文是产品与架构规划，不表示对应能力已经实现。
+本文记录 M10 已落地的 namespace/URL 决策，并补充活动路线图 M14、M15 的团队角色、企业身份和远程仓库同步边界。M10 验收入口见 `docs/roadmap/completed-milestones.md`；M14/M15 仍是规划。
 
 ## 1. 产品决策摘要
 
@@ -10,7 +10,7 @@
 - 用户、团队、仓库都使用稳定内部 ID。URL slug 只是可变名称，权限、审计、任务和外部绑定不得以 slug 作为外键。
 - 用户和团队共用一个大小写不敏感的全局命名空间；系统路由、当前名称和保留期内的历史别名都不能被再次占用。
 - 用户或团队 URL slug 在滚动 7 天窗口内最多成功修改 3 次。失败的改名不计数；紧急恢复只能由系统管理员通过单独的审计流程执行。
-- 历史 namespace/repository alias 的默认保留期为 365 天并可配置。保留期内，旧 Web URL、Git HTTP URL 和 SSH URL都必须继续工作并提示迁移到规范 URL。
+- 历史 namespace/repository alias 的默认保留期为 365 天并可配置。alias 只保留名称占用和审计，不提供旧 Web、Git HTTP/LFS 或 SSH 地址访问；旧地址返回 not found。
 - 团队角色固定为 `TeamOwner`（最高管理员/团队所有者）、`Leader`（组长）、`DeputyLeader`（副组长）和 `Member`（成员）。团队至少保留一名 `TeamOwner`。
 - 企业身份分为登录联邦和目录供应两个平面：OIDC/SAML 解决登录，SCIM 或厂商通讯录 API 解决用户、组织和成员生命周期。二者不得混成一套不可替换的 provider 代码。
 - 远程仓库同步第一阶段只支持明确的单向 `Pull` 或 `Push` mirror。双向 mirror 因竞态、历史改写和冲突风险默认禁用，待单向能力和冲突保护通过后再单独试验。
@@ -66,17 +66,16 @@
 
 改名限频按主体计算成功事件：任意滚动 7 天内最多 3 次。并发改名必须在数据库事务和唯一索引保护下完成，不能靠应用层先查后写。普通管理员 UI 不提供绕过；灾难恢复使用单独命令或受控页面，要求理由、二次确认和完整审计。
 
-### 3.3 兼容访问与提示
+### 3.3 规范地址直切与名称占用
 
-| 通道 | 旧地址行为 | 用户提示 |
-| --- | --- | --- |
-| Web GET | `308 Permanent Redirect` 到规范 URL，保留安全 query 参数 | 新页面显示一次“地址已变更，请更新书签/remote”提示 |
-| Git HTTP discovery | 同 host `308` 到规范 `info/refs` | 真实 Git 客户端必须显示 redirect/update-remote warning |
-| Git HTTP RPC | 正常流程应已使用 discovery 后的新基址；旧 RPC 仍需安全解析，不能丢请求体 | 使用协议允许的提示机制；不得往 pkt-line/pack 数据中直接插文本 |
-| SSH | 内部解析 alias，继续执行相同权限检查和 transport backend | 通过独立 stderr channel 输出规范 remote URL |
-| API | 返回规范资源 ID/URL；是否跟随 redirect 由 API 版本明确规定 | `Location` 和可机器读取的 canonical 字段 |
+| 通道 | 历史或非规范地址行为 |
+| --- | --- |
+| Web | 旧 `/Repository/...`、namespace alias 和 repository alias 返回 404，不重定向 |
+| Git HTTP/LFS | legacy `/git/{project}`、alias 和无 `.git` remote 返回 404；只有当前 `/{namespace}/{repository}.git` 可用 |
+| SSH | legacy、alias 和无 `.git` 命令在 transport 启动前拒绝 |
+| API | 后续版本只返回稳定资源 ID 和当前 canonical URL，不以 alias 作为资源标识 |
 
-提示不能取代兼容性。别名访问必须复用当前仓库的认证、权限、路径边界、审计、hook 和限流逻辑，不能复制一套旧路径授权规则。Web、HTTP Git 和 SSH 的 alias hit 都记录脱敏审计事件，便于管理员找到仍未更新的客户端。
+alias 的职责是防止保留期内名称被抢注，并为改名审计、管理员诊断和到期释放提供稳定记录。它不是兼容访问入口。客户端和书签必须显式更新到当前规范地址。
 
 ## 4. 团队角色模型
 
@@ -187,11 +186,11 @@
 
 ## 8. 实施顺序与验收重点
 
-1. M10 先建立稳定 namespace ID、统一 resolver、alias 和真实 Git 客户端兼容测试。没有这层，企业目录改名和远程 repository rename 都会继续扩散字符串外键。
-2. M11-M13 先建立 Issue、PR/Review、PAT、通知、审计、webhook 和 branch protection，使企业身份接入后能直接复用完整协作权限与审计边界。
-3. M14 在 namespace 基础上建立团队四级角色、connection abstraction，再先交付 Microsoft Entra OIDC + SCIM 垂直切片，随后接企业微信、飞书、钉钉 adapter。
+1. M10-M12 已完成稳定 namespace、Issue 和 PR/Review/Merge，作为后续能力的固定前置层。
+2. M12.7 先完成 dashboard、统一通知和团队来源；M13 再完成 PAT、审计、webhook、branch protection 和外部 CI。
+3. M14 在稳定 namespace 和 M13 安全边界上建立团队四级角色、connection abstraction、Entra OIDC + SCIM，再接企业微信、飞书、钉钉 adapter。
 4. M15 先做通用 remote/account/secret/job 模型和 GitHub 连接，再扩 GitLab、Gitee；Pull 与 Push 分两个垂直切片，双向最后单独评估。
-5. M16 Code Intelligence 继续使用稳定 repository ID 和新权限模型，不自己保存 namespace slug 或外部账号 token。
+5. M16 继续使用稳定 repository ID、权限和凭据模型，不保存 namespace slug 或外部账号 token 作为关系键。
 
 跨里程碑必测：
 
