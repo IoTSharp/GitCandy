@@ -17,6 +17,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>@pageTitle - GitCandy</title>
+    <link rel="icon" href="~/brand/gitcandy-mark.svg" type="image/svg+xml" />
     @if (ViewData["CanonicalUrl"] is string canonicalUrl)
     {
         <link rel="canonical" href="@canonicalUrl" />
@@ -36,7 +37,7 @@
             <i data-lucide="menu"></i>
         </button>
         <a class="brand" asp-controller="Home" asp-action="Index" aria-label="GitCandy home">
-            <span class="brand-mark"><i data-lucide="git-branch"></i></span>
+            <img class="brand-logo" src="~/brand/gitcandy-mark.svg" alt="" width="28" height="28" />
             <span>GitCandy</span>
             <span class="brand-stage">Alpha</span>
         </a>

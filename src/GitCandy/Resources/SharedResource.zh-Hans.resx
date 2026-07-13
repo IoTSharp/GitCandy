@@ -219,6 +219,75 @@
   <data name="Account_SSH" xml:space="preserve">
     <value>SSH</value>
   </data>
+  <data name="Landing_MetaTitle" xml:space="preserve"><value>GitCandy - 自托管 Git 协作平台</value></data>
+  <data name="Landing_MetaDescription" xml:space="preserve"><value>GitCandy 是轻量的自托管 Git 协作平台，提供 Smart HTTP、内置 SSH、Issue、Pull Request 和 ASP.NET Core Identity。</value></data>
+  <data name="Landing_SkipToContent" xml:space="preserve"><value>跳到主要内容</value></data>
+  <data name="Landing_OpenMenu" xml:space="preserve"><value>打开导航</value></data>
+  <data name="Landing_PrimaryNavigation" xml:space="preserve"><value>主导航</value></data>
+  <data name="Landing_NavProduct" xml:space="preserve"><value>产品</value></data>
+  <data name="Landing_NavCollaboration" xml:space="preserve"><value>协作</value></data>
+  <data name="Landing_NavDeployment" xml:space="preserve"><value>部署</value></data>
+  <data name="Landing_NavHelp" xml:space="preserve"><value>帮助</value></data>
+  <data name="Landing_Eyebrow" xml:space="preserve"><value>开源 · 为自托管而生</value></data>
+  <data name="Landing_HeroTitle" xml:space="preserve"><value>你的代码，你的服务器，你的协作方式。</value></data>
+  <data name="Landing_HeroSummary" xml:space="preserve"><value>面向务实团队的 Git 平台：可靠托管源码、审查变更，不必维护庞杂的工具链。</value></data>
+  <data name="Landing_StartNow" xml:space="preserve"><value>立即开始</value></data>
+  <data name="Landing_ViewSource" xml:space="preserve"><value>查看源代码</value></data>
+  <data name="Landing_ProductPreviewLabel" xml:space="preserve"><value>GitCandy 代码库工作区预览</value></data>
+  <data name="Landing_PreviewSearch" xml:space="preserve"><value>搜索代码库、Issue 和代码</value></data>
+  <data name="Landing_PreviewPrivate" xml:space="preserve"><value>私有</value></data>
+  <data name="Landing_PreviewCode" xml:space="preserve"><value>代码</value></data>
+  <data name="Landing_PreviewIssues" xml:space="preserve"><value>议题</value></data>
+  <data name="Landing_PreviewPullRequests" xml:space="preserve"><value>合并请求</value></data>
+  <data name="Landing_PreviewChecksPassed" xml:space="preserve"><value>检查全部通过</value></data>
+  <data name="Landing_PreviewCommitTitle" xml:space="preserve"><value>让传输审计清晰可观测</value></data>
+  <data name="Landing_PreviewTime" xml:space="preserve"><value>2 分钟前</value></data>
+  <data name="Landing_PreviewStatus" xml:space="preserve"><value>Smart HTTP 与 SSH 在线</value></data>
+  <data name="Landing_CapabilitiesLabel" xml:space="preserve"><value>GitCandy 核心能力</value></data>
+  <data name="Landing_BuiltInSsh" xml:space="preserve"><value>内置 SSH</value></data>
+  <data name="Landing_CollaborationKicker" xml:space="preserve"><value>从第一次推送到最终批准</value></data>
+  <data name="Landing_CollaborationTitle" xml:space="preserve"><value>让每一次代码讨论都有上下文。</value></data>
+  <data name="Landing_CollaborationSummary" xml:space="preserve"><value>浏览变更、讨论意图、完成合并，每一步都有清晰的代码库权限保护。</value></data>
+  <data name="Landing_FeatureGitTitle" xml:space="preserve"><value>纯正的 Git 工作方式</value></data>
+  <data name="Landing_FeatureGitSummary" xml:space="preserve"><value>通过流式 Smart HTTP 或内置 SSH clone、fetch、push，并用 Git LFS 管理大文件。</value></data>
+  <data name="Landing_FeatureReviewTitle" xml:space="preserve"><value>在上下文中审查</value></data>
+  <data name="Landing_FeatureReviewSummary" xml:space="preserve"><value>Issue、Pull Request、行内讨论、批准、merge 与 squash 始终与代码相连。</value></data>
+  <data name="Landing_FeatureControlTitle" xml:space="preserve"><value>控制权留在本地</value></data>
+  <data name="Landing_FeatureControlSummary" xml:space="preserve"><value>身份、团队、私有代码库、SSH 密钥和权限都由你自己管理。</value></data>
+  <data name="Landing_ReviewPreviewLabel" xml:space="preserve"><value>Pull Request 代码审查流程预览</value></data>
+  <data name="Landing_ReviewTitle" xml:space="preserve"><value>增加传输审计记录</value></data>
+  <data name="Landing_ReviewOpen" xml:space="preserve"><value>进行中</value></data>
+  <data name="Landing_ReviewCommentTitle" xml:space="preserve"><value>一处行内讨论已解决</value></data>
+  <data name="Landing_ReviewCommentSummary" xml:space="preserve"><value>重试路径现在会保留取消信号。</value></data>
+  <data name="Landing_ReviewApprovedTitle" xml:space="preserve"><value>两位审查者已批准</value></data>
+  <data name="Landing_ReviewApprovedSummary" xml:space="preserve"><value>分支策略要求均已满足。</value></data>
+  <data name="Landing_ReviewReadyTitle" xml:space="preserve"><value>可以合并</value></data>
+  <data name="Landing_ReviewReadySummary" xml:space="preserve"><value>3 个提交 · 8 个文件变更</value></data>
+  <data name="Landing_DeploymentKicker" xml:space="preserve"><value>简单可控</value></data>
+  <data name="Landing_DeploymentTitle" xml:space="preserve"><value>一个应用，承载团队需要的 Git 服务。</value></data>
+  <data name="Landing_DeploymentSummary" xml:space="preserve"><value>Web、Git 传输、身份认证、后台任务与运维信号，都运行在同一个 ASP.NET Core 主机中。</value></data>
+  <data name="Landing_DeploymentPointOne" xml:space="preserve"><value>支持 Docker Compose、systemd 与 Windows Service</value></data>
+  <data name="Landing_DeploymentPointTwo" xml:space="preserve"><value>默认 SQLite，并保留 SQL Server 与 SonnetDB 路径</value></data>
+  <data name="Landing_DeploymentPointThree" xml:space="preserve"><value>内置健康检查、OpenTelemetry 与迁移工具</value></data>
+  <data name="Landing_DeploymentPreviewLabel" xml:space="preserve"><value>GitCandy 单进程部署架构</value></data>
+  <data name="Landing_OneProcess" xml:space="preserve"><value>单进程</value></data>
+  <data name="Landing_HelpKicker" xml:space="preserve"><value>找到下一步</value></data>
+  <data name="Landing_HelpTitle" xml:space="preserve"><value>探索、部署，或者加入这个项目。</value></data>
+  <data name="Landing_HelpDocsTitle" xml:space="preserve"><value>阅读文档</value></data>
+  <data name="Landing_HelpDocsSummary" xml:space="preserve"><value>查看安装、配置与项目指南。</value></data>
+  <data name="Landing_HelpCommunityTitle" xml:space="preserve"><value>联系维护者</value></data>
+  <data name="Landing_HelpCommunitySummary" xml:space="preserve"><value>报告问题或提出改进建议。</value></data>
+  <data name="Landing_HelpExploreTitle" xml:space="preserve"><value>探索代码库</value></data>
+  <data name="Landing_HelpExploreSummary" xml:space="preserve"><value>查看这台服务器上的公开项目。</value></data>
+  <data name="Landing_FinalKicker" xml:space="preserve"><value>成为你的平台</value></data>
+  <data name="Landing_FinalTitle" xml:space="preserve"><value>让下一个代码库回到自己手中。</value></data>
+  <data name="Landing_FinalSummary" xml:space="preserve"><value>创建账户，从第一次推送到代码审查，都在你掌控的 Git 平台中完成。</value></data>
+  <data name="Landing_CreateAccount" xml:space="preserve"><value>创建账户</value></data>
+  <data name="Landing_FooterSummary" xml:space="preserve"><value>开源 Git 协作，为务实的自托管而设计。</value></data>
+  <data name="Landing_FooterNavigation" xml:space="preserve"><value>页脚导航</value></data>
+  <data name="Landing_SourceCode" xml:space="preserve"><value>源代码</value></data>
+  <data name="Landing_ExploreRepositories" xml:space="preserve"><value>探索代码库</value></data>
+  <data name="Landing_OpenWorkspace" xml:space="preserve"><value>进入工作区</value></data>
   <data name="Home_AboutDescription" xml:space="preserve">
     <value>GitCandy&amp;copy; 是一个基于ASP.NET MVC的[Git](http://git-scm.com/documentation)分布式版本控制平台，支持公共和私有代码库。可以不受限制的创建代码库，与你的团队一块协作。
 

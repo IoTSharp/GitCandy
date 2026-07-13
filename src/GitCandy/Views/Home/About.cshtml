@@ -1,7 +1,186 @@
-@{ ViewData["Title"] = Text["Home_AboutTitle"]; }
-<header class="page-heading"><div><h1>@Text["Home_AboutTitle"]</h1><p>GitCandy is a lightweight, self-hosted Git service built on ASP.NET Core 10 MVC, EF Core, and ASP.NET Core Identity.</p></div></header>
-<h2>Client software</h2>
-<ul class="entity-list">
-    <li class="entity-row"><a href="https://esbuild.github.io/" rel="external">esbuild</a><span class="entity-meta">MIT License</span></li>
-    <li class="entity-row"><a href="https://lucide.dev/" rel="external">Lucide</a><span class="entity-meta">ISC License</span></li>
-</ul>
+@inject Microsoft.Extensions.Options.IOptions<GitCandyApplicationOptions> ApplicationOptions
+@{
+    Layout = "_LandingLayout";
+    ViewData["Title"] = Text["Landing_MetaTitle"];
+    ViewData["Description"] = Text["Landing_MetaDescription"];
+    var allowRegisterUser = ApplicationOptions.Value.AllowRegisterUser;
+}
+
+<section id="product" class="landing-hero">
+    <div class="landing-hero-inner">
+        <div class="landing-hero-copy" data-reveal>
+            <p class="landing-eyebrow"><span></span>@Text["Landing_Eyebrow"]</p>
+            <h1>GitCandy</h1>
+            <h2>@Text["Landing_HeroTitle"]</h2>
+            <p class="landing-hero-summary">@Text["Landing_HeroSummary"]</p>
+            <div class="landing-hero-actions">
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a class="btn btn-primary landing-primary-action" asp-controller="Repository" asp-action="Index">
+                        @Text["Landing_OpenWorkspace"] <i data-lucide="arrow-right"></i>
+                    </a>
+                }
+                else if (allowRegisterUser)
+                {
+                    <a class="btn btn-primary landing-primary-action" asp-controller="Account" asp-action="Create">
+                        @Text["Landing_StartNow"] <i data-lucide="arrow-right"></i>
+                    </a>
+                }
+                else
+                {
+                    <a class="btn btn-primary landing-primary-action" asp-controller="Repository" asp-action="Index">
+                        @Text["Landing_ExploreRepositories"] <i data-lucide="arrow-right"></i>
+                    </a>
+                }
+                <a class="landing-text-action" href="https://github.com/IoTSharp/GitCandy" rel="external">
+                    <i data-lucide="code-2"></i> @Text["Landing_ViewSource"]
+                </a>
+            </div>
+        </div>
+
+        <div class="landing-product-visual" aria-label="@Text["Landing_ProductPreviewLabel"]">
+            <div class="product-window-bar">
+                <div class="product-window-brand"><img src="~/brand/gitcandy-mark.svg" alt="" width="26" height="26" />GitCandy</div>
+                <div class="product-window-search"><i data-lucide="search"></i><span>@Text["Landing_PreviewSearch"]</span></div>
+                <div class="product-window-user">GC</div>
+            </div>
+            <div class="product-window-body">
+                <aside class="product-window-sidebar" aria-hidden="true">
+                    <span class="is-active"><i data-lucide="folder-git-2"></i></span>
+                    <span><i data-lucide="git-branch"></i></span>
+                    <span><i data-lucide="message-square"></i></span>
+                    <span><i data-lucide="activity"></i></span>
+                </aside>
+                <div class="product-repository">
+                    <header class="product-repository-heading">
+                        <div>
+                            <p>iotsharp /</p>
+                            <strong>edge-control</strong>
+                        </div>
+                        <span><i data-lucide="lock"></i> @Text["Landing_PreviewPrivate"]</span>
+                    </header>
+                    <nav class="product-repository-tabs" aria-hidden="true">
+                        <span class="is-active">@Text["Landing_PreviewCode"]</span>
+                        <span>@Text["Landing_PreviewIssues"] <b>12</b></span>
+                        <span>@Text["Landing_PreviewPullRequests"] <b>3</b></span>
+                    </nav>
+                    <div class="product-branch-bar">
+                        <span><i data-lucide="git-branch"></i> main <i data-lucide="chevron-down"></i></span>
+                        <span class="product-commit"><i data-lucide="circle-check"></i> @Text["Landing_PreviewChecksPassed"]</span>
+                    </div>
+                    <div class="product-commit-row">
+                        <span class="product-avatar">YL</span>
+                        <p><strong>@Text["Landing_PreviewCommitTitle"]</strong><small>yilin · 8f7c21a · @Text["Landing_PreviewTime"]</small></p>
+                    </div>
+                    <div class="product-file-list" aria-hidden="true">
+                        <div><span><i data-lucide="folder"></i> src</span><small>refine transport audit events</small></div>
+                        <div><span><i data-lucide="folder"></i> tests</span><small>cover branch protection policy</small></div>
+                        <div><span><i data-lucide="file-code-2"></i> README.md</span><small>document single-process deployment</small></div>
+                    </div>
+                </div>
+            </div>
+            <div class="product-live-status"><span></span>@Text["Landing_PreviewStatus"]</div>
+        </div>
+    </div>
+    <div class="landing-signal-band" aria-label="@Text["Landing_CapabilitiesLabel"]">
+        <span>Smart HTTP</span>
+        <span>@Text["Landing_BuiltInSsh"]</span>
+        <span>Issues &amp; Pull Requests</span>
+        <span>Git LFS</span>
+        <span>.NET 10</span>
+    </div>
+</section>
+
+<section id="collaboration" class="landing-section landing-collaboration">
+    <div class="landing-section-heading" data-reveal>
+        <p class="landing-kicker">@Text["Landing_CollaborationKicker"]</p>
+        <h2>@Text["Landing_CollaborationTitle"]</h2>
+        <p>@Text["Landing_CollaborationSummary"]</p>
+    </div>
+    <div class="landing-feature-layout">
+        <div class="landing-feature-list" data-reveal>
+            <article>
+                <span class="landing-feature-number">01</span>
+                <div><h3>@Text["Landing_FeatureGitTitle"]</h3><p>@Text["Landing_FeatureGitSummary"]</p></div>
+            </article>
+            <article>
+                <span class="landing-feature-number">02</span>
+                <div><h3>@Text["Landing_FeatureReviewTitle"]</h3><p>@Text["Landing_FeatureReviewSummary"]</p></div>
+            </article>
+            <article>
+                <span class="landing-feature-number">03</span>
+                <div><h3>@Text["Landing_FeatureControlTitle"]</h3><p>@Text["Landing_FeatureControlSummary"]</p></div>
+            </article>
+        </div>
+        <div class="review-flow" data-reveal aria-label="@Text["Landing_ReviewPreviewLabel"]">
+            <div class="review-flow-heading">
+                <span class="product-avatar">YZ</span>
+                <div><strong>@Text["Landing_ReviewTitle"]</strong><small>feature/transport-audit → main</small></div>
+                <span class="review-flow-state"><i data-lucide="circle-dot"></i> @Text["Landing_ReviewOpen"]</span>
+            </div>
+            <div class="review-flow-line"><i data-lucide="message-square"></i><p><strong>@Text["Landing_ReviewCommentTitle"]</strong><span>@Text["Landing_ReviewCommentSummary"]</span></p></div>
+            <div class="review-flow-line"><i data-lucide="check-square"></i><p><strong>@Text["Landing_ReviewApprovedTitle"]</strong><span>@Text["Landing_ReviewApprovedSummary"]</span></p></div>
+            <div class="review-flow-merge"><i data-lucide="git-compare-arrows"></i><span><strong>@Text["Landing_ReviewReadyTitle"]</strong>@Text["Landing_ReviewReadySummary"]</span></div>
+        </div>
+    </div>
+</section>
+
+<section id="deployment" class="landing-deployment">
+    <div class="landing-deployment-inner">
+        <div class="landing-deployment-copy" data-reveal>
+            <p class="landing-kicker">@Text["Landing_DeploymentKicker"]</p>
+            <h2>@Text["Landing_DeploymentTitle"]</h2>
+            <p>@Text["Landing_DeploymentSummary"]</p>
+            <ul>
+                <li><i data-lucide="circle-check"></i>@Text["Landing_DeploymentPointOne"]</li>
+                <li><i data-lucide="circle-check"></i>@Text["Landing_DeploymentPointTwo"]</li>
+                <li><i data-lucide="circle-check"></i>@Text["Landing_DeploymentPointThree"]</li>
+            </ul>
+        </div>
+        <div class="deployment-map" data-reveal aria-label="@Text["Landing_DeploymentPreviewLabel"]">
+            <div class="deployment-core"><img src="~/brand/gitcandy-mark.svg" alt="" width="42" height="42" /><strong>GitCandy</strong><span>@Text["Landing_OneProcess"]</span></div>
+            <span class="deployment-line deployment-line-one"></span>
+            <span class="deployment-line deployment-line-two"></span>
+            <span class="deployment-line deployment-line-three"></span>
+            <div class="deployment-node deployment-node-web"><i data-lucide="code-2"></i><span>Web &amp; API</span></div>
+            <div class="deployment-node deployment-node-git"><i data-lucide="git-branch"></i><span>Git HTTP / SSH</span></div>
+            <div class="deployment-node deployment-node-data"><i data-lucide="box"></i><span>Identity &amp; Data</span></div>
+        </div>
+    </div>
+</section>
+
+<section id="help" class="landing-section landing-help">
+    <div class="landing-section-heading" data-reveal>
+        <p class="landing-kicker">@Text["Landing_HelpKicker"]</p>
+        <h2>@Text["Landing_HelpTitle"]</h2>
+    </div>
+    <div class="landing-help-links" data-reveal>
+        <a href="https://github.com/IoTSharp/GitCandy#readme" rel="external"><i data-lucide="file-code-2"></i><span><strong>@Text["Landing_HelpDocsTitle"]</strong>@Text["Landing_HelpDocsSummary"]</span><i data-lucide="arrow-right"></i></a>
+        <a href="https://github.com/IoTSharp/GitCandy/issues" rel="external"><i data-lucide="message-square"></i><span><strong>@Text["Landing_HelpCommunityTitle"]</strong>@Text["Landing_HelpCommunitySummary"]</span><i data-lucide="arrow-right"></i></a>
+        <a asp-controller="Repository" asp-action="Index"><i data-lucide="folder-git-2"></i><span><strong>@Text["Landing_HelpExploreTitle"]</strong>@Text["Landing_HelpExploreSummary"]</span><i data-lucide="arrow-right"></i></a>
+    </div>
+</section>
+
+<section class="landing-final-cta">
+    <div data-reveal>
+        <p class="landing-kicker">@Text["Landing_FinalKicker"]</p>
+        <h2>@Text["Landing_FinalTitle"]</h2>
+        <p>@Text["Landing_FinalSummary"]</p>
+        <div class="landing-hero-actions">
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <a class="btn btn-primary landing-primary-action" asp-controller="Repository" asp-action="Index">@Text["Landing_OpenWorkspace"] <i data-lucide="arrow-right"></i></a>
+            }
+            else if (allowRegisterUser)
+            {
+                <a class="btn btn-primary landing-primary-action" asp-controller="Account" asp-action="Create">@Text["Landing_CreateAccount"] <i data-lucide="arrow-right"></i></a>
+                <a class="landing-text-action" asp-controller="Account" asp-action="Login">@Text["Shared_Login"]</a>
+            }
+            else
+            {
+                <a class="btn btn-primary landing-primary-action" asp-controller="Repository" asp-action="Index">@Text["Landing_ExploreRepositories"] <i data-lucide="arrow-right"></i></a>
+                <a class="landing-text-action" asp-controller="Account" asp-action="Login">@Text["Shared_Login"]</a>
+            }
+        </div>
+    </div>
+</section>

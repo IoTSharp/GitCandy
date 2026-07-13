@@ -25,6 +25,31 @@ public sealed class MvcPageSmokeTests
     private const string AdministratorPassword = "M5-Administrator-Password-2026!";
 
     [TestMethod]
+    public async Task HomePage_WithAnonymousAndAuthenticatedUsers_RendersProductPageThenOpensWorkspace()
+    {
+        await using var fixture = await MvcWebFixture.CreateAsync();
+
+        using var anonymousResponse = await fixture.Client.GetAsync("/");
+        Assert.AreEqual(HttpStatusCode.OK, anonymousResponse.StatusCode);
+        var anonymousHtml = await anonymousResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(anonymousHtml, "class=\"landing-body\"");
+        StringAssert.Contains(anonymousHtml, "id=\"collaboration\"");
+        StringAssert.Contains(anonymousHtml, "/brand/gitcandy-mark.svg");
+        StringAssert.Contains(anonymousHtml, "/Account/Login?returnUrl=%2F");
+
+        using var logoResponse = await fixture.Client.GetAsync("/brand/gitcandy-mark.svg");
+        Assert.AreEqual(HttpStatusCode.OK, logoResponse.StatusCode);
+        Assert.AreEqual("image/svg+xml", logoResponse.Content.Headers.ContentType?.MediaType);
+
+        await fixture.CreateAdministratorAsync();
+        await fixture.LoginAsync("m5-admin", AdministratorPassword);
+
+        using var authenticatedResponse = await fixture.Client.GetAsync("/");
+        Assert.AreEqual(HttpStatusCode.Redirect, authenticatedResponse.StatusCode);
+        Assert.AreEqual("/Repository", authenticatedResponse.Headers.Location?.OriginalString);
+    }
+
+    [TestMethod]
     public async Task RepositoryPages_WithAnonymousUser_ShowOnlyPublicRepositoriesAndLocalizedAssets()
     {
         await using var fixture = await MvcWebFixture.CreateAsync();

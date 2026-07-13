@@ -10,11 +10,15 @@
  - Completed the M11-M12 collaboration baseline with Issues, Markdown discussions, labels, milestones, notifications, Pull Requests, cross-fork sources, inline review, approvals, mergeability, merge commits, and squash.
 
 #### Added
+ - Added a redesigned public GitCandy product page for anonymous root visits, with a dedicated responsive navigation, product workflow previews, deployment overview, help links, localized English and Simplified Chinese copy, and a new candy-and-Git branch brand mark used across the public page and authenticated application shell.
  - Added the M12.6 SonnetDB production slice: configuration-selected host registration, an independent full-schema migration, Identity/repository smoke coverage, and a `gitcandy.com` Compose profile that reuses the existing sonnet.vip Caddy and internal SonnetDB service.
  - Added `IoTSharp/SonnetDB` as a source submodule and fixed unique-index NULL semantics in the database engine so EF migration seed rows can contain multiple NULL values while duplicate non-NULL values remain rejected.
 
 #### Removed
  - Removed legacy repository Web, Git Smart HTTP, Git LFS, and SSH addresses. Repository pages now require `/{namespace}/{repository}` and Git transports require `/{namespace}/{repository}.git`; old `/Repository/Detail/{name}`, `/Repository/{browser-action}/{name}`, `/Repository/Issues/{name}`, `/Repository/Pulls/{name}`, `/git/{repository}[.git]`, no-suffix Git remotes, and retained alias addresses return not found.
+
+#### Changed
+ - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users continue directly to the repository workspace.
 
 #### Fixed
  - Fixed repository UI routing so create/list/detail/code navigation emits canonical `/{namespace}/{repository}` URLs and HTTPS clone addresses use `/{namespace}/{repository}.git`.

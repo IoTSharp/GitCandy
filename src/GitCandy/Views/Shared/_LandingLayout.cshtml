@@ -1,0 +1,112 @@
+@inject Microsoft.Extensions.Options.IOptions<GitCandyApplicationOptions> ApplicationOptions
+@{
+    const string themeCookieName = ".GitCandy.Theme";
+    var currentUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var allowRegisterUser = ApplicationOptions.Value.AllowRegisterUser;
+    var requestedTheme = Context.Request.Cookies[themeCookieName];
+    var theme = requestedTheme is "light" or "dark" or "system" ? requestedTheme : "system";
+    var pageTitle = ViewData["Title"]?.ToString() ?? "GitCandy";
+    var pageDescription = ViewData["Description"]?.ToString() ?? Text["Landing_MetaDescription"];
+}
+<!DOCTYPE html>
+<html lang="@(ViewData["Lang"] ?? "en-US")" data-theme="@theme">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="@pageDescription" />
+    <title>@pageTitle</title>
+    <link rel="icon" href="~/brand/gitcandy-mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="~/assets/app.css" asp-append-version="true" />
+</head>
+<body class="landing-body">
+    <a class="skip-link" href="#main-content">@Text["Landing_SkipToContent"]</a>
+    <header class="landing-header" data-landing-header>
+        <a class="landing-brand" asp-controller="Home" asp-action="Index" aria-label="GitCandy home">
+            <img src="~/brand/gitcandy-mark.svg" alt="" width="32" height="32" />
+            <span>GitCandy</span>
+        </a>
+
+        <button class="icon-button landing-menu-button"
+                type="button"
+                aria-label="@Text["Landing_OpenMenu"]"
+                aria-controls="landing-navigation"
+                aria-expanded="false"
+                data-landing-navigation-toggle>
+            <i data-lucide="menu"></i>
+        </button>
+
+        <nav id="landing-navigation" class="landing-navigation" aria-label="@Text["Landing_PrimaryNavigation"]" data-landing-navigation>
+            <a href="#product">@Text["Landing_NavProduct"]</a>
+            <a href="#collaboration">@Text["Landing_NavCollaboration"]</a>
+            <a href="#deployment">@Text["Landing_NavDeployment"]</a>
+            <a class="landing-nav-mobile-only" href="#help">@Text["Landing_NavHelp"]</a>
+            @if (isAuthenticated)
+            {
+                <a class="landing-nav-mobile-only" asp-controller="Repository" asp-action="Index">@Text["Landing_OpenWorkspace"]</a>
+            }
+            else
+            {
+                <a class="landing-nav-mobile-only" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@currentUrl">@Text["Shared_Login"]</a>
+            }
+        </nav>
+
+        <div class="landing-actions">
+            <a class="landing-help-link" href="#help">@Text["Landing_NavHelp"]</a>
+            @if (isAuthenticated)
+            {
+                <a class="btn btn-primary" asp-controller="Repository" asp-action="Index">
+                    @Text["Landing_OpenWorkspace"]
+                </a>
+            }
+            else
+            {
+                <a class="btn landing-login" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@currentUrl">
+                    @Text["Shared_Login"]
+                </a>
+                @if (allowRegisterUser)
+                {
+                    <a class="btn btn-primary landing-register-button" asp-controller="Account" asp-action="Create">
+                        @Text["Shared_Register"]
+                    </a>
+                }
+            }
+        </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+        @RenderBody()
+    </main>
+
+    <footer class="landing-footer" title="@Context.GetGitCandyRequestProfiler()?.Elapsed">
+        <div class="landing-footer-main">
+            <a class="landing-brand" asp-controller="Home" asp-action="Index">
+                <img src="~/brand/gitcandy-mark.svg" alt="" width="30" height="30" />
+                <span>GitCandy</span>
+            </a>
+            <p>@Text["Landing_FooterSummary"]</p>
+        </div>
+        <nav class="landing-footer-links" aria-label="@Text["Landing_FooterNavigation"]">
+            <a href="#product">@Text["Landing_NavProduct"]</a>
+            <a href="#help">@Text["Landing_NavHelp"]</a>
+            <a href="https://github.com/IoTSharp/GitCandy" rel="external">@Text["Landing_SourceCode"]</a>
+            <a asp-controller="Repository" asp-action="Index">@Text["Landing_ExploreRepositories"]</a>
+        </nav>
+        <div class="landing-footer-meta">
+            <span>&copy; 2013-@DateTime.UtcNow.Year IoTSharp</span>
+            <details class="language-menu landing-language-menu">
+                <summary><i data-lucide="languages"></i> @(ViewData["Language"] ?? "English")</summary>
+                <div class="popover-menu">
+                    <a asp-controller="Home" asp-action="Language" asp-route-lang="zh-cn" asp-route-returnUrl="@currentUrl">简体中文</a>
+                    <a asp-controller="Home" asp-action="Language" asp-route-lang="en-us" asp-route-returnUrl="@currentUrl">English</a>
+                    <a asp-controller="Home" asp-action="Language" asp-route-lang="fr-fr" asp-route-returnUrl="@currentUrl">Français</a>
+                </div>
+            </details>
+        </div>
+    </footer>
+
+    <script type="module" src="~/assets/app.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

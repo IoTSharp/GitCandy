@@ -219,6 +219,75 @@
   <data name="Account_SSH" xml:space="preserve">
     <value>SSH</value>
   </data>
+  <data name="Landing_MetaTitle" xml:space="preserve"><value>GitCandy - Self-hosted Git collaboration</value></data>
+  <data name="Landing_MetaDescription" xml:space="preserve"><value>GitCandy is a lightweight, self-hosted Git collaboration platform with Smart HTTP, built-in SSH, Issues, Pull Requests, and ASP.NET Core Identity.</value></data>
+  <data name="Landing_SkipToContent" xml:space="preserve"><value>Skip to content</value></data>
+  <data name="Landing_OpenMenu" xml:space="preserve"><value>Open navigation</value></data>
+  <data name="Landing_PrimaryNavigation" xml:space="preserve"><value>Primary navigation</value></data>
+  <data name="Landing_NavProduct" xml:space="preserve"><value>Product</value></data>
+  <data name="Landing_NavCollaboration" xml:space="preserve"><value>Collaboration</value></data>
+  <data name="Landing_NavDeployment" xml:space="preserve"><value>Deployment</value></data>
+  <data name="Landing_NavHelp" xml:space="preserve"><value>Help</value></data>
+  <data name="Landing_Eyebrow" xml:space="preserve"><value>Open source · built for self-hosting</value></data>
+  <data name="Landing_HeroTitle" xml:space="preserve"><value>Your code. Your server. Your workflow.</value></data>
+  <data name="Landing_HeroSummary" xml:space="preserve"><value>A focused Git platform for teams that want dependable source hosting and code review without operating a sprawling toolchain.</value></data>
+  <data name="Landing_StartNow" xml:space="preserve"><value>Start now</value></data>
+  <data name="Landing_ViewSource" xml:space="preserve"><value>View source</value></data>
+  <data name="Landing_ProductPreviewLabel" xml:space="preserve"><value>GitCandy repository workspace preview</value></data>
+  <data name="Landing_PreviewSearch" xml:space="preserve"><value>Search repositories, issues, and code</value></data>
+  <data name="Landing_PreviewPrivate" xml:space="preserve"><value>Private</value></data>
+  <data name="Landing_PreviewCode" xml:space="preserve"><value>Code</value></data>
+  <data name="Landing_PreviewIssues" xml:space="preserve"><value>Issues</value></data>
+  <data name="Landing_PreviewPullRequests" xml:space="preserve"><value>Pull requests</value></data>
+  <data name="Landing_PreviewChecksPassed" xml:space="preserve"><value>All checks passed</value></data>
+  <data name="Landing_PreviewCommitTitle" xml:space="preserve"><value>Make transport auditing observable</value></data>
+  <data name="Landing_PreviewTime" xml:space="preserve"><value>2 minutes ago</value></data>
+  <data name="Landing_PreviewStatus" xml:space="preserve"><value>Smart HTTP and SSH online</value></data>
+  <data name="Landing_CapabilitiesLabel" xml:space="preserve"><value>Core GitCandy capabilities</value></data>
+  <data name="Landing_BuiltInSsh" xml:space="preserve"><value>Built-in SSH</value></data>
+  <data name="Landing_CollaborationKicker" xml:space="preserve"><value>From first push to final approval</value></data>
+  <data name="Landing_CollaborationTitle" xml:space="preserve"><value>Keep the whole code conversation in one place.</value></data>
+  <data name="Landing_CollaborationSummary" xml:space="preserve"><value>Browse changes, discuss intent, and merge with clear repository permissions around every action.</value></data>
+  <data name="Landing_FeatureGitTitle" xml:space="preserve"><value>Git that works like Git</value></data>
+  <data name="Landing_FeatureGitSummary" xml:space="preserve"><value>Clone, fetch, and push over streaming Smart HTTP or built-in SSH, with Git LFS for large assets.</value></data>
+  <data name="Landing_FeatureReviewTitle" xml:space="preserve"><value>Review with context</value></data>
+  <data name="Landing_FeatureReviewSummary" xml:space="preserve"><value>Issues, Pull Requests, inline discussions, approvals, merge, and squash stay connected to the code.</value></data>
+  <data name="Landing_FeatureControlTitle" xml:space="preserve"><value>Control stays local</value></data>
+  <data name="Landing_FeatureControlSummary" xml:space="preserve"><value>Identity, teams, private repositories, SSH keys, and permissions remain under your administration.</value></data>
+  <data name="Landing_ReviewPreviewLabel" xml:space="preserve"><value>Pull Request review workflow preview</value></data>
+  <data name="Landing_ReviewTitle" xml:space="preserve"><value>Add transport audit trail</value></data>
+  <data name="Landing_ReviewOpen" xml:space="preserve"><value>Open</value></data>
+  <data name="Landing_ReviewCommentTitle" xml:space="preserve"><value>One inline conversation resolved</value></data>
+  <data name="Landing_ReviewCommentSummary" xml:space="preserve"><value>The retry path now preserves cancellation.</value></data>
+  <data name="Landing_ReviewApprovedTitle" xml:space="preserve"><value>Approved by two reviewers</value></data>
+  <data name="Landing_ReviewApprovedSummary" xml:space="preserve"><value>Branch policy requirements are satisfied.</value></data>
+  <data name="Landing_ReviewReadyTitle" xml:space="preserve"><value>Ready to merge</value></data>
+  <data name="Landing_ReviewReadySummary" xml:space="preserve"><value>3 commits · 8 files changed</value></data>
+  <data name="Landing_DeploymentKicker" xml:space="preserve"><value>Simple to own</value></data>
+  <data name="Landing_DeploymentTitle" xml:space="preserve"><value>One application. The Git service your team needs.</value></data>
+  <data name="Landing_DeploymentSummary" xml:space="preserve"><value>GitCandy keeps the web UI, Git transport, authentication, background work, and operational signals inside one ASP.NET Core host.</value></data>
+  <data name="Landing_DeploymentPointOne" xml:space="preserve"><value>Run with Docker Compose, systemd, or Windows Service</value></data>
+  <data name="Landing_DeploymentPointTwo" xml:space="preserve"><value>SQLite by default, with SQL Server and SonnetDB paths</value></data>
+  <data name="Landing_DeploymentPointThree" xml:space="preserve"><value>Health checks, OpenTelemetry, and migration tooling included</value></data>
+  <data name="Landing_DeploymentPreviewLabel" xml:space="preserve"><value>GitCandy single-process deployment architecture</value></data>
+  <data name="Landing_OneProcess" xml:space="preserve"><value>one process</value></data>
+  <data name="Landing_HelpKicker" xml:space="preserve"><value>Find your way</value></data>
+  <data name="Landing_HelpTitle" xml:space="preserve"><value>Explore, deploy, or join the project.</value></data>
+  <data name="Landing_HelpDocsTitle" xml:space="preserve"><value>Read the documentation</value></data>
+  <data name="Landing_HelpDocsSummary" xml:space="preserve"><value>Installation, configuration, and project guidance.</value></data>
+  <data name="Landing_HelpCommunityTitle" xml:space="preserve"><value>Talk with maintainers</value></data>
+  <data name="Landing_HelpCommunitySummary" xml:space="preserve"><value>Report a problem or propose an improvement.</value></data>
+  <data name="Landing_HelpExploreTitle" xml:space="preserve"><value>Explore repositories</value></data>
+  <data name="Landing_HelpExploreSummary" xml:space="preserve"><value>See public projects hosted on this server.</value></data>
+  <data name="Landing_FinalKicker" xml:space="preserve"><value>Make it yours</value></data>
+  <data name="Landing_FinalTitle" xml:space="preserve"><value>Bring your next repository home.</value></data>
+  <data name="Landing_FinalSummary" xml:space="preserve"><value>Create an account and move from the first push to review in a Git platform you control.</value></data>
+  <data name="Landing_CreateAccount" xml:space="preserve"><value>Create account</value></data>
+  <data name="Landing_FooterSummary" xml:space="preserve"><value>Open-source Git collaboration, designed for practical self-hosting.</value></data>
+  <data name="Landing_FooterNavigation" xml:space="preserve"><value>Footer navigation</value></data>
+  <data name="Landing_SourceCode" xml:space="preserve"><value>Source code</value></data>
+  <data name="Landing_ExploreRepositories" xml:space="preserve"><value>Explore repositories</value></data>
+  <data name="Landing_OpenWorkspace" xml:space="preserve"><value>Open workspace</value></data>
   <data name="Home_AboutDescription" xml:space="preserve">
     <value>GitCandy&amp;copy; is a [Git](http://git-scm.com/documentation) distributed version control platform based on ASP.NET MVC application, which supports public and private repositories. You can create and collaborate your repository with your team anytime anywhere without any limit.
 

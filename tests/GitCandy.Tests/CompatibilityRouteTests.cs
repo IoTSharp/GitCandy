@@ -14,7 +14,7 @@ namespace GitCandy.Tests;
 public sealed class CompatibilityRouteTests
 {
     [TestMethod]
-    public async Task MapGitCandyCompatibilityRoutes_WithRootPath_RedirectsToRepositoryIndex()
+    public async Task MapGitCandyCompatibilityRoutes_WithAnonymousRootPath_RendersProductPage()
     {
         await using var app = await StartRouteTestAppAsync();
         using var httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false })
@@ -23,8 +23,8 @@ public sealed class CompatibilityRouteTests
         };
 
         using var homeResponse = await httpClient.GetAsync("/");
-        Assert.AreEqual(HttpStatusCode.Redirect, homeResponse.StatusCode);
-        Assert.AreEqual("/Repository", homeResponse.Headers.Location?.OriginalString);
+        Assert.AreEqual(HttpStatusCode.OK, homeResponse.StatusCode);
+        StringAssert.Contains(await homeResponse.Content.ReadAsStringAsync(), "class=\"landing-body\"");
     }
 
     private static async Task<WebApplication> StartRouteTestAppAsync()
@@ -38,6 +38,7 @@ public sealed class CompatibilityRouteTests
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Services.AddControllersWithViews()
             .AddApplicationPart(typeof(CompatibilityController).Assembly);
+        builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
         var app = builder.Build();
         app.MapGitCandyCompatibilityRoutes();

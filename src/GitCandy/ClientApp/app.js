@@ -180,6 +180,46 @@ function initializeNavigation() {
   synchronizeDrawer();
 }
 
+function initializeLandingPage() {
+  const body = document.querySelector(".landing-body");
+  if (!(body instanceof HTMLElement)) {
+    return;
+  }
+
+  const toggle = document.querySelector("[data-landing-navigation-toggle]");
+  const navigation = document.querySelector("[data-landing-navigation]");
+  const closeNavigation = () => {
+    navigation?.classList.remove("is-open");
+    toggle?.setAttribute("aria-expanded", "false");
+  };
+
+  toggle?.addEventListener("click", () => {
+    const isOpen = navigation?.classList.toggle("is-open") ?? false;
+    toggle.setAttribute("aria-expanded", isOpen.toString());
+  });
+  navigation?.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeNavigation));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeNavigation();
+    }
+  });
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+
+  document.documentElement.classList.add("landing-motion");
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { rootMargin: "0px 0px -12%", threshold: 0.08 });
+  document.querySelectorAll("[data-reveal]").forEach((element) => observer.observe(element));
+}
+
 function initializeCopyButtons() {
   document.querySelectorAll("[data-copy-target]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -318,6 +358,7 @@ createIcons({
 });
 initializeThemeControl();
 initializeNavigation();
+initializeLandingPage();
 initializeCopyButtons();
 initializeConfirmations();
 initializeCodeViews();

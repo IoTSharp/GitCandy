@@ -12,7 +12,9 @@ public sealed class HomeController : CandyControllerBase
     [AllowAnonymous]
     public IActionResult Index()
     {
-        return RedirectToStartPage();
+        return User.Identity?.IsAuthenticated == true
+            ? RedirectToStartPage()
+            : View("About");
     }
 
     [HttpGet]
