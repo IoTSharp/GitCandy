@@ -32,6 +32,11 @@ namespace GitCandy.Data.SonnetDB.Migrations
                 table: "UserTeamRoles",
                 columns: new[] { "TeamId", "Role" });
 
+            migrationBuilder.AddCheckConstraint(
+                name: "CK_UserTeamRoles_Role",
+                table: "UserTeamRoles",
+                sql: "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')");
+
         }
 
         /// <inheritdoc />
@@ -39,6 +44,10 @@ namespace GitCandy.Data.SonnetDB.Migrations
         {
             migrationBuilder.DropIndex(
                 name: "IX_UserTeamRoles_TeamId_Role",
+                table: "UserTeamRoles");
+
+            migrationBuilder.DropCheckConstraint(
+                name: "CK_UserTeamRoles_Role",
                 table: "UserTeamRoles");
 
             migrationBuilder.AddColumn<bool>(

@@ -46,6 +46,7 @@
  - Changed `git-receive-pack` execution to install a controlled GitCandy `pre-receive` bridge. Git continues to stream and quarantine pack data; only bounded ref updates enter the shared policy service.
 
 #### Fixed
+ - Added full `CHECK` constraint support to the bundled SonnetDB source dependency, including EF migration DDL, existing-row validation, INSERT/UPDATE enforcement, schema persistence, rollback, and restart recovery, so M14 team roles use the same database constraint across all supported runtime providers.
  - Fixed repository UI routing so create/list/detail/code navigation emits canonical `/{namespace}/{repository}` URLs and HTTPS clone addresses use `/{namespace}/{repository}.git`.
  - Fixed the `gitcandy.com` production Compose health check by allowing the container-local loopback host alongside the public host name.
  - Fixed the documented `GitCandy --migrate` command so it exits successfully after applying migrations instead of continuing to start the Web, SSH, scheduler, and background host.

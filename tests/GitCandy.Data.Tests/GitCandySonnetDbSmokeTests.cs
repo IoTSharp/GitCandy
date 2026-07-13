@@ -2,6 +2,7 @@ using GitCandy.Data.Configuration;
 using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Data.SonnetDB;
+using GitCandy.Teams;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -98,6 +99,24 @@ public sealed class GitCandySonnetDbSmokeTests
                 repository.NormalizedName == "SONNETREPOSITORY"));
             Assert.AreEqual(1, await dbContext.RepositoryStars.CountAsync());
             Assert.AreEqual(1, await dbContext.Todos.CountAsync());
+
+            var team = new GitCandyTeam
+            {
+                Name = "sonnet-team",
+                NormalizedName = "SONNET-TEAM",
+                DisplayName = "Sonnet Team",
+                Description = "CHECK constraint smoke",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            dbContext.Teams.Add(team);
+            await dbContext.SaveChangesAsync();
+            dbContext.UserTeamRoles.Add(new GitCandyUserTeamRole
+            {
+                UserId = sonnetUser.Id,
+                TeamId = team.Id,
+                Role = (TeamRole)999
+            });
+            await Assert.ThrowsExactlyAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
         }
         finally
         {

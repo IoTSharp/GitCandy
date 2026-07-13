@@ -2520,7 +2520,10 @@ namespace GitCandy.Data.SonnetDB.Migrations
                     b.HasIndex("TeamId", "Role")
                         .HasDatabaseName("IX_UserTeamRoles_TeamId_Role");
 
-                    b.ToTable("UserTeamRoles", (string)null);
+                    b.ToTable("UserTeamRoles", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_UserTeamRoles_Role", "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')");
+                        });
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyWebhookDelivery", b =>

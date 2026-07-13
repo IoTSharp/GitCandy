@@ -20,7 +20,7 @@
 | `true` | `TeamOwner` |
 | `false` | `Member` |
 
-迁移将 `IX_UserTeamRoles_TeamId` 替换为 `IX_UserTeamRoles_TeamId_Role`，使按团队和角色检查 owner 的查询使用同一索引。SQLite 和 SQL Server 增加 `CK_UserTeamRoles_Role`，只接受四个已定义角色。SonnetDB 当前不支持 migration-time `ADD CHECK CONSTRAINT`，因此该 provider 使用必填字符串、长度限制和应用枚举校验；这是已知 provider 差异。
+迁移将 `IX_UserTeamRoles_TeamId` 替换为 `IX_UserTeamRoles_TeamId_Role`，使按团队和角色检查 owner 的查询使用同一索引。SQLite、SQL Server 和 SonnetDB 都增加 `CK_UserTeamRoles_Role`，只接受四个已定义角色。随仓库固定的 SonnetDB source dependency 已补齐 `CREATE/ALTER TABLE ... CHECK`、存量数据验证、DML enforcement、DROP 和重启恢复；其 table schema codec 从 v5 向后兼容升级到 v6。
 
 新建团队的创建者直接成为 TeamOwner。现有 `TeamAdministrator` 授权策略在 `#151` 前保持严格兼容，只把 TeamOwner 视为原“团队管理员”；不会提前让 Leader 获得所有旧管理员路由。
 

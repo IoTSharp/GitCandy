@@ -435,15 +435,9 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
             entity.HasIndex(role => new { role.TeamId, role.Role })
                 .HasDatabaseName("IX_UserTeamRoles_TeamId_Role");
 
-            if (!string.Equals(
-                    Database.ProviderName,
-                    "SonnetDB.EntityFrameworkCore",
-                    StringComparison.Ordinal))
-            {
-                entity.ToTable("UserTeamRoles", table => table.HasCheckConstraint(
-                    "CK_UserTeamRoles_Role",
-                    "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')"));
-            }
+            entity.ToTable("UserTeamRoles", table => table.HasCheckConstraint(
+                "CK_UserTeamRoles_Role",
+                "Role IN ('Member', 'DeputyLeader', 'Leader', 'TeamOwner')"));
         });
 
         builder.Entity<GitCandySshKey>(entity =>
