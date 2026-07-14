@@ -118,6 +118,7 @@ public sealed class ArchitectureDependencyTests
         var allowedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             Path.Combine(sourceRoot, "GitCandy.Git", "GitProcessTransportBackend.cs"),
+            Path.Combine(sourceRoot, "GitCandy.Git", "GitProcessRemoteRepositorySyncBackend.cs"),
             Path.Combine(sourceRoot, "GitCandy.Git", "GitReceiveHook.cs"),
             Path.Combine(sourceRoot, "GitCandy", "Operations", "GitBackendHealthCheck.cs")
         };
@@ -139,7 +140,7 @@ public sealed class ArchitectureDependencyTests
             .ToArray();
 
         Assert.HasCount(0, failures,
-            "External processes are limited to the Git wire-protocol backend and its readiness check: "
+            "External processes are limited to controlled Git transport, remote sync, receive-hook, and readiness boundaries: "
             + string.Join(", ", failures));
 
         var transportSource = File.ReadAllText(
@@ -147,6 +148,10 @@ public sealed class ArchitectureDependencyTests
         StringAssert.Contains(transportSource, "GitTransportService.UploadPack => \"upload-pack\"");
         StringAssert.Contains(transportSource, "GitTransportService.ReceivePack => \"receive-pack\"");
         StringAssert.Contains(transportSource, "GitTransportService.UploadArchive => \"upload-archive\"");
+        var remoteSyncSource = File.ReadAllText(
+            Path.Combine(sourceRoot, "GitCandy.Git", "GitProcessRemoteRepositorySyncBackend.cs"));
+        StringAssert.Contains(remoteSyncSource, "startInfo.ArgumentList.Add");
+        StringAssert.Contains(remoteSyncSource, "RemoteCredentialPipeServer");
     }
 
     private static IEnumerable<string> GetSourceProjectPaths(string repositoryRoot)

@@ -109,6 +109,7 @@ public static class WebServiceCollectionExtensions
         services.AddGitCandyRemoteProviders(configuration);
         services.AddGitCandyApplicationServices();
         ConfigureReceiveHook(services, configuration);
+        ConfigureRemoteRepositorySync(services, configuration);
         services.AddGitCandyGit();
         services.AddGitCandyHealthChecks();
 
@@ -328,6 +329,27 @@ public static class WebServiceCollectionExtensions
             options.DatabaseProvider = database.Provider.ToString();
             options.DatabaseConnectionString = database.ConnectionString;
         });
+    }
+
+    private static void ConfigureRemoteRepositorySync(
+        IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddOptions<RemoteRepositorySyncOptions>()
+            .Bind(configuration.GetSection(RemoteRepositorySyncOptions.SectionName))
+            .Validate(
+                options => options.OperationTimeout >= TimeSpan.FromSeconds(1)
+                    && options.OperationTimeout <= TimeSpan.FromHours(24),
+                "Remote sync OperationTimeout must be between one second and 24 hours.")
+            .Validate(
+                options => options.StreamBufferSize is >= 4096 and <= 1048576,
+                "Remote sync StreamBufferSize must be between 4 KiB and 1 MiB.")
+            .Validate(
+                options => options.MaxDiagnosticCharacters is >= 1024 and <= 65536,
+                "Remote sync MaxDiagnosticCharacters must be between 1024 and 65536.")
+            .ValidateOnStart();
+        services.Configure<RemoteGitCredentialHelperOptions>(options =>
+            options.CommandAssemblyPath = typeof(WebServiceCollectionExtensions).Assembly.Location);
     }
 
     private static IServiceCollection AddGitCandyScheduler(this IServiceCollection services)

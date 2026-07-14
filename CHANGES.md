@@ -14,10 +14,11 @@
 
 #### Added
  - Added an anonymous, PathBase-compatible `/help` center generated at build time from 13 canonical Markdown guides covering accounts, workspace, repositories, Git/LFS, collaboration, security, providers, deployment, recovery, API, webhooks, MCP availability, and architecture.
- - Added a complete 87-document inventory with owner, audience, public, canonical, archived, version, and permalink metadata, keeping migration records and roadmap snapshots out of current navigation.
+ - Added a complete 88-document inventory with owner, audience, public, canonical, archived, version, and permalink metadata, keeping migration records and roadmap snapshots out of current navigation.
  - Added a pinned JekyllNet 0.2.5 local tool, self-hosted responsive theme, local search metadata, help release manifest, security/cache/content-type headers, path-boundary handling, and desktop/mobile browser coverage.
  - Added the M15 remote account and one-way repository mirror EF schema with stable provider identities, user/team ownership, opaque credential references, ref/schedule/divergence/prune policies, observable status, portable constraints, and SQLite, SQL Server, and SonnetDB migrations.
  - Added M15 GitHub/GitLab/Gitee personal account connections at `/me/remotes` with fixed provider endpoints, encrypted non-echoed credentials, stable account/repository identities, classified connection tests, paginated repository discovery, revocation, and credential audit evidence.
+ - Added the M15 controlled remote sync backend for structured Git fetch/push, origin and refspec validation, streaming process I/O, timeout/cancellation, stable error classification, disabled redirects/hooks/global Git configuration, and token delivery through a one-time current-user credential-helper pipe.
  - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
  - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
  - Added a unified team authorization service, atomic member batches, governance audit history, four-role management UI, and local break-glass TeamOwner protection.

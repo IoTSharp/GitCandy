@@ -33,9 +33,12 @@ public static class GitCandyGitServiceCollectionExtensions
         services.TryAddSingleton<IGitContentSearchService, GitContentSearchService>();
         services.TryAddScoped<GitCandy.Application.IRepositoryLifecycleService, RepositoryLifecycleService>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
+        services.TryAddSingleton<IRemoteRepositorySyncBackend, GitProcessRemoteRepositorySyncBackend>();
         services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
         services.TryAddSingleton<IGitReceiveHookLauncher, GitReceiveHookLauncher>();
         services.TryAddTransient<IGitReceiveHookRunner, GitReceiveHookRunner>();
+        services.AddOptions<RemoteRepositorySyncOptions>();
+        services.AddOptions<RemoteGitCredentialHelperOptions>();
 
         return services;
     }

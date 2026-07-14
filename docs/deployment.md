@@ -147,7 +147,7 @@ Webhook delivery 由 `GitCandy:Webhooks` 配置。生产默认只允许公网 HT
 
 Webhook signing secret 由 Data Protection key ring 加密保存且只在创建页显示一次，因此 `DataProtectionKeysPath` 与数据库必须一致备份/恢复。丢失 key ring 后旧 subscription 无法继续签名，应暂停并重新创建，而不是在日志或配置中回显 secret。
 
-远程账号连接由 `GitCandy:Remotes` 配置。`GitHub`、`GitLab`、`Gitee` 各自提供 `Enabled`、`ServerUrl` 和 `ApiBaseUrl`；正式环境只允许固定 HTTPS origin，loopback HTTP 仅供受控 fixture。`RequestTimeout` 默认 20 秒。用户不能覆盖 endpoint，authenticated request 不跟随 redirect，token 不进入 URL 或日志。连接 token 由 Data Protection 加密保存在 `DataProtectionKeysPath/remote-credentials`，因此该子目录必须与 key ring 和数据库一致备份；丢失 key ring 时应在远端撤销 token 并重新连接。
+远程账号连接和受控 Git 同步后端由 `GitCandy:Remotes` 配置。`GitHub`、`GitLab`、`Gitee` 各自提供 `Enabled`、`ServerUrl` 和 `ApiBaseUrl`；正式环境只允许固定 HTTPS origin，loopback HTTP 仅供受控 fixture。`RequestTimeout` 默认 20 秒，只控制 Provider API；`OperationTimeout` 默认 30 分钟，控制 Git fetch/push；`StreamBufferSize` 默认 81920 字节，`MaxDiagnosticCharacters` 默认 8192。用户不能覆盖 endpoint，authenticated request 不跟随 redirect，token 不进入 URL、参数、环境变量、临时文件或日志。Git credential helper 通过一次性同用户命名管道取得 token。连接 token 由 Data Protection 加密保存在 `DataProtectionKeysPath/remote-credentials`，因此该子目录必须与 key ring 和数据库一致备份；丢失 key ring 时应在远端撤销 token 并重新连接。受控 backend 已内置，但实际 import、Pull/Push mirror、持久化 job 和运维入口仍由后续 M15 切片提供。
 
 用户通知的 webhook target 复用相同 SSRF、连接和签名边界；通知邮件复用 `GitCandy:Identity:AccountRecovery:Smtp`。通知偏好不会关闭站内 inbox，只决定额外邮件/webhook 投递。后台投递前会重新检查 repository/team 权限，撤权后的 pending delivery 以 `permission_revoked` 失败结束，不再发送资源标题或 URL。
 

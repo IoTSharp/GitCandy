@@ -43,13 +43,16 @@ Provider 配置必须显式启用。数据库、企业身份和远程 Git Provid
 | 键 | 默认值 | 说明 |
 | --- | --- | --- |
 | `RequestTimeout` | `00:00:20` | 单次 Provider API 请求 timeout，允许 1 秒到 2 分钟 |
+| `OperationTimeout` | `00:30:00` | 远程 Git fetch/push timeout，允许 1 秒到 24 小时 |
+| `StreamBufferSize` | `81920` | Git 子进程 stdout/stderr 流式排空缓冲区，允许 4 KiB 到 1 MiB |
+| `MaxDiagnosticCharacters` | `8192` | 仅用于错误分类的 stderr 尾部上限，允许 1024 到 65536 字符 |
 | `{Provider}:Enabled` | `true` | 是否允许用户选择该 Provider |
 | `{Provider}:ServerUrl` | 官方站点 | stable identity 所属站点；自托管实例由管理员固定 |
 | `{Provider}:ApiBaseUrl` | 官方 API | 出站 API origin；只允许 HTTPS，loopback HTTP 仅供测试 |
 
 用户不能提交自定义 endpoint。authenticated API 请求不跟随 redirect，token 只进入授权 header。连接 token 使用 Data Protection key ring 加密到其 `remote-credentials` 子目录，EF Core 只保存 opaque reference；设置页和日志均不回显 token。
 
-当前只发布账号连接和仓库发现。受控 sync backend、实际 import、pull/push mirror、持久化 job、webhook 与运维视图仍未发布；不要根据仓库已经出现在发现列表或数据库表存在就宣称 mirror 可用。仓库 mirror 第一阶段也只处理 Git refs，不包含 LFS、Issues、PR/MR、Wiki、Releases、CI 或 Packages。
+当前用户可操作能力仍只有账号连接和仓库发现。受控 sync backend 已作为内部 Git 进程边界内置，但实际 import、pull/push mirror、持久化 job、webhook 与运维视图仍未发布；不要根据 backend、发现列表或数据库表存在就宣称 mirror 可用。仓库 mirror 第一阶段也只处理 Git refs，不包含 LFS、Issues、PR/MR、Wiki、Releases、CI 或 Packages。
 
 ## 变更流程
 

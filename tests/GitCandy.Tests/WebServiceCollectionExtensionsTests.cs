@@ -141,6 +141,13 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRepositoryService>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRemoteConnectionService>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRemoteCredentialVault>());
+            Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRemoteRepositorySyncBackend>());
+            var remoteSyncOptions = scope.ServiceProvider
+                .GetRequiredService<IOptions<RemoteRepositorySyncOptions>>()
+                .Value;
+            Assert.AreEqual(TimeSpan.FromMinutes(30), remoteSyncOptions.OperationTimeout);
+            Assert.AreEqual(81920, remoteSyncOptions.StreamBufferSize);
+            Assert.AreEqual(8192, remoteSyncOptions.MaxDiagnosticCharacters);
             CollectionAssert.AreEquivalent(
                 new[] { RemoteProviderKind.GitHub, RemoteProviderKind.GitLab, RemoteProviderKind.Gitee },
                 scope.ServiceProvider.GetRequiredService<IRemoteProviderCatalog>()

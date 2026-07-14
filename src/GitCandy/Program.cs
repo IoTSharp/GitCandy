@@ -1,8 +1,17 @@
 using GitCandy.Configuration;
+using GitCandy.Git;
 using GitCandy.Observability;
 using GitCandy.Operations;
 using GitCandy.Profiling;
 using Microsoft.Extensions.Options;
+
+if (RemoteGitCredentialHelperCommand.IsRequested(args))
+{
+    return await RemoteGitCredentialHelperCommand.ExecuteAsync(
+        args,
+        Console.In,
+        Console.Out);
+}
 
 var openSshRequested = OpenSshCommandLine.IsRequested(args);
 var receiveHookRequested = args.Length == 1
