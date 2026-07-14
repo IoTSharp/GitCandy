@@ -1,6 +1,6 @@
 # GitCandy 活动产品路线图
 
-更新日期：2026-07-13
+更新日期：2026-07-14
 
 本文件只维护尚未完成的工作。已经退出活动路线图的 M0-M12.7、验收结论和专题文档入口见 [已完成里程碑索引](docs/roadmap/completed-milestones.md)；重组前的完整路线图见 [2026-07-13 历史快照](docs/roadmap/roadmap-archive-2026-07-13.md)。
 
@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- M13 的 PAT、deploy key、webhook/check、branch protection、CODEOWNERS、通知、审计、Release、search 和外部 CI gate 已完成；当前进入 M14 团队治理与企业身份联邦，M15-M16 继续按依赖顺序推进。
+- M14 的四级团队治理、企业连接、Microsoft Entra ID/SCIM、企业微信/飞书/钉钉、目录对账与同步停用已完成；当前进入 M15 remote/mirror，M15.5-M16 继续按依赖顺序推进。
 
 ## 已确认的产品决策与冲突处理
 
@@ -40,32 +40,9 @@
 
 ## 当前实施顺序
 
-1. `#150-#159`：四级团队角色、企业连接、Microsoft Entra ID/SCIM 与国内 provider，同步停用和总验收。
-2. M14 完成后进入 M15 remote/mirror；M15.5 文档体系在相关产品契约稳定后实施。
+1. `#160-#169`：remote account、GitHub/GitLab/Gitee 连接、单向 pull/push mirror、持久化 job 与故障验收。
+2. M15.5 文档体系在相关产品契约稳定后实施。
 3. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
-
-## 🚧 Milestone 14：团队治理与企业身份联邦
-
-目标：提供 `TeamOwner/Leader/DeputyLeader/Member` 四级角色，以及 Microsoft Entra ID、企业微信、飞书、钉钉登录与目录同步。
-
-登录联邦与目录供应分层；外部同步默认只授予 Member，至少保留一个本地 break-glass TeamOwner。M14 复用 M12.7 通知和 M13 PAT/审计，不直接改写 namespace 字符串外键。
-
-| 编号 | 状态 | 主题 | 验收重点 |
-| --- | --- | --- | --- |
-| #150 | 🚧 | 四级团队角色 schema 与权限矩阵 | 角色迁移、成员/仓库/改名/连接权限和最后 owner 保护 |
-| #151 | ⬜ | 团队授权服务与 UI | 统一角色比较、服务端复核、批量操作和审计 |
-| #152 | ⬜ | 企业连接与 secret 边界 | provider 接口、稳定 external ID、secret reference、游标和管理 UI |
-| #153 | ⬜ | Microsoft Entra ID 登录 | tenant/issuer、claims、冲突处理、连接测试和组织启用 |
-| #154 | ⬜ | SCIM 2.0 Users/Groups | bearer、create/query/PATCH、active、分页、幂等 externalId 和 Entra smoke |
-| #155 | ⬜ | 企业微信 adapter | OAuth、稳定用户绑定、部门/成员同步、最小 scope 和诊断 |
-| #156 | ⬜ | 飞书 adapter | tenant/OAuth、稳定 ID、增量同步、token 轮换和事件去重 |
-| #157 | ⬜ | 钉钉 adapter | CorpId/unionId/userId 作用域、同步、轮换和去重 |
-| #158 | ⬜ | Deprovision 与对账作业 | 停用、session/凭据撤销、故障隔离、恢复和 break-glass |
-| #159 | ⬜ | 企业连接安全与集成验证 | secret 脱敏、state/PKCE、签名、限流、冲突、最后 owner 和 provider fixture |
-
-完成门槛：最后 TeamOwner 不可被删除、降级或同步停用；管理员能测试和诊断连接但不能读取 secret；同步按稳定外部 ID 幂等，不因邮箱或显示名变化创建重复用户。
-
-`#150` 首个垂直切片的 schema、旧角色回填、权限矩阵和最后 TeamOwner 服务层保护见 [M14 团队角色迁移记录](docs/migration/m14-150-team-governance-roles.md)；统一授权服务和完整管理 UI 继续由 `#151` 闭环。
 
 ## ⬜ Milestone 15：远程账号连接与单向 Mirror
 

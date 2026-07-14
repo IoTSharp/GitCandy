@@ -62,7 +62,8 @@ internal sealed class NamespaceProvisioningService(
         string slug,
         CancellationToken cancellationToken)
     {
-        await using var transaction = _dbContext.Database.IsRelational()
+        var hasAmbientTransaction = _dbContext.Database.CurrentTransaction is not null;
+        await using var transaction = _dbContext.Database.IsRelational() && !hasAmbientTransaction
             ? await _dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken)
             : null;
         var normalizedSlug = NamespaceSlugRules.Normalize(slug);
@@ -102,6 +103,11 @@ internal sealed class NamespaceProvisioningService(
         }
         catch (DbUpdateException)
         {
+            if (hasAmbientTransaction)
+            {
+                throw;
+            }
+
             if (transaction is not null)
             {
                 await transaction.RollbackAsync(cancellationToken);

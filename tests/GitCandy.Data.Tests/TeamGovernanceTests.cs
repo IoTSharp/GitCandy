@@ -117,11 +117,15 @@ public sealed class TeamGovernanceTests
         Assert.IsFalse(await service.SetMemberAsync(
             TeamFixture.TeamName,
             TeamFixture.OwnerName,
-            TeamMemberAction.Remove));
+            TeamMemberAction.Remove,
+            TeamFixture.OwnerId,
+            actorIsSystemAdministrator: false));
         Assert.IsFalse(await service.SetMemberAsync(
             TeamFixture.TeamName,
             TeamFixture.OwnerName,
-            TeamMemberAction.MakeLeader));
+            TeamMemberAction.MakeLeader,
+            TeamFixture.OwnerId,
+            actorIsSystemAdministrator: false));
 
         var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
         var ownerRole = await dbContext.UserTeamRoles.SingleAsync(
@@ -139,7 +143,9 @@ public sealed class TeamGovernanceTests
         Assert.IsTrue(await service.SetMemberAsync(
             TeamFixture.TeamName,
             TeamFixture.OwnerName,
-            TeamMemberAction.MakeDeputyLeader));
+            TeamMemberAction.MakeDeputyLeader,
+            TeamFixture.OwnerId,
+            actorIsSystemAdministrator: false));
 
         var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
         var roles = await dbContext.UserTeamRoles
@@ -149,12 +155,169 @@ public sealed class TeamGovernanceTests
         Assert.AreEqual(TeamRole.TeamOwner, roles[TeamFixture.SecondOwnerId]);
     }
 
+    [TestMethod]
+    public async Task IsAllowedAsync_WithFourRoles_AppliesPermissionMatrixFromDatabase()
+    {
+        await using var fixture = await TeamFixture.CreateAsync(includeGovernanceRoles: true);
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var authorization = scope.ServiceProvider.GetRequiredService<ITeamAuthorizationService>();
+
+        Assert.IsTrue(await authorization.IsAllowedAsync(
+            TeamFixture.TeamName,
+            TeamFixture.LeaderId,
+            false,
+            TeamPermission.ManageMembers));
+        Assert.IsFalse(await authorization.IsAllowedAsync(
+            TeamFixture.TeamName,
+            TeamFixture.LeaderId,
+            false,
+            TeamPermission.ManageEnterpriseConnections));
+        Assert.IsTrue(await authorization.IsAllowedAsync(
+            TeamFixture.TeamName,
+            TeamFixture.DeputyId,
+            false,
+            TeamPermission.ManageMembers));
+        Assert.IsFalse(await authorization.IsAllowedAsync(
+            TeamFixture.TeamName,
+            TeamFixture.MemberId,
+            false,
+            TeamPermission.ManageMembers));
+    }
+
+    [TestMethod]
+    public async Task ApplyMemberChangesAsync_WithLeaderBatch_UpdatesAtomicallyAndAuditsEachMember()
+    {
+        await using var fixture = await TeamFixture.CreateAsync(includeGovernanceRoles: true);
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITeamService>();
+
+        var result = await service.ApplyMemberChangesAsync(
+            TeamFixture.TeamName,
+            [
+                new TeamMemberChange("deputy", TeamMemberAction.MakeMember),
+                new TeamMemberChange("member", TeamMemberAction.MakeDeputyLeader)
+            ],
+            TeamFixture.LeaderId,
+            actorIsSystemAdministrator: false);
+
+        Assert.IsTrue(result.Succeeded, result.Error);
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+        var roles = await dbContext.UserTeamRoles
+            .Where(role => role.TeamId == fixture.TeamId)
+            .ToDictionaryAsync(role => role.UserId, role => role.Role);
+        Assert.AreEqual(TeamRole.Member, roles[TeamFixture.DeputyId]);
+        Assert.AreEqual(TeamRole.DeputyLeader, roles[TeamFixture.MemberId]);
+        var audit = await service.GetAuditEventsAsync(TeamFixture.TeamName);
+        Assert.AreEqual(2, audit.Count(item => item.Outcome == "succeeded"));
+        Assert.IsTrue(audit.All(item => item.Actor == "leader"));
+    }
+
+    [TestMethod]
+    public async Task ApplyMemberChangesAsync_WithUnchangedRole_DoesNotWriteAuditEvent()
+    {
+        await using var fixture = await TeamFixture.CreateAsync();
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITeamService>();
+
+        var result = await service.ApplyMemberChangesAsync(
+            TeamFixture.TeamName,
+            [new TeamMemberChange(TeamFixture.OwnerName, TeamMemberAction.MakeTeamOwner)],
+            TeamFixture.OwnerId,
+            actorIsSystemAdministrator: false);
+
+        Assert.IsTrue(result.Succeeded, result.Error);
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+        Assert.AreEqual(
+            TeamRole.TeamOwner,
+            (await dbContext.UserTeamRoles.SingleAsync(role => role.UserId == TeamFixture.OwnerId)).Role);
+        Assert.AreEqual(0, (await service.GetAuditEventsAsync(TeamFixture.TeamName)).Count);
+    }
+
+    [TestMethod]
+    public async Task ApplyMemberChangesAsync_WithLastOwnerBatch_RejectsWholeBatchAndRecordsReason()
+    {
+        await using var fixture = await TeamFixture.CreateAsync(includeGovernanceRoles: true);
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var service = scope.ServiceProvider.GetRequiredService<ITeamService>();
+
+        var result = await service.ApplyMemberChangesAsync(
+            TeamFixture.TeamName,
+            [
+                new TeamMemberChange(TeamFixture.OwnerName, TeamMemberAction.MakeMember),
+                new TeamMemberChange("member", TeamMemberAction.MakeDeputyLeader)
+            ],
+            TeamFixture.OwnerId,
+            actorIsSystemAdministrator: false);
+
+        Assert.IsFalse(result.Succeeded);
+        StringAssert.Contains(result.Error ?? string.Empty, "TeamOwner");
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+        Assert.AreEqual(
+            TeamRole.Member,
+            (await dbContext.UserTeamRoles.SingleAsync(role => role.UserId == TeamFixture.MemberId)).Role);
+        var audit = await service.GetAuditEventsAsync(TeamFixture.TeamName);
+        Assert.AreEqual(1, audit.Count);
+        Assert.AreEqual("rejected", audit[0].Outcome);
+    }
+
+    [TestMethod]
+    public async Task SetMemberAsync_WithOnlyExternalOwnerRemaining_PreservesLocalBreakGlassOwner()
+    {
+        await using var fixture = await TeamFixture.CreateAsync(includeSecondOwner: true);
+        await using var scope = fixture.Services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+        var connection = new GitCandyEnterpriseConnection
+        {
+            TeamId = fixture.TeamId,
+            Name = "directory",
+            NormalizedName = "DIRECTORY",
+            Provider = GitCandy.Enterprise.EnterpriseProviderKind.Scim,
+            ExternalOrganizationId = "tenant",
+            SecretReference = "env:SCIM_SECRET",
+            IsEnabled = true,
+            ProvisioningEnabled = true,
+            Status = GitCandy.Enterprise.EnterpriseConnectionStatus.Healthy,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+        dbContext.EnterpriseConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+        dbContext.EnterpriseExternalIdentities.Add(new GitCandyEnterpriseExternalIdentity
+        {
+            ConnectionId = connection.Id,
+            ExternalId = "external-owner",
+            UserId = TeamFixture.SecondOwnerId,
+            UserName = "second",
+            NormalizedUserName = "SECOND",
+            IsActive = true,
+            FirstSeenAtUtc = DateTime.UtcNow,
+            LastSeenAtUtc = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+        var service = scope.ServiceProvider.GetRequiredService<ITeamService>();
+
+        var changed = await service.SetMemberAsync(
+            TeamFixture.TeamName,
+            TeamFixture.OwnerName,
+            TeamMemberAction.MakeMember,
+            TeamFixture.OwnerId,
+            actorIsSystemAdministrator: false);
+
+        Assert.IsFalse(changed);
+        Assert.AreEqual(
+            TeamRole.TeamOwner,
+            (await dbContext.UserTeamRoles.SingleAsync(role => role.UserId == TeamFixture.OwnerId)).Role);
+    }
+
     private sealed class TeamFixture : IAsyncDisposable
     {
         public const string TeamName = "core";
         public const string OwnerId = "team-owner";
         public const string OwnerName = "owner";
         public const string SecondOwnerId = "second-owner";
+        public const string LeaderId = "team-leader";
+        public const string DeputyId = "team-deputy";
+        public const string MemberId = "team-member";
 
         private readonly SqliteConnection _connection;
 
@@ -168,7 +331,9 @@ public sealed class TeamGovernanceTests
         public ServiceProvider Services { get; }
         public long TeamId { get; }
 
-        public static async Task<TeamFixture> CreateAsync(bool includeSecondOwner = false)
+        public static async Task<TeamFixture> CreateAsync(
+            bool includeSecondOwner = false,
+            bool includeGovernanceRoles = false)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -182,10 +347,17 @@ public sealed class TeamGovernanceTests
             await dbContext.Database.EnsureCreatedAsync();
             var owner = NewUser(OwnerId, OwnerName);
             var secondOwner = NewUser(SecondOwnerId, "second");
+            var leader = NewUser(LeaderId, "leader");
+            var deputy = NewUser(DeputyId, "deputy");
+            var member = NewUser(MemberId, "member");
             dbContext.Users.Add(owner);
             if (includeSecondOwner)
             {
                 dbContext.Users.Add(secondOwner);
+            }
+            if (includeGovernanceRoles)
+            {
+                dbContext.Users.AddRange(leader, deputy, member);
             }
 
             var team = new GitCandyTeam
@@ -207,6 +379,24 @@ public sealed class TeamGovernanceTests
                 {
                     UserId = secondOwner.Id,
                     Role = TeamRole.TeamOwner
+                });
+            }
+            if (includeGovernanceRoles)
+            {
+                team.UserRoles.Add(new GitCandyUserTeamRole
+                {
+                    UserId = leader.Id,
+                    Role = TeamRole.Leader
+                });
+                team.UserRoles.Add(new GitCandyUserTeamRole
+                {
+                    UserId = deputy.Id,
+                    Role = TeamRole.DeputyLeader
+                });
+                team.UserRoles.Add(new GitCandyUserTeamRole
+                {
+                    UserId = member.Id,
+                    Role = TeamRole.Member
                 });
             }
 

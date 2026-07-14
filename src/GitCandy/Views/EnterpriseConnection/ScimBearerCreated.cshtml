@@ -1,0 +1,6 @@
+@model CreatedScimBearer
+@{ ViewData["Title"] = "SCIM bearer created"; }
+<header class="page-heading"><div><h1>SCIM bearer created</h1><p>@Model.Prefix</p></div></header>
+<div class="alert alert-warning" role="alert">This bearer is shown once.</div>
+<div class="form-field"><label for="scim-token">Bearer token</label><input id="scim-token" value="@Model.Token" readonly spellcheck="false" /></div>
+<div class="form-actions"><a asp-action="Index" asp-route-teamName="@Model.TeamName" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div>

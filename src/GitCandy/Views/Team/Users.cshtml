@@ -1,18 +1,61 @@
 @model TeamDetailsViewModel
 @{ ViewData["Title"] = $"Members - {Model.Team.Name}"; }
-<header class="page-heading"><div><h1>Members of @Model.Team.Name</h1><p>Team administrators can add members and delegate team administration.</p></div><div class="page-actions"><a asp-action="Detail" asp-route-name="@Model.Team.Name" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div></header>
+<header class="page-heading">
+    <div><h1>Members of @Model.Team.Name</h1><p>Assign governance roles within the limits of your own role.</p></div>
+    <div class="page-actions"><a asp-action="Detail" asp-route-name="@Model.Team.Name" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div>
+</header>
+@if (TempData["Error"] is string error)
+{
+    <div class="alert alert-danger" role="alert">@error</div>
+}
 @if (Model.Team.Members.Count == 0)
 {
     <section class="empty-state"><div><i data-lucide="users"></i><h2>No team members</h2><p>Add the first member below.</p></div></section>
 }
 else
 {
-    <div class="table-responsive"><table class="table"><thead><tr><th scope="col">User</th><th scope="col">Role</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
-    @foreach (var member in Model.Team.Members)
-    {
-        <tr><td><a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName">@member.DisplayName</a><div class="entity-meta">@@@member.UserName</div></td><td>@(member.IsAdministrator ? "Administrator" : "Member")</td><td class="text-right"><div class="inline-actions"><form asp-action="ChooseUser" method="post"><input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="User" value="@member.UserName" /><button type="submit" name="Act" value="@(member.IsAdministrator ? "member" : "admin")" class="btn btn-xs">@(member.IsAdministrator ? "Make member" : "Make administrator")</button></form><form asp-action="ChooseUser" method="post" data-confirm="Remove @member.UserName from @Model.Team.Name?"><input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="User" value="@member.UserName" /><button type="submit" name="Act" value="del" class="icon-button" aria-label="Remove @member.UserName" data-tooltip="Remove member"><i data-lucide="trash-2"></i></button></form></div></td></tr>
-    }
-    </tbody></table></div>
+    <form asp-action="UpdateUsers" method="post">
+        <input type="hidden" name="Name" value="@Model.Team.Name" />
+        <div class="table-responsive"><table class="table"><thead><tr><th scope="col"><span class="sr-only">Select</span></th><th scope="col">User</th><th scope="col">Role</th></tr></thead><tbody>
+        @for (var index = 0; index < Model.Team.Members.Count; index++)
+        {
+            var member = Model.Team.Members[index];
+            var canManageTarget = User.IsInRole(RoleNames.Administrator)
+                || (Model.CurrentRole is TeamRole actorRole && TeamRolePermissions.CanManage(actorRole, member.Role));
+            <tr>
+                <td><input type="checkbox" name="Members[@index].Selected" value="true" disabled="@(!canManageTarget)" aria-label="Select @member.UserName" /></td>
+                <td><a asp-controller="Account" asp-action="Detail" asp-route-name="@member.UserName">@member.DisplayName</a><div class="entity-meta">@@@member.UserName</div><input type="hidden" name="Members[@index].User" value="@member.UserName" /></td>
+                <td>
+                    <select name="Members[@index].Role" disabled="@(!canManageTarget)" aria-label="Role for @member.UserName">
+                        @foreach (var role in Enum.GetValues<TeamRole>())
+                        {
+                            var canAssign = User.IsInRole(RoleNames.Administrator)
+                                || (Model.CurrentRole is TeamRole currentRole && TeamRolePermissions.CanManage(currentRole, role));
+                            if (canAssign || role == member.Role)
+                            {
+                                <option value="@role" selected="@(role == member.Role)">@role</option>
+                            }
+                        }
+                    </select>
+                </td>
+            </tr>
+        }
+        </tbody></table></div>
+        <div class="form-actions">
+            <button type="submit" name="Operation" value="roles" class="btn btn-primary"><i data-lucide="check"></i> Apply selected roles</button>
+            <button type="submit" name="Operation" value="remove" class="btn btn-danger" data-confirm="Remove the selected members?"><i data-lucide="trash-2"></i> Remove selected</button>
+        </div>
+    </form>
 }
 <h2>Add member</h2>
 <form asp-action="ChooseUser" method="post" class="account-form"><input type="hidden" name="Name" value="@Model.Team.Name" /><input type="hidden" name="Act" value="add" /><div class="form-field"><label for="User">Username</label><input id="User" name="User" required autocomplete="off" /></div><button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Add member</button></form>
+@if (Model.AuditEvents.Count > 0)
+{
+    <h2>Governance audit</h2>
+    <div class="table-responsive"><table class="table"><thead><tr><th scope="col">Time</th><th scope="col">Actor</th><th scope="col">Action</th><th scope="col">Subject</th><th scope="col">Outcome</th></tr></thead><tbody>
+    @foreach (var item in Model.AuditEvents)
+    {
+        <tr><td>@item.OccurredAt.ToLocalTime().ToString("g")</td><td>@item.Actor</td><td>@item.Action</td><td>@item.Subject<div class="entity-meta">@item.Detail</div></td><td>@item.Outcome</td></tr>
+    }
+    </tbody></table></div>
+}

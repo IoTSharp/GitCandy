@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using GitCandy.Enterprise;
 
 namespace GitCandy.Models.Account;
 
@@ -16,4 +17,6 @@ public sealed class LoginViewModel
     public bool RememberMe { get; set; }
 
     public IReadOnlyList<ExternalLoginProviderViewModel> ExternalProviders { get; set; } = [];
+
+    public IReadOnlyList<EnterpriseLoginOption> EnterpriseProviders { get; set; } = [];
 }

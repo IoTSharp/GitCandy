@@ -7,6 +7,7 @@ using GitCandy.Models;
 using GitCandy.Models.Account;
 using GitCandy.Identity;
 using GitCandy.IdentityServices;
+using GitCandy.Enterprise;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,7 @@ public sealed class AccountController(
     UserManager<GitCandyUser> userManager,
     SignInManager<GitCandyUser> signInManager,
     IMembershipService membershipService,
+    IEnterpriseConnectionService enterpriseConnectionService,
     INamespaceProvisioningService namespaceProvisioningService,
     INameManagementService nameManagementService,
     IUserAdministrationService userAdministrationService,
@@ -33,6 +35,7 @@ public sealed class AccountController(
     private readonly UserManager<GitCandyUser> _userManager = userManager;
     private readonly SignInManager<GitCandyUser> _signInManager = signInManager;
     private readonly IMembershipService _membershipService = membershipService;
+    private readonly IEnterpriseConnectionService _enterpriseConnectionService = enterpriseConnectionService;
     private readonly INamespaceProvisioningService _namespaceProvisioningService = namespaceProvisioningService;
     private readonly INameManagementService _nameManagementService = nameManagementService;
     private readonly IUserAdministrationService _userAdministrationService = userAdministrationService;
@@ -107,7 +110,8 @@ public sealed class AccountController(
         ViewData[nameof(returnUrl)] = returnUrl;
         return View(new LoginViewModel
         {
-            ExternalProviders = await GetExternalLoginProvidersAsync()
+            ExternalProviders = await GetExternalLoginProvidersAsync(),
+            EnterpriseProviders = await _enterpriseConnectionService.GetLoginOptionsAsync()
         });
     }
 
@@ -123,6 +127,7 @@ public sealed class AccountController(
         if (!ModelState.IsValid)
         {
             model.ExternalProviders = await GetExternalLoginProvidersAsync();
+            model.EnterpriseProviders = await _enterpriseConnectionService.GetLoginOptionsAsync(cancellationToken);
             return View(model);
         }
 
@@ -150,6 +155,7 @@ public sealed class AccountController(
 
         ModelState.AddModelError(string.Empty, InvalidCredentialsMessage);
         model.ExternalProviders = await GetExternalLoginProvidersAsync();
+        model.EnterpriseProviders = await _enterpriseConnectionService.GetLoginOptionsAsync(cancellationToken);
         return View(model);
     }
 

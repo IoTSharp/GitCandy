@@ -22,7 +22,9 @@ using GitCandy.Operations;
 using GitCandy.Profiling;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
+using GitCandy.Enterprise;
 using GitCandy.Web.Integrations;
+using GitCandy.Web.Enterprise;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
@@ -90,6 +92,7 @@ public static class WebServiceCollectionExtensions
             .Validate(options => options.OrphanRetention > TimeSpan.Zero, "Release orphan retention must be positive.")
             .ValidateOnStart();
         services.AddGitCandyWebhooks(configuration);
+        services.AddGitCandyEnterpriseProviders();
         var identitySettings = AddGitCandyIdentityOptions(services, configuration);
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IHostedService, GitCandyHostDiagnosticsHostedService>());
@@ -101,6 +104,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IRequestProfilerAccessor, HttpContextRequestProfilerAccessor>();
 
         services.AddConfiguredGitCandyData(configuration);
+        services.TryAddSingleton<IEnterpriseSecretResolver, ConfigurationEnterpriseSecretResolver>();
         services.AddGitCandyApplicationServices();
         ConfigureReceiveHook(services, configuration);
         services.AddGitCandyGit();
@@ -123,6 +127,8 @@ public static class WebServiceCollectionExtensions
             .AddDefaultTokenProviders();
         services.Configure<DataProtectionTokenProviderOptions>(options =>
             options.TokenLifespan = identitySettings.AccountRecovery.TokenLifespan);
+        services.Configure<SecurityStampValidatorOptions>(options =>
+            options.ValidationInterval = TimeSpan.Zero);
 
         var authentication = services.AddAuthentication()
             .AddScheme<AuthenticationSchemeOptions, GitBasicAuthenticationHandler>(
@@ -130,6 +136,9 @@ public static class WebServiceCollectionExtensions
                 _ => { })
             .AddScheme<AuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(
                 GitCandyAuthenticationSchemes.PersonalAccessToken,
+                _ => { })
+            .AddScheme<AuthenticationSchemeOptions, ScimBearerAuthenticationHandler>(
+                GitCandyAuthenticationSchemes.ScimBearer,
                 _ => { });
 
         if (identitySettings.OpenIdConnect.Enabled)
@@ -249,6 +258,11 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IAccountRecoveryThrottle, AccountRecoveryThrottle>();
         services.TryAddScoped<IAccountEmailSender, SmtpAccountEmailSender>();
         services.TryAddScoped<ICurrentUser, HttpContextCurrentUser>();
+        services.TryAddSingleton<IEnterpriseLoginStateService, EnterpriseLoginStateService>();
+        services.TryAddScoped<IEnterpriseSignInService, EnterpriseSignInService>();
+        services.TryAddScoped<IScimProvisioningService, ScimProvisioningService>();
+        services.TryAddScoped<IEnterpriseDirectorySyncService, EnterpriseDirectorySyncService>();
+        services.TryAddSingleton<EnterpriseEventSignatureValidator>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitTransportActivitySink, GitTransportWorkspaceActivitySink>());
         services.TryAddEnumerable(
             ServiceDescriptor.Scoped<IAuthorizationHandler, RepositoryAuthorizationHandler>());
@@ -321,6 +335,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, WebhookDeliveryJob>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, NotificationDeliveryJob>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, ReleaseAssetCleanupJob>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, EnterpriseDirectorySyncJob>());
 
         services.AddQuartz(options =>
         {
@@ -365,6 +380,36 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IWebhookSender, WebhookSender>();
         services.TryAddSingleton<INotificationDeliverySender, NotificationDeliverySender>();
         services.AddHttpClient(WebhookSender.HttpClientName, client =>
+            client.Timeout = Timeout.InfiniteTimeSpan)
+            .ConfigurePrimaryHttpMessageHandler(provider =>
+            {
+                var options = provider.GetRequiredService<IOptions<WebhookOptions>>().Value;
+                var targetPolicy = provider.GetRequiredService<IOutboundTargetPolicy>();
+                return new SocketsHttpHandler
+                {
+                    AllowAutoRedirect = false,
+                    UseProxy = false,
+                    ConnectTimeout = options.ConnectTimeout,
+                    PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+                    MaxConnectionsPerServer = 4,
+                    ConnectCallback = (context, cancellationToken) =>
+                        targetPolicy.ConnectAsync(context.DnsEndPoint, cancellationToken)
+                };
+            });
+        return services;
+    }
+
+    private static IServiceCollection AddGitCandyEnterpriseProviders(this IServiceCollection services)
+    {
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IEnterpriseProvider, MicrosoftEntraEnterpriseProvider>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IEnterpriseProvider, WeComEnterpriseProvider>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IEnterpriseProvider, FeishuEnterpriseProvider>());
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IEnterpriseProvider, DingTalkEnterpriseProvider>());
+        services.AddHttpClient(MicrosoftEntraEnterpriseProvider.HttpClientName, client =>
             client.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(provider =>
             {

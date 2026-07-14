@@ -1,5 +1,7 @@
 namespace GitCandy.Application;
 
+using GitCandy.Teams;
+
 /// <summary>
 /// 团队 CRUD 和成员管理的应用服务入口。
 /// </summary>
@@ -28,16 +30,38 @@ public interface ITeamService
         string name,
         string displayName,
         string description,
+        string actorUserId,
+        bool actorIsSystemAdministrator,
         CancellationToken cancellationToken = default);
 
     /// <summary>删除团队及其级联关系。</summary>
-    Task<bool> DeleteTeamAsync(string name, CancellationToken cancellationToken = default);
+    Task<bool> DeleteTeamAsync(
+        string name,
+        string actorUserId,
+        bool actorIsSystemAdministrator,
+        CancellationToken cancellationToken = default);
 
     /// <summary>添加、移除或调整团队成员。</summary>
     Task<bool> SetMemberAsync(
         string teamName,
         string userName,
         TeamMemberAction action,
+        string actorUserId,
+        bool actorIsSystemAdministrator,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>在单个事务中批量调整团队成员。</summary>
+    Task<TeamMemberChangeResult> ApplyMemberChangesAsync(
+        string teamName,
+        IReadOnlyList<TeamMemberChange> changes,
+        string actorUserId,
+        bool actorIsSystemAdministrator,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>读取团队治理审计记录。</summary>
+    Task<IReadOnlyList<TeamAuditEventSummary>> GetAuditEventsAsync(
+        string teamName,
+        int limit = 100,
         CancellationToken cancellationToken = default);
 }
 
@@ -52,11 +76,32 @@ public enum TeamMemberAction
     MakeMember
 }
 
+/// <summary>单个成员治理变更。</summary>
+public sealed record TeamMemberChange(string UserName, TeamMemberAction Action);
+
+/// <summary>批量成员治理结果。</summary>
+public sealed record TeamMemberChangeResult(bool Succeeded, string? Error = null)
+{
+    public static TeamMemberChangeResult Success { get; } = new(true);
+}
+
 /// <summary>团队列表摘要。</summary>
 public sealed record TeamSummary(string Name, string DisplayName, string Description, int MemberCount);
 
 /// <summary>团队成员摘要。</summary>
-public sealed record TeamMemberSummary(string UserName, string DisplayName, bool IsAdministrator);
+public sealed record TeamMemberSummary(string UserName, string DisplayName, TeamRole Role)
+{
+    public bool IsAdministrator => Role == TeamRole.TeamOwner;
+}
+
+/// <summary>不包含敏感数据的团队治理审计摘要。</summary>
+public sealed record TeamAuditEventSummary(
+    string Actor,
+    string Action,
+    string Outcome,
+    string Subject,
+    string Detail,
+    DateTimeOffset OccurredAt);
 
 /// <summary>团队详情。</summary>
 public sealed record TeamDetails(

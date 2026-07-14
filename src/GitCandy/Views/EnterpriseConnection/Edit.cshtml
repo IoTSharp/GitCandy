@@ -1,0 +1,21 @@
+@model EnterpriseConnectionFormViewModel
+@{ ViewData["Title"] = Model.Id is null ? "Add enterprise connection" : $"Edit {Model.Name}"; }
+<header class="page-heading"><div><h1>@ViewData["Title"]</h1><p>@Model.TeamName</p></div></header>
+<form asp-action="Save" method="post" class="account-form">
+    <input asp-for="Id" type="hidden" />
+    <input asp-for="TeamName" type="hidden" />
+    <div asp-validation-summary="ModelOnly" class="validation-summary" role="alert"></div>
+    <div class="form-field"><label asp-for="Name"></label><input asp-for="Name" autocomplete="off" /><span asp-validation-for="Name"></span></div>
+    <div class="form-field"><label asp-for="Provider"></label><select asp-for="Provider" asp-items="Html.GetEnumSelectList<EnterpriseProviderKind>()"></select><span asp-validation-for="Provider"></span></div>
+    <div class="form-field"><label asp-for="ExternalOrganizationId"></label><input asp-for="ExternalOrganizationId" autocomplete="off" /><span asp-validation-for="ExternalOrganizationId"></span></div>
+    <div class="form-field"><label asp-for="Authority"></label><input asp-for="Authority" type="url" autocomplete="off" /><span asp-validation-for="Authority"></span></div>
+    <div class="form-field"><label asp-for="ClientId"></label><input asp-for="ClientId" autocomplete="off" /><span asp-validation-for="ClientId"></span></div>
+    <div class="form-field"><label asp-for="ApiBaseUrl"></label><input asp-for="ApiBaseUrl" type="url" autocomplete="off" /><span asp-validation-for="ApiBaseUrl"></span></div>
+    <div class="form-field"><label asp-for="ConfigurationJson"></label><textarea asp-for="ConfigurationJson" rows="5" spellcheck="false"></textarea><span asp-validation-for="ConfigurationJson"></span></div>
+    <div class="form-field"><label asp-for="SecretReference"></label><input asp-for="SecretReference" autocomplete="off" placeholder="env:GITCANDY_PROVIDER_SECRET" /><span asp-validation-for="SecretReference"></span></div>
+    <div class="form-field"><label asp-for="WebhookSecretReference"></label><input asp-for="WebhookSecretReference" autocomplete="off" placeholder="env:GITCANDY_PROVIDER_WEBHOOK_SECRET" /><span asp-validation-for="WebhookSecretReference"></span></div>
+    <label class="checkbox-row"><input asp-for="LoginEnabled" /> <span>@Html.DisplayNameFor(model => model.LoginEnabled)</span></label>
+    <label class="checkbox-row"><input asp-for="ProvisioningEnabled" /> <span>@Html.DisplayNameFor(model => model.ProvisioningEnabled)</span></label>
+    <label class="checkbox-row"><input asp-for="IsEnabled" /> <span>@Html.DisplayNameFor(model => model.IsEnabled)</span></label>
+    <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="check"></i> @Text["Shared_Save"]</button><a asp-action="Index" asp-route-teamName="@Model.TeamName" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a></div>
+</form>

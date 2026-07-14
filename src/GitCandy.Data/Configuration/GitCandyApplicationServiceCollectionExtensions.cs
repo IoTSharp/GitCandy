@@ -13,6 +13,8 @@ using GitCandy.Notifications;
 using GitCandy.Audit;
 using GitCandy.Releases;
 using GitCandy.Search;
+using GitCandy.Teams;
+using GitCandy.Enterprise;
 
 namespace GitCandy.Data.Configuration;
 
@@ -36,6 +38,11 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<IMembershipService, MembershipService>();
         services.TryAddScoped<IUserAdministrationService, UserAdministrationService>();
         services.TryAddScoped<ITeamService, TeamService>();
+        services.TryAddScoped<ITeamAuthorizationService, TeamAuthorizationService>();
+        services.TryAddScoped<IEnterpriseConnectionService, EnterpriseConnectionService>();
+        services.TryAddSingleton<IEnterpriseSecretResolver, UnavailableEnterpriseSecretResolver>();
+        services.TryAddSingleton<IScimBearerService, ScimBearerService>();
+        services.TryAddSingleton<IEnterpriseEventReceiptService, EnterpriseEventReceiptService>();
         services.TryAddScoped<IRepositoryService, RepositoryService>();
         services.TryAddScoped<IRepositoryManagementService, RepositoryManagementService>();
         services.TryAddScoped<IRepositoryAddressResolver, RepositoryAddressResolver>();

@@ -179,6 +179,35 @@ TOTP 和恢复码只用于交互式 Web/外部登录的第二阶段认证。Git 
 
 不迁移旧 `_gc_auth` cookie、密码 hash、`Users`、`AuthorizationLog` 或 `PasswordVersion`。用户必须在新 Identity schema 中重新创建。旧 repository/team/role 元数据只能由后续独立导入工具导入；当前发布不包含自动导入器，也不会在启动时读取并改写旧数据库。物理 bare repositories 可备份后复制到新 repository 根目录，再在新系统重建对应 metadata 和权限。
 
+### 团队企业身份连接
+
+TeamOwner 或系统管理员可从团队详情进入 Enterprise connections。连接只持久化公开配置和 secret reference；支持以下两种运行时引用：
+
+```text
+env:GITCANDY_ENTRA_CLIENT_SECRET
+config:GitCandy:EnterpriseSecrets:ContosoEntra
+```
+
+`env:` 后只允许 ASCII 字母、数字和下划线；`config:` 后是 ASP.NET Core configuration key。真实值应由进程环境、容器 secret、systemd credential 或未提交的生产配置注入。管理 UI 和诊断只显示引用及脱敏状态，不返回 secret。provider webhook 使用独立的 `Webhook secret reference`，不要与 OAuth client secret 共用。
+
+| Provider | 公开连接字段 | secret 内容 | 说明 |
+| --- | --- | --- | --- |
+| Microsoft Entra ID | tenant ID、HTTPS authority、client ID | client secret | authority 通常为 tenant 专用 v2.0 authority；redirect URI 是公网 HTTPS origin 加 `/EnterpriseLogin/Callback`。JIT 还要求应用允许注册且非敏感 JSON 为 `{"allowJit":true}` |
+| SCIM | 稳定组织 ID | secret reference 仍为必填占位引用 | 从管理页轮换独立 SCIM bearer；base URL 为公网 HTTPS origin 加 `/scim/v2/{connectionId}`，明文 bearer 只显示一次 |
+| 企业微信 | CorpId、可选 API base URL | CorpSecret | 登录还需非敏感 JSON `{"agentId":"100001"}`；callback 同为 `/EnterpriseLogin/Callback` |
+| 飞书 | tenant/组织稳定 ID、App ID、可选 API base URL | App Secret | event URL 为 `/enterprise-events/{connectionId}/Feishu`，签名 secret 单独配置 |
+| 钉钉 | CorpId、AppKey、可选 API base URL | App Secret | event URL 为 `/enterprise-events/{connectionId}/DingTalk`，签名 secret 单独配置 |
+
+先创建但保持 connection、login 和 provisioning disabled，注入 secret 后执行 Test connection，再在上游登记 callback、SCIM 或 event URL。上游 scope 只授予实际启用的登录、用户和部门读取能力。Microsoft Entra ID 连接测试使用 client credential 请求 Graph `.default` scope；生产 consent 必须与此一致。
+
+SCIM 使用独立 Bearer authentication scheme，不接受浏览器 cookie、PAT 或 Git Basic credential。轮换 bearer 会立即使旧值失效；通过 `Authorization: Bearer <token>` 调用 Users/Groups create、query、PATCH 和分页接口。`active=false` 或完整目录对账发现用户缺失时，GitCandy 会锁定 Identity、刷新 security stamp、移除团队成员关系、撤销 PAT 并删除 SSH key。系统始终保护最后 TeamOwner 和至少一位本地、非企业托管的 break-glass TeamOwner。
+
+企业微信、飞书和钉钉的主动目录同步由同进程 Quartz job 每 15 分钟执行。单个连接的失败不会阻止其他连接；游标会持久化以便重启恢复。只有完整 fresh scan 才停用缺失用户。飞书和钉钉 event endpoint 只在 1 MiB 限制、写入 rate limit、签名和 5 分钟时间窗通过后记录去重收据，不在 HTTP 请求内执行目录同步。
+
+运行验收至少包括：连接测试、企业登录、同一 stable external ID 重复登录、SCIM create/query/PATCH、目录分页恢复、停用后的 Web/PAT/SSH 拒绝，以及 break-glass owner 仍可登录和修复配置。真实 Entra、企业微信、飞书和钉钉 tenant 的 consent、scope、回调域名、事件订阅和网络策略必须在部署环境验证；仓库测试 fixture 不包含生产 credential。
+
+紧急功能回滚时先禁用对应 connection 或分别关闭 login/provisioning，并在 provider 侧撤销 client secret、SCIM bearer 或 event subscription。该方式保留 external identity mapping、游标和审计，便于修复后恢复。二进制回滚若跨越 M14 migrations，必须停止服务并恢复升级前数据库快照；不要让旧二进制连接含 M14 schema 的数据库。Data Protection keys 必须与数据库保持同一备份时间点，否则未完成的 enterprise login state 和现有 Identity cookie 会失效。
+
 ## 文件系统路径
 
 | 数据 | Compose | Linux | Windows | 备份要求 |

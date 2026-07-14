@@ -1,0 +1,41 @@
+@model EnterpriseConnectionIndexViewModel
+@{ ViewData["Title"] = $"Enterprise connections - {Model.TeamName}"; }
+<header class="page-heading">
+    <div><h1>Enterprise connections</h1><p>@Model.TeamName</p></div>
+    <div class="page-actions">
+        <a asp-controller="Team" asp-action="Detail" asp-route-name="@Model.TeamName" class="btn"><i data-lucide="arrow-left"></i> @Text["Shared_Back"]</a>
+        @if (Model.CanManage) { <a asp-action="Create" asp-route-teamName="@Model.TeamName" class="btn btn-primary"><i data-lucide="plus"></i> Add connection</a> }
+    </div>
+</header>
+@if (TempData["Message"] is string message) { <div class="alert alert-success" role="status">@message</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (Model.Connections.Count == 0)
+{
+    <section class="empty-state"><div><i data-lucide="building-2"></i><h2>No enterprise connections</h2></div></section>
+}
+else
+{
+    <div class="table-responsive"><table class="table"><thead><tr><th scope="col">Name</th><th scope="col">Provider</th><th scope="col">Organization</th><th scope="col">Status</th><th scope="col">Secret reference</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+    @foreach (var connection in Model.Connections)
+    {
+        <tr>
+            <td>@connection.Name<div class="entity-meta">Login @(connection.LoginEnabled ? "on" : "off") · Provisioning @(connection.ProvisioningEnabled ? "on" : "off")</div></td>
+            <td>@connection.Provider</td>
+            <td>@connection.ExternalOrganizationId</td>
+            <td>@connection.Status@if (!string.IsNullOrWhiteSpace(connection.LastErrorCode)) { <div class="entity-meta">@connection.LastErrorCode</div> }</td>
+            <td><code>@connection.SecretReference</code></td>
+            <td class="text-right">
+                @if (Model.CanManage)
+                {
+                    <div class="inline-actions">
+                        <a asp-action="Edit" asp-route-teamName="@Model.TeamName" asp-route-id="@connection.Id" class="icon-button" aria-label="Edit @connection.Name" data-tooltip="Edit"><i data-lucide="pencil"></i></a>
+                        <form asp-action="Test" asp-route-teamName="@Model.TeamName" asp-route-id="@connection.Id" method="post"><button type="submit" class="icon-button" aria-label="Test @connection.Name" data-tooltip="Test connection"><i data-lucide="plug-zap"></i></button></form>
+                        @if (connection.ProvisioningEnabled && connection.Provider is EnterpriseProviderKind.Scim or EnterpriseProviderKind.MicrosoftEntraId) { <form asp-action="RotateScimBearer" asp-route-teamName="@Model.TeamName" asp-route-id="@connection.Id" method="post" data-confirm="Rotate the SCIM bearer for @connection.Name?"><button type="submit" class="icon-button" aria-label="Rotate SCIM bearer for @connection.Name" data-tooltip="Rotate SCIM bearer"><i data-lucide="key-round"></i></button></form> }
+                        <form asp-action="Delete" asp-route-teamName="@Model.TeamName" asp-route-id="@connection.Id" method="post" data-confirm="Delete @connection.Name?"><button type="submit" class="icon-button" aria-label="Delete @connection.Name" data-tooltip="Delete"><i data-lucide="trash-2"></i></button></form>
+                    </div>
+                }
+            </td>
+        </tr>
+    }
+    </tbody></table></div>
+}

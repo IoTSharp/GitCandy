@@ -47,6 +47,9 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     /// </summary>
     public DbSet<GitCandyUserTeamRole> UserTeamRoles => Set<GitCandyUserTeamRole>();
 
+    /// <summary>团队治理审计事件。</summary>
+    public DbSet<GitCandyTeamAuditEvent> TeamAuditEvents => Set<GitCandyTeamAuditEvent>();
+
     /// <summary>
     /// SSH 公钥领域表。
     /// </summary>
@@ -112,6 +115,12 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyCommitCheck> CommitChecks => Set<GitCandyCommitCheck>();
     public DbSet<GitCandyRelease> Releases => Set<GitCandyRelease>();
     public DbSet<GitCandyReleaseAsset> ReleaseAssets => Set<GitCandyReleaseAsset>();
+    public DbSet<GitCandyEnterpriseConnection> EnterpriseConnections => Set<GitCandyEnterpriseConnection>();
+    public DbSet<GitCandyEnterpriseExternalIdentity> EnterpriseExternalIdentities => Set<GitCandyEnterpriseExternalIdentity>();
+    public DbSet<GitCandyEnterpriseScimCredential> EnterpriseScimCredentials => Set<GitCandyEnterpriseScimCredential>();
+    public DbSet<GitCandyEnterpriseGroup> EnterpriseGroups => Set<GitCandyEnterpriseGroup>();
+    public DbSet<GitCandyEnterpriseGroupMember> EnterpriseGroupMembers => Set<GitCandyEnterpriseGroupMember>();
+    public DbSet<GitCandyEnterpriseProviderEvent> EnterpriseProviderEvents => Set<GitCandyEnterpriseProviderEvent>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -145,6 +154,8 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         builder.ConfigureWorkspaceModel();
         builder.ConfigureCredentialModel();
         builder.ConfigureGovernanceModel();
+        builder.ConfigureTeamGovernanceModel();
+        builder.ConfigureEnterpriseModel();
         builder.ConfigureIntegrationModel();
         builder.ConfigureReleaseModel();
 

@@ -9,10 +9,19 @@
  - Completed account, team, repository, 2FA, TOTP recovery-code, optional OpenID Connect, SSH-key, responsive theme, health-check, OpenTelemetry, and Docker/Linux/Windows deployment workflows.
  - Completed the M11-M12 collaboration baseline with Issues, Markdown discussions, labels, milestones, notifications, Pull Requests, cross-fork sources, inline review, approvals, mergeability, merge commits, and squash.
  - Completed M12.7 with the private `/me` workspace, actionable Todos, unified notifications, versioned activity Feed, public profiles, Stars, public metrics, and explainable repository discovery.
+ - Completed M14 with four-level team governance, enterprise connection management, Microsoft Entra ID and SCIM 2.0, WeCom/Feishu/DingTalk adapters, bounded directory reconciliation, deprovisioning, and security acceptance fixtures.
 
 #### Added
  - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
  - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
+ - Added a unified team authorization service, atomic member batches, governance audit history, four-role management UI, and local break-glass TeamOwner protection.
+ - Added enterprise connection schema and management UI with provider capabilities, stable external identity binding, runtime-only `env:`/`config:` secret references, independent webhook secret references, diagnostics, sync cursors, status, and audit evidence.
+ - Added Microsoft Entra ID OIDC login with protected state, correlation cookie, PKCE, nonce, discovery/JWKS signature validation, tenant/issuer/audience checks, stable `oid/sub` binding, conflict-safe JIT policy, and compatibility with the existing global OIDC scheme.
+ - Added an independent hash-only SCIM Bearer scheme and `/scim/v2/{connectionId}` Users/Groups create, query, PATCH, filter, pagination, active lifecycle, idempotent `externalId`, and service-provider configuration endpoints.
+ - Added WeCom, Feishu, and DingTalk login/directory adapters using provider-stable IDs, operation-local access tokens, bounded pagination, provider diagnostics, and persistent event receipt deduplication.
+ - Added a 15-minute Quartz enterprise directory reconciliation job with cursor recovery, per-connection fault isolation, bounded pages/users, complete-scan deprovisioning, and immediate Identity security-stamp, PAT, SSH key, and team-membership revocation while preserving break-glass owners.
+ - Added Feishu and DingTalk provider event endpoints with independent secret references, signature and five-minute replay-window validation, 1 MiB request limits, rate limiting, event-ID deduplication, and deferred Quartz synchronization.
+ - Added SQLite, SQL Server, and SonnetDB `M14TeamAuthorization`, `M14EnterpriseConnections`, `M14ScimProvisioning`, `M14ProviderEventDeduplication`, and `M14EnterpriseSecurityAcceptance` migrations.
  - Added `/me`, `/todos`, unified `/notifications`, private repository/team/settings lists, public `/{username}` profiles, Repository Stars, real Packages empty states, and public `/explore` discovery.
  - Added versioned activity projections, permission-rechecked Todo and notification state, daily public repository metrics, privacy-filtered page-view aggregation, immutable `m12.7-v1` recommendation snapshots, Quartz refresh, and deterministic fallback ordering.
  - Added SQLite, SQL Server, and SonnetDB `WorkspaceDashboardDiscovery` migrations plus service, MVC, provider, privacy, concurrency, responsive browser, and route-priority coverage.
@@ -41,11 +50,14 @@
 
 #### Changed
  - Team creators and legacy team administrators are now TeamOwners; team repository creation recognizes TeamOwner and Leader while repository permissions remain independent from team governance roles.
+ - Enterprise-synchronized users are granted Member access only; disabling or removing a directory identity locks the Identity account and revokes its active machine credentials instead of inferring access from email or display name.
  - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.7 moved to completion history after production and workspace/discovery acceptance.
  - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users enter the private `/me` workspace.
  - Changed `git-receive-pack` execution to install a controlled GitCandy `pre-receive` bridge. Git continues to stream and quarantine pack data; only bounded ref updates enter the shared policy service.
 
 #### Fixed
+ - Fixed unchanged team-role submissions so they no longer create misleading no-op governance audit records.
+ - Fixed the enterprise connection and connection-test Lucide icons so the new team and enterprise pages render without browser console warnings.
  - Added full `CHECK` constraint support to the bundled SonnetDB source dependency, including EF migration DDL, existing-row validation, INSERT/UPDATE enforcement, schema persistence, rollback, and restart recovery, so M14 team roles use the same database constraint across all supported runtime providers.
  - Fixed repository UI routing so create/list/detail/code navigation emits canonical `/{namespace}/{repository}` URLs and HTTPS clone addresses use `/{namespace}/{repository}.git`.
  - Fixed the `gitcandy.com` production Compose health check by allowing the container-local loopback host alongside the public host name.

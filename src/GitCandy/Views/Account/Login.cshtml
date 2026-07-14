@@ -43,4 +43,18 @@
             }
         </div>
     }
+    @if (Model.EnterpriseProviders.Count > 0)
+    {
+        <hr />
+        <div class="external-login-list">
+            @foreach (var provider in Model.EnterpriseProviders)
+            {
+                <form asp-controller="EnterpriseLogin" asp-action="Begin" asp-route-returnUrl="@returnUrl" method="post">
+                    <button type="submit" name="connectionId" value="@provider.ConnectionId" class="btn">
+                        Sign in with @provider.ConnectionName (@provider.TeamName)
+                    </button>
+                </form>
+            }
+        </div>
+    }
 </section>

@@ -52,4 +52,12 @@ internal static class SchemaLimits
     public const int ReleaseName = 200;
     public const int ReleaseAssetName = 255;
     public const int ReleaseContentType = 100;
+    public const int EnterpriseConnectionName = 100;
+    public const int EnterpriseExternalId = 256;
+    public const int EnterpriseClientId = 256;
+    public const int EnterpriseConfiguration = 8192;
+    public const int EnterpriseSyncCursor = 2048;
+    public const int SecretReference = 512;
+    public const int EnterpriseGroupName = 256;
+    public const int EnterpriseEventId = 256;
 }

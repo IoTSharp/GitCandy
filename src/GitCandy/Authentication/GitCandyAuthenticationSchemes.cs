@@ -17,4 +17,7 @@ public static class GitCandyAuthenticationSchemes
     /// 可选的通用 OpenID Connect Web 登录方案。
     /// </summary>
     public const string OpenIdConnect = "GitCandy.OpenIdConnect";
+
+    /// <summary>SCIM 2.0 provisioning endpoint 的独立 Bearer 方案。</summary>
+    public const string ScimBearer = "GitCandy.ScimBearer";
 }

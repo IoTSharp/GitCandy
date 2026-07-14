@@ -3,6 +3,7 @@ using GitCandy.Authentication;
 using GitCandy.Authorization;
 using GitCandy.Configuration;
 using GitCandy.Models;
+using GitCandy.Teams;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -13,13 +14,13 @@ namespace GitCandy.Controllers;
 public sealed class TeamController(
     ITeamService teamService,
     INameManagementService nameManagementService,
-    IAuthorizationService authorizationService,
+    ITeamAuthorizationService teamAuthorizationService,
     ICurrentUser currentUser,
     IOptions<GitCandyApplicationOptions> applicationOptions) : CandyControllerBase
 {
     private readonly ITeamService _teamService = teamService;
     private readonly INameManagementService _nameManagementService = nameManagementService;
-    private readonly IAuthorizationService _authorizationService = authorizationService;
+    private readonly ITeamAuthorizationService _teamAuthorizationService = teamAuthorizationService;
     private readonly ICurrentUser _currentUser = currentUser;
     private readonly GitCandyApplicationOptions _applicationOptions = applicationOptions.Value;
 
@@ -88,18 +89,14 @@ public sealed class TeamController(
             return NotFound();
         }
 
-        var canManage = (await _authorizationService.AuthorizeAsync(
-            User,
-            new TeamAuthorizationResource(name),
-            AuthorizationPolicies.TeamAdministrator)).Succeeded;
-        return View(new TeamDetailsViewModel { Team = team, CanManage = canManage });
+        return View(await CreateDetailsViewModelAsync(team, includeAudit: false, cancellationToken));
     }
 
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Edit(string name, CancellationToken cancellationToken)
     {
-        var denied = await RequireTeamAdministratorAsync(name);
+        var denied = await RequireTeamPermissionAsync(name, TeamPermission.RenameTeam, cancellationToken);
         if (denied is not null)
         {
             return denied;
@@ -123,7 +120,7 @@ public sealed class TeamController(
         TeamFormViewModel model,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireTeamAdministratorAsync(name);
+        var denied = await RequireTeamPermissionAsync(name, TeamPermission.RenameTeam, cancellationToken);
         if (denied is not null)
         {
             return denied;
@@ -136,16 +133,27 @@ public sealed class TeamController(
             return View(model);
         }
 
-        return await _teamService.UpdateTeamAsync(name, model.DisplayName, model.Description, cancellationToken)
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return Forbid();
+        }
+
+        return await _teamService.UpdateTeamAsync(
+                name,
+                model.DisplayName,
+                model.Description,
+                _currentUser.UserId,
+                _currentUser.IsAdministrator,
+                cancellationToken)
             ? RedirectToAction(nameof(Detail), new { name })
-            : NotFound();
+            : Forbid();
     }
 
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Users(string name, CancellationToken cancellationToken)
     {
-        var denied = await RequireTeamAdministratorAsync(name);
+        var denied = await RequireTeamPermissionAsync(name, TeamPermission.ManageMembers, cancellationToken);
         if (denied is not null)
         {
             return denied;
@@ -154,14 +162,14 @@ public sealed class TeamController(
         var team = await GetTeamAsync(name, cancellationToken);
         return team is null
             ? NotFound()
-            : View(new TeamDetailsViewModel { Team = team, CanManage = true });
+            : View(await CreateDetailsViewModelAsync(team, includeAudit: true, cancellationToken));
     }
 
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> Rename(string name, CancellationToken cancellationToken)
     {
-        var denied = await RequireTeamAdministratorAsync(name);
+        var denied = await RequireTeamPermissionAsync(name, TeamPermission.RenameTeam, cancellationToken);
         if (denied is not null)
         {
             return denied;
@@ -183,7 +191,10 @@ public sealed class TeamController(
     [Authorize]
     public async Task<IActionResult> Rename(NameChangeViewModel model, CancellationToken cancellationToken)
     {
-        var denied = await RequireTeamAdministratorAsync(model.CurrentSlug);
+        var denied = await RequireTeamPermissionAsync(
+            model.CurrentSlug,
+            TeamPermission.RenameTeam,
+            cancellationToken);
         if (denied is not null)
         {
             return denied;
@@ -233,24 +244,27 @@ public sealed class TeamController(
         TeamMemberCommand command,
         CancellationToken cancellationToken)
     {
-        var denied = await RequireTeamAdministratorAsync(command.Name);
+        var denied = await RequireTeamPermissionAsync(
+            command.Name,
+            TeamPermission.ManageMembers,
+            cancellationToken);
         if (denied is not null)
         {
             return denied;
         }
 
-        if (!_currentUser.IsAdministrator
-            && string.Equals(command.User, _currentUser.UserName, StringComparison.OrdinalIgnoreCase)
-            && command.Act is "del" or "member")
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
         {
-            return BadRequest("Team administrators cannot remove their own administrator access.");
+            return Forbid();
         }
 
         var action = command.Act.ToLowerInvariant() switch
         {
             "add" => TeamMemberAction.Add,
             "del" => TeamMemberAction.Remove,
-            "admin" => TeamMemberAction.MakeTeamOwner,
+            "owner" or "admin" => TeamMemberAction.MakeTeamOwner,
+            "leader" => TeamMemberAction.MakeLeader,
+            "deputy" => TeamMemberAction.MakeDeputyLeader,
             "member" => TeamMemberAction.MakeMember,
             _ => (TeamMemberAction?)null
         };
@@ -259,41 +273,151 @@ public sealed class TeamController(
                 command.Name,
                 command.User,
                 action.Value,
+                _currentUser.UserId,
+                _currentUser.IsAdministrator,
                 cancellationToken)
                 ? Json("success")
                 : BadRequest("Unable to update the team member.");
     }
 
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> UpdateUsers(
+        TeamMemberBatchCommand command,
+        CancellationToken cancellationToken)
+    {
+        var denied = await RequireTeamPermissionAsync(
+            command.Name,
+            TeamPermission.ManageMembers,
+            cancellationToken);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return Forbid();
+        }
+
+        var changes = new List<TeamMemberChange>();
+        foreach (var member in command.Members.Where(member => member.Selected))
+        {
+            TeamMemberAction? action = command.Operation switch
+            {
+                "remove" => TeamMemberAction.Remove,
+                "roles" when Enum.TryParse<TeamRole>(member.Role, ignoreCase: true, out var role) => role switch
+                {
+                    TeamRole.TeamOwner => TeamMemberAction.MakeTeamOwner,
+                    TeamRole.Leader => TeamMemberAction.MakeLeader,
+                    TeamRole.DeputyLeader => TeamMemberAction.MakeDeputyLeader,
+                    TeamRole.Member => TeamMemberAction.MakeMember,
+                    _ => null
+                },
+                _ => null
+            };
+            if (action is null)
+            {
+                return BadRequest("The requested team role is invalid.");
+            }
+
+            changes.Add(new TeamMemberChange(member.User, action.Value));
+        }
+
+        var result = await _teamService.ApplyMemberChangesAsync(
+            command.Name,
+            changes,
+            _currentUser.UserId,
+            _currentUser.IsAdministrator,
+            cancellationToken);
+        if (!result.Succeeded)
+        {
+            TempData["Error"] = result.Error ?? "Unable to update team members.";
+        }
+
+        return RedirectToAction(nameof(Users), new { name = command.Name });
+    }
+
     [HttpGet]
-    [Authorize(Policy = AuthorizationPolicies.Administrator)]
+    [Authorize]
     public async Task<IActionResult> Delete(string name, CancellationToken cancellationToken)
     {
+        var denied = await RequireTeamPermissionAsync(name, TeamPermission.DeleteTeam, cancellationToken);
+        if (denied is not null)
+        {
+            return denied;
+        }
+
         return await GetTeamAsync(name, cancellationToken) is null
             ? NotFound()
             : View(model: name);
     }
 
     [HttpPost, ActionName(nameof(Delete))]
-    [Authorize(Policy = AuthorizationPolicies.Administrator)]
+    [Authorize]
     public async Task<IActionResult> DeleteConfirmed(string name, CancellationToken cancellationToken)
     {
-        return await _teamService.DeleteTeamAsync(name, cancellationToken)
-            ? RedirectToAction(nameof(Index))
-            : NotFound();
+        if (string.IsNullOrWhiteSpace(_currentUser.UserId))
+        {
+            return Forbid();
+        }
+
+        return await _teamService.DeleteTeamAsync(
+                name,
+                _currentUser.UserId,
+                _currentUser.IsAdministrator,
+                cancellationToken)
+            ? RedirectToAction("Index", "Home")
+            : Forbid();
     }
 
-    private async Task<IActionResult?> RequireTeamAdministratorAsync(string teamName)
+    private async Task<IActionResult?> RequireTeamPermissionAsync(
+        string teamName,
+        TeamPermission permission,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(teamName))
         {
             return NotFound();
         }
 
-        var result = await _authorizationService.AuthorizeAsync(
-            User,
-            new TeamAuthorizationResource(teamName),
-            AuthorizationPolicies.TeamAdministrator);
-        return result.Succeeded ? null : Forbid();
+        return await _teamAuthorizationService.IsAllowedAsync(
+            teamName,
+            _currentUser.UserId,
+            _currentUser.IsAdministrator,
+            permission,
+            cancellationToken)
+            ? null
+            : Forbid();
+    }
+
+    private async Task<TeamDetailsViewModel> CreateDetailsViewModelAsync(
+        TeamDetails team,
+        bool includeAudit,
+        CancellationToken cancellationToken)
+    {
+        var role = string.IsNullOrWhiteSpace(_currentUser.UserId)
+            ? null
+            : await _teamAuthorizationService.GetRoleAsync(
+                team.Name,
+                _currentUser.UserId,
+                cancellationToken);
+        bool Allows(TeamPermission permission) =>
+            _currentUser.IsAdministrator
+            || (role is not null && TeamRolePermissions.Allows(role.Value, permission));
+        return new TeamDetailsViewModel
+        {
+            Team = team,
+            CurrentRole = role,
+            CanManageMembers = Allows(TeamPermission.ManageMembers),
+            CanEdit = Allows(TeamPermission.RenameTeam),
+            CanRename = Allows(TeamPermission.RenameTeam),
+            CanDelete = Allows(TeamPermission.DeleteTeam),
+            CanViewEnterpriseConnections = Allows(TeamPermission.ViewEnterpriseConnections),
+            AuditEvents = includeAudit
+                ? await _teamService.GetAuditEventsAsync(team.Name, cancellationToken: cancellationToken)
+                : []
+        };
     }
 
     private Task<TeamDetails?> GetTeamAsync(string name, CancellationToken cancellationToken)
