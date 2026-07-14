@@ -1,0 +1,9 @@
+title: GitCandy Help
+description: GitCandy 当前版本的用户、管理、运维和开发者文档。
+lang: zh-CN
+encoding: utf-8
+markdown: CommonMark
+asset_version: 20260714.1
+exclude:
+  - README.md
+  - _data

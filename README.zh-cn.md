@@ -40,6 +40,7 @@ docker pull iotsharp/gitcandy:latest
 
 ## 运维入口
 
+- 随应用版本发布、允许匿名访问的帮助中心：`/help/`
 - 存活检查：`/health/live`
 - 就绪检查：`/health/ready`
 - OpenTelemetry tracing、metrics、logging 与可选 OTLP 导出
@@ -62,6 +63,8 @@ dotnet test GitCandy.slnx
 ```
 
 `GitCandy.slnx` 是当前唯一活动 solution。已退役的 MVC5 源码可通过 Git 历史查阅，行为基线继续保留在 `docs/migration`。
+
+Web 项目构建会使用固定的 JekyllNet local tool 从 `docs/help` 生成帮助站点，并只复制到 build/publish 产物。发布环境不需要 Node.js、JekyllNet 或 CDN；生成的 HTML 不应提交到仓库。验收与回滚说明见 [M15.5 帮助中心记录](docs/migration/m15-5-help-center.md)。
 
 ## 鸣谢
 

@@ -34,7 +34,9 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore GitCandy.slnx
+        run: |
+          dotnet tool restore
+          dotnet restore GitCandy.slnx
 
       - name: Build
         run: dotnet build GitCandy.slnx --configuration Release --no-restore
@@ -66,6 +68,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Restore local tools
+        run: dotnet tool restore
+
       - name: Publish self-contained application
         shell: pwsh
         run: |
@@ -96,7 +101,15 @@ jobs:
           ./dist/app/GitCandy > "$root/app.log" 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
-          for attempt in {1..60}; do curl --fail --silent http://127.0.0.1:15080/health/live && exit 0; sleep 1; done
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:15080/health/live; then
+              curl --fail --silent --location http://127.0.0.1:15080/help/ >/dev/null
+              curl --fail --silent http://127.0.0.1:15080/help/help-manifest.json >/dev/null
+              test -f dist/app/wwwroot/help/help-manifest.json
+              exit 0
+            fi
+            sleep 1
+          done
           cat "$root/app.log"
           exit 1
 
@@ -117,7 +130,15 @@ jobs:
           $process = Start-Process dist/app/GitCandy.exe -WindowStyle Hidden -PassThru
           try {
             foreach ($attempt in 1..60) {
-              try { if ((Invoke-WebRequest http://127.0.0.1:15080/health/live -TimeoutSec 2).StatusCode -eq 200) { exit 0 } } catch {}
+              try {
+                if ((Invoke-WebRequest http://127.0.0.1:15080/health/live -TimeoutSec 2).StatusCode -eq 200) {
+                  if ((Invoke-WebRequest http://127.0.0.1:15080/help/ -TimeoutSec 2).StatusCode -eq 200 -and
+                      (Invoke-WebRequest http://127.0.0.1:15080/help/help-manifest.json -TimeoutSec 2).StatusCode -eq 200 -and
+                      (Test-Path dist/app/wwwroot/help/help-manifest.json)) {
+                    exit 0
+                  }
+                }
+              } catch {}
               Start-Sleep -Seconds 1
             }
             throw 'Published Windows service package did not become live.'

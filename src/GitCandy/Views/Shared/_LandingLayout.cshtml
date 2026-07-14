@@ -41,7 +41,7 @@
             <a href="#product">@Text["Landing_NavProduct"]</a>
             <a href="#collaboration">@Text["Landing_NavCollaboration"]</a>
             <a href="#deployment">@Text["Landing_NavDeployment"]</a>
-            <a class="landing-nav-mobile-only" href="#help">@Text["Landing_NavHelp"]</a>
+            <a class="landing-nav-mobile-only" href="@(Context.Request.PathBase)/help">@Text["Landing_NavHelp"]</a>
             @if (isAuthenticated)
             {
                 <a class="landing-nav-mobile-only" asp-controller="Repository" asp-action="Index">@Text["Landing_OpenWorkspace"]</a>
@@ -53,7 +53,7 @@
         </nav>
 
         <div class="landing-actions">
-            <a class="landing-help-link" href="#help">@Text["Landing_NavHelp"]</a>
+            <a class="landing-help-link" href="@(Context.Request.PathBase)/help">@Text["Landing_NavHelp"]</a>
             @if (isAuthenticated)
             {
                 <a class="btn btn-primary" asp-controller="Repository" asp-action="Index">
@@ -89,7 +89,7 @@
         </div>
         <nav class="landing-footer-links" aria-label="@Text["Landing_FooterNavigation"]">
             <a href="#product">@Text["Landing_NavProduct"]</a>
-            <a href="#help">@Text["Landing_NavHelp"]</a>
+            <a href="@(Context.Request.PathBase)/help">@Text["Landing_NavHelp"]</a>
             <a href="https://github.com/IoTSharp/GitCandy" rel="external">@Text["Landing_SourceCode"]</a>
             <a asp-controller="Repository" asp-action="Index">@Text["Landing_ExploreRepositories"]</a>
         </nav>

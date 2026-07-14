@@ -14,6 +14,8 @@
 | `gitcandy-{version}-compose.zip` | `docker-compose.yml` 与镜像、宿主机端口变量样例 |
 | `gitcandy-{version}-linux-amd64-image.tar.gz` | 可离线下载并通过 `docker load` 导入的镜像 |
 
+应用目录内的 `wwwroot/help` 是每种服务包和容器镜像的必需内容，至少包含 `index.html`、`help-manifest.json`、`search-index.json` 和本地主题资产。`/help/` 允许匿名访问并与应用同版本发布；发布 smoke 会请求首页和 manifest，缺失文档会阻止发布。
+
 在线镜像使用相同版本 tag：
 
 ```bash
@@ -43,6 +45,8 @@ curl --fail http://127.0.0.1:8080/health/ready
 ```
 
 GitCandy 主程序会在 Web、SSH、Quartz 和其他 hosted service 启动前检查 EF Core pending migrations；有待应用版本时自动迁移，没有时直接继续。迁移失败会让进程以失败状态退出，不会在旧 schema 上开始监听。`GitCandy --migrate` 仍可用于只执行迁移后退出，但 Compose 不再需要单独的迁移服务。
+
+帮助站点只在构建/发布阶段由固定 JekyllNet local tool 从 `docs/help` Markdown 生成。生产启动和请求不会解析 Markdown，也不需要 JekyllNet、Node.js、网络或 SonnetDB。不要在服务器上手工覆盖 `wwwroot/help`；升级和回滚时应把它与同一应用产物整体替换。
 
 源码仓库使用标准 `docker-compose.override.yml` 保存 `build.context` 和 `build.dockerfile`，执行 `docker compose up --build -d` 时会自动加载。Release Compose 包不包含该重载文件；Release 部署先执行 `docker compose pull`，随后使用基础 `docker-compose.yml` 启动预构建镜像。
 

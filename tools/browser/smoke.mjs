@@ -18,6 +18,27 @@ try {
     await page.getByText('If an account matches that address').waitFor();
     await page.screenshot({ path: `output/playwright/recovery-${viewport.name}.png`, fullPage: true });
     await page.close();
+
+    const helpPage = await browser.newPage({ viewport });
+    const browserErrors = [];
+    helpPage.on('console', message => {
+      if (message.type() === 'error') browserErrors.push(message.text());
+    });
+    helpPage.on('pageerror', error => browserErrors.push(error.message));
+    await helpPage.goto(`${baseUrl}/help`, { waitUntil: 'networkidle' });
+    if ((await helpPage.locator('h1').textContent())?.trim() !== '先找到正确的操作手册') throw new Error('Help home did not render.');
+    if (await helpPage.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)) throw new Error(`Help ${viewport.name} layout overflows horizontally.`);
+    if (viewport.name === 'mobile') {
+      await helpPage.getByRole('button', { name: '目录' }).click();
+      await helpPage.getByLabel('搜索当前文档').waitFor();
+    }
+    await helpPage.getByLabel('搜索当前文档').fill('部署');
+    await helpPage.getByRole('link', { name: '部署、反向代理与 TLS' }).waitFor();
+    await helpPage.screenshot({ path: `output/playwright/help-${viewport.name}.png`, fullPage: true });
+    await helpPage.getByRole('link', { name: '部署、反向代理与 TLS' }).first().click();
+    await helpPage.getByRole('heading', { name: '部署、反向代理与 TLS', level: 1 }).waitFor();
+    if (browserErrors.length) throw new Error(`Help ${viewport.name} browser errors: ${browserErrors.join('; ')}`);
+    await helpPage.close();
   }
 } finally {
   await browser.close();

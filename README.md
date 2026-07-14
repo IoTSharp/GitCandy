@@ -74,6 +74,7 @@ Canonical repositories expose `/branches`, `/tags`, and `/contributors`. Writers
 
 ## Operations
 
+- Version-matched, anonymous help center: `/help/`
 - Liveness: `/health/live`
 - Readiness: `/health/ready`
 - OpenTelemetry tracing, metrics, and logging with optional OTLP export
@@ -88,7 +89,7 @@ Canonical repositories expose `/branches`, `/tags`, and `/contributors`. Writers
 
 ## Development
 
-.NET 10 SDK and Node.js 20 or later are required. Node is used only to bundle the self-hosted CSS, JavaScript, and Lucide icons; published deployments do not require Node or a CDN.
+.NET 10 SDK and Node.js 20 or later are required. Node bundles the application assets, while the pinned JekyllNet local tool generates `/help` from `docs/help`. Published deployments require neither Node, JekyllNet, nor a CDN.
 
 ```bash
 dotnet tool restore
@@ -97,7 +98,7 @@ dotnet build GitCandy.slnx
 dotnet test GitCandy.slnx
 ```
 
-The client bundle is rebuilt incrementally by MSBuild from `src/GitCandy/ClientApp`. See [the M9 UI implementation record](docs/design/m9-ui-implementation.md) for asset, theme, visual baseline, and rollback details.
+The client bundle and help site are rebuilt incrementally by MSBuild. Generated help HTML is copied only to build/publish output and must not be committed. See [the M9 UI implementation record](docs/design/m9-ui-implementation.md) and [the M15.5 help-center acceptance record](docs/migration/m15-5-help-center.md) for asset, documentation, validation, and rollback details.
 
 `GitCandy.slnx` is the only active solution. The retired MVC5 source remains available through Git history, while its behavior baselines remain under `docs/migration`.
 

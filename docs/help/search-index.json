@@ -1,0 +1,14 @@
+[
+  { "title": "当前版本概览", "url": "current/", "summary": "当前能力、非目标与 URL 约定", "keywords": "版本 功能 namespace URL" },
+  { "title": "账号与私人工作台", "url": "current/users/account-workspace/", "summary": "Identity、2FA、PAT、Todo、通知与公开个人页", "keywords": "登录 账号 密码 工作台 todo notification SSH key" },
+  { "title": "仓库、Git 与 LFS", "url": "current/users/repositories-git/", "summary": "仓库创建、clone、fetch、push、SSH 与 LFS", "keywords": "repository git clone push branch tag lfs" },
+  { "title": "Issue、Pull Request 与发现", "url": "current/users/collaboration/", "summary": "Issue、PR、review、check、Release、搜索和发现", "keywords": "issue pull request review webhook release explore" },
+  { "title": "权限、凭据与安全", "url": "current/admin/access-security/", "summary": "角色、认证 scheme、PAT、deploy key 与分支保护", "keywords": "权限 安全 role identity token pat ssh oidc" },
+  { "title": "企业身份与数据库 Provider", "url": "current/admin/providers/", "summary": "OIDC、SCIM、企业连接、SQLite、SQL Server 与 SonnetDB", "keywords": "provider database sqlite sqlserver sonnetdb entra scim" },
+  { "title": "部署、反向代理与 TLS", "url": "current/operations/deployment/", "summary": "Docker、Linux systemd、Windows Service、TLS 和 PathBase", "keywords": "deploy docker compose linux windows tls proxy pathbase" },
+  { "title": "备份、恢复、观测与排障", "url": "current/operations/recovery-troubleshooting/", "summary": "一致性备份、恢复、回滚、health 和 OpenTelemetry", "keywords": "backup restore rollback troubleshoot health telemetry" },
+  { "title": "HTTP API 参考", "url": "current/developers/api/", "summary": "Commit check API、PAT scope、错误与限流", "keywords": "api check status bearer pagination error rate limit" },
+  { "title": "Webhook 集成", "url": "current/developers/webhooks/", "summary": "事件、签名、delivery、重试和 SSRF 边界", "keywords": "webhook signature delivery retry event" },
+  { "title": "MCP 能力矩阵", "url": "current/developers/mcp/", "summary": "当前不可用与 Milestone 16 计划契约", "keywords": "mcp agent memory knowledge search sonnetdb" },
+  { "title": "架构与贡献", "url": "current/developers/architecture/", "summary": "项目边界、本地构建、测试和贡献规则", "keywords": "architecture build test contribution dotnet jekyllnet" }
+]

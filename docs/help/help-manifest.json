@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generator": "JekyllNet 0.2.5",
+  "documentationVersion": "current",
+  "assetVersion": "20260714.1",
+  "updated": "2026-07-14",
+  "entryPoint": "index.html",
+  "searchIndex": "search-index.json",
+  "canonicalSourceRoot": "docs/help",
+  "documents": [
+    "current/",
+    "current/users/account-workspace/",
+    "current/users/repositories-git/",
+    "current/users/collaboration/",
+    "current/admin/access-security/",
+    "current/admin/providers/",
+    "current/operations/deployment/",
+    "current/operations/recovery-troubleshooting/",
+    "current/developers/api/",
+    "current/developers/webhooks/",
+    "current/developers/mcp/",
+    "current/developers/architecture/"
+  ]
+}

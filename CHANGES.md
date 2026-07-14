@@ -10,8 +10,12 @@
  - Completed the M11-M12 collaboration baseline with Issues, Markdown discussions, labels, milestones, notifications, Pull Requests, cross-fork sources, inline review, approvals, mergeability, merge commits, and squash.
  - Completed M12.7 with the private `/me` workspace, actionable Todos, unified notifications, versioned activity Feed, public profiles, Stars, public metrics, and explainable repository discovery.
  - Completed M14 with four-level team governance, enterprise connection management, Microsoft Entra ID and SCIM 2.0, WeCom/Feishu/DingTalk adapters, bounded directory reconciliation, deprovisioning, and security acceptance fixtures.
+ - Completed M15.5 with a versioned `/help` center, full Markdown inventory, current user/operator/developer guidance, offline search/theme assets, safe static routing, and build/package quality gates.
 
 #### Added
+ - Added an anonymous, PathBase-compatible `/help` center generated at build time from 13 canonical Markdown guides covering accounts, workspace, repositories, Git/LFS, collaboration, security, providers, deployment, recovery, API, webhooks, MCP availability, and architecture.
+ - Added a complete 86-document inventory with owner, audience, public, canonical, archived, version, and permalink metadata, keeping migration records and roadmap snapshots out of current navigation.
+ - Added a pinned JekyllNet 0.2.5 local tool, self-hosted responsive theme, local search metadata, help release manifest, security/cache/content-type headers, path-boundary handling, and desktop/mobile browser coverage.
  - Added the M15 remote account and one-way repository mirror EF schema with stable provider identities, user/team ownership, opaque credential references, ref/schedule/divergence/prune policies, observable status, portable constraints, and SQLite, SQL Server, and SonnetDB migrations.
  - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
  - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
@@ -50,6 +54,7 @@
  - Removed legacy repository Web, Git Smart HTTP, Git LFS, and SSH addresses. Repository pages now require `/{namespace}/{repository}` and Git transports require `/{namespace}/{repository}.git`; old `/Repository/Detail/{name}`, `/Repository/{browser-action}/{name}`, `/Repository/Issues/{name}`, `/Repository/Pulls/{name}`, `/git/{repository}[.git]`, no-suffix Git remotes, and retained alias addresses return not found.
 
 #### Changed
+ - Changed build, publish, Docker, Linux, and Windows release paths to generate and package the same help site; missing help pages or manifest now fail release smoke validation.
  - Team creators and legacy team administrators are now TeamOwners; team repository creation recognizes TeamOwner and Leader while repository permissions remain independent from team governance roles.
  - Enterprise-synchronized users are granted Member access only; disabling or removing a directory identity locks the Identity account and revokes its active machine credentials instead of inferring access from email or display name.
  - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.7 moved to completion history after production and workspace/discovery acceptance.

@@ -11,6 +11,7 @@ WORKDIR /src
 
 COPY . .
 COPY --from=client-assets /src/src/GitCandy/wwwroot/assets src/GitCandy/wwwroot/assets
+RUN dotnet tool restore
 RUN dotnet restore GitCandy.slnx
 RUN dotnet publish src/GitCandy/GitCandy.csproj \
     --configuration Release \

@@ -8,6 +8,13 @@
         "dotnet-ef"
       ],
       "rollForward": false
+    },
+    "jekyllnet": {
+      "version": "0.2.5",
+      "commands": [
+        "jekyllnet"
+      ],
+      "rollForward": false
     }
   }
 }

@@ -147,6 +147,7 @@ app.UseRateLimiter();
 
 app.MapStaticAssets();
 app.MapGitCandyHealthChecks();
+app.MapGitCandyHelp();
 app.MapGitCandyCompatibilityRoutes();
 
 await app.RunAsync();

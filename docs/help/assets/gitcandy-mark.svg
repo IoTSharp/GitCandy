@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
+  <title id="title">GitCandy</title>
+  <desc id="description">A wrapped candy containing a Git branch.</desc>
+  <rect x="2" y="2" width="60" height="60" rx="12" fill="#13201c" />
+  <path d="M17 20 7 15l3 13-4 12 11 4Z" fill="#ff7564" />
+  <path d="m47 20 10-5-3 13 4 12-11 4Z" fill="#ff7564" />
+  <rect x="14" y="14" width="36" height="36" rx="11" fill="#62d7a5" />
+  <path d="M25 23v8.5c0 4.1 3.4 7.5 7.5 7.5H40M32 39V27" fill="none" stroke="#13201c" stroke-linecap="round" stroke-linejoin="round" stroke-width="3.5" />
+  <circle cx="25" cy="22" r="3.5" fill="#fff" stroke="#13201c" stroke-width="2.5" />
+  <circle cx="32" cy="26" r="3.5" fill="#ff7564" stroke="#13201c" stroke-width="2.5" />
+  <circle cx="41" cy="39" r="3.5" fill="#fff" stroke="#13201c" stroke-width="2.5" />
+</svg>

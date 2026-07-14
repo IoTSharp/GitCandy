@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN" data-help-version="{{ page.version }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="{{ page.description }}">
+  <meta name="gitcandy:doc-version" content="{{ page.version }}">
+  <meta name="gitcandy:canonical-source" content="{{ page.canonical }}">
+  <meta name="gitcandy:owner" content="{{ page.owner }}">
+  <meta name="gitcandy:audience" content="{{ page.audience }}">
+  <meta name="gitcandy:public" content="{{ page.public }}">
+  <meta name="gitcandy:archived" content="{{ page.archived }}">
+  <title>{{ page.title }} | GitCandy Help</title>
+  <link rel="icon" href="{{ page.help_root }}assets/gitcandy-mark.svg?v={{ site.asset_version }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ page.help_root }}assets/help.css?v={{ site.asset_version }}">
+</head>
+<body>
+  <a class="skip-link" href="#help-content">跳到正文</a>
+  <header class="help-header">
+    <a class="help-brand" href="{{ page.help_root }}" aria-label="GitCandy 帮助中心首页">
+      <img src="{{ page.help_root }}assets/gitcandy-mark.svg?v={{ site.asset_version }}" alt="" width="34" height="34">
+      <span>GitCandy</span>
+      <strong>HELP / CURRENT</strong>
+    </a>
+    <div class="header-actions">
+      <button class="help-menu-button" type="button" aria-expanded="false" aria-controls="help-sidebar" data-help-menu>目录</button>
+      <a class="return-link" href="{{ page.help_root }}../">返回 GitCandy</a>
+    </div>
+  </header>
+
+  <div class="help-frame">
+    <aside id="help-sidebar" class="help-sidebar" aria-label="帮助中心导航" data-help-sidebar>
+      <div class="search-control">
+        <label for="help-search">搜索当前文档</label>
+        <input id="help-search" type="search" autocomplete="off" placeholder="仓库、部署、API..." data-help-search data-search-index="{{ page.help_root }}search-index.json">
+        <p class="search-status" data-search-status aria-live="polite"></p>
+        <ol class="search-results" data-search-results></ol>
+      </div>
+
+      <nav class="manual-nav">
+        <p>开始使用</p>
+        <a href="{{ page.help_root }}current/">版本概览</a>
+        <a href="{{ page.help_root }}current/users/account-workspace/">账号与工作台</a>
+        <a href="{{ page.help_root }}current/users/repositories-git/">仓库、Git 与 LFS</a>
+        <a href="{{ page.help_root }}current/users/collaboration/">Issue、PR 与发现</a>
+
+        <p>管理与运维</p>
+        <a href="{{ page.help_root }}current/admin/access-security/">权限与安全</a>
+        <a href="{{ page.help_root }}current/admin/providers/">企业与数据库 Provider</a>
+        <a href="{{ page.help_root }}current/operations/deployment/">部署与 TLS</a>
+        <a href="{{ page.help_root }}current/operations/recovery-troubleshooting/">恢复与排障</a>
+
+        <p>开发者</p>
+        <a href="{{ page.help_root }}current/developers/api/">HTTP API</a>
+        <a href="{{ page.help_root }}current/developers/webhooks/">Webhook</a>
+        <a href="{{ page.help_root }}current/developers/mcp/">MCP 能力矩阵</a>
+        <a href="{{ page.help_root }}current/developers/architecture/">架构与贡献</a>
+      </nav>
+    </aside>
+
+    <main id="help-content" class="manual" tabindex="-1">
+      <div class="document-meta">
+        <span>{{ page.section }}</span>
+        <span>版本 {{ page.version }}</span>
+        <span>更新于 {{ page.updated }}</span>
+      </div>
+      <article>
+        {{ content }}
+      </article>
+      <footer class="document-footer">
+        <span>Canonical source: <code>{{ page.canonical }}</code></span>
+        <a href="{{ page.help_root }}help-manifest.json">发布清单</a>
+      </footer>
+    </main>
+  </div>
+  <script src="{{ page.help_root }}assets/help.js?v={{ site.asset_version }}" defer></script>
+</body>
+</html>

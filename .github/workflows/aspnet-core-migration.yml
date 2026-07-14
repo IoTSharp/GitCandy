@@ -62,7 +62,9 @@ jobs:
           global-json-file: global.json
 
       - name: Restore
-        run: dotnet restore GitCandy.slnx
+        run: |
+          dotnet tool restore
+          dotnet restore GitCandy.slnx
 
       - name: Build
         run: dotnet build GitCandy.slnx --configuration Release --no-restore
@@ -94,6 +96,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: dotnet tool restore
       - run: dotnet build src/GitCandy/GitCandy.csproj --configuration Release
       - name: Start GitCandy
         run: |
@@ -156,7 +159,11 @@ jobs:
         run: |
           docker run --detach --name gitcandy-ci -p 18080:8080 -e GitCandy__Application__EnableSsh=false gitcandy:ci
           for attempt in {1..60}; do
-            if curl --fail --silent http://127.0.0.1:18080/health/ready; then exit 0; fi
+            if curl --fail --silent http://127.0.0.1:18080/health/ready; then
+              curl --fail --silent --location http://127.0.0.1:18080/help/ >/dev/null
+              curl --fail --silent http://127.0.0.1:18080/help/help-manifest.json >/dev/null
+              exit 0
+            fi
             sleep 1
           done
           docker logs gitcandy-ci

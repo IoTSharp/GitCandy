@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <HelpSiteSource>$(MSBuildProjectDirectory)\..\..\docs\help</HelpSiteSource>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +31,7 @@
 
   <ItemGroup>
     <ClientAssetSource Include="ClientApp\app.css;ClientApp\app.js" />
+    <HelpSiteInput Include="$(HelpSiteSource)\**\*" />
   </ItemGroup>
 
   <Target Name="BuildClientAssets"
@@ -39,6 +41,42 @@
           Outputs="wwwroot\assets\app.css;wwwroot\assets\app.js">
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)\ClientApp" Command="npm ci --ignore-scripts" />
     <Exec WorkingDirectory="$(MSBuildProjectDirectory)\ClientApp" Command="npm run build" />
+  </Target>
+
+  <Target Name="BuildHelpSite"
+          BeforeTargets="Build"
+          Condition="'$(SkipHelpSiteBuild)' != 'true'"
+          Inputs="@(HelpSiteInput)"
+          Outputs="$(IntermediateOutputPath)help-site.stamp">
+    <RemoveDir Directories="$(IntermediateOutputPath)help-site" />
+    <MakeDir Directories="$(IntermediateOutputPath)help-site" />
+    <Exec WorkingDirectory="$(MSBuildProjectDirectory)\..\.."
+          Command="dotnet tool run jekyllnet build --source &quot;$(HelpSiteSource)&quot; --destination &quot;$(IntermediateOutputPath)help-site&quot;" />
+    <WriteLinesToFile File="$(IntermediateOutputPath)help-site.stamp" Lines="JekyllNet 0.2.5" Overwrite="true" />
+  </Target>
+
+  <Target Name="CopyHelpSiteToBuildOutput"
+          AfterTargets="CopyFilesToOutputDirectory"
+          DependsOnTargets="BuildHelpSite"
+          Condition="'$(SkipHelpSiteBuild)' != 'true'">
+    <ItemGroup>
+      <GeneratedHelpSiteFile Include="$(IntermediateOutputPath)help-site\**\*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(OutDir)wwwroot\help" />
+    <Copy SourceFiles="@(GeneratedHelpSiteFile)"
+          DestinationFiles="@(GeneratedHelpSiteFile->'$(OutDir)wwwroot\help\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </Target>
+
+  <Target Name="CopyHelpSiteToPublishOutput"
+          AfterTargets="Publish"
+          DependsOnTargets="BuildHelpSite"
+          Condition="'$(SkipHelpSiteBuild)' != 'true'">
+    <ItemGroup>
+      <PublishedHelpSiteFile Include="$(IntermediateOutputPath)help-site\**\*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(PublishDir)wwwroot\help" />
+    <Copy SourceFiles="@(PublishedHelpSiteFile)"
+          DestinationFiles="@(PublishedHelpSiteFile->'$(PublishDir)wwwroot\help\%(RecursiveDir)%(Filename)%(Extension)')" />
   </Target>
 
 </Project>
