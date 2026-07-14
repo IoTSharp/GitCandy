@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using GitCandy.Git;
 using GitCandy.Governance;
+using GitCandy.Remotes;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GitCandy.Tests;
@@ -52,15 +53,97 @@ public sealed class GitReceiveHookTests
         Assert.IsNull(gate.Request);
     }
 
-    private static ServiceProvider CreateServices(IGitPushGate gate)
+    [TestMethod]
+    public async Task ExecuteAsync_WithReservedMirrorRef_ReturnsFailureBeforePolicyEvaluation()
+    {
+        var gate = new CapturingPushGate(GitPushGateResult.Allow);
+        await using var provider = CreateServices(gate);
+        using var environment = new HookEnvironment(
+            ("GITCANDY_REPOSITORY_ID", "42"),
+            ("GITCANDY_ACTOR_NAME", "build-agent"),
+            ("GITCANDY_ACTOR_USER_ID", "user-42"),
+            ("GITCANDY_DEPLOY_KEY_ID", null));
+
+        var exitCode = await provider.GetRequiredService<IGitReceiveHookRunner>().ExecuteAsync(
+            new StringReader($"{new string('0', 40)} {new string('a', 40)} refs/gitcandy/mirrors/1/heads/main\n"),
+            new StringWriter());
+
+        Assert.AreEqual(1, exitCode);
+        Assert.IsNull(gate.Request);
+    }
+
+    [TestMethod]
+    public async Task PostReceive_WithValidUpdates_EnqueuesWithoutReevaluatingPushGate()
+    {
+        var gate = new CapturingPushGate(GitPushGateResult.Allow);
+        var sink = new CapturingMirrorEventSink();
+        await using var provider = CreateServices(gate, sink);
+        using var environment = new HookEnvironment(("GITCANDY_REPOSITORY_ID", "42"));
+
+        var exitCode = await provider.GetRequiredService<IGitPostReceiveHookRunner>().ExecuteAsync(
+            new StringReader($"{new string('a', 40)} {new string('b', 40)} refs/heads/main\n"),
+            new StringWriter());
+
+        Assert.AreEqual(0, exitCode);
+        Assert.AreEqual(42L, sink.RepositoryId);
+        Assert.AreEqual("refs/heads/main", sink.Updates.Single().ReferenceName);
+        Assert.IsNull(gate.Request);
+    }
+
+    [TestMethod]
+    public async Task PostReceive_WithEnqueueFailure_ReturnsSuccessAndWarnsThatLocalPushRemainsCommitted()
+    {
+        var gate = new CapturingPushGate(GitPushGateResult.Allow);
+        await using var provider = CreateServices(gate, new ThrowingMirrorEventSink());
+        using var environment = new HookEnvironment(("GITCANDY_REPOSITORY_ID", "42"));
+        var error = new StringWriter();
+
+        var exitCode = await provider.GetRequiredService<IGitPostReceiveHookRunner>().ExecuteAsync(
+            new StringReader($"{new string('a', 40)} {new string('0', 40)} refs/heads/main\n"),
+            error);
+
+        Assert.AreEqual(0, exitCode);
+        StringAssert.Contains(error.ToString(), "local push remains committed");
+    }
+
+    private static ServiceProvider CreateServices(
+        IGitPushGate gate,
+        IRemoteMirrorPushEventSink? eventSink = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddOptions();
         services.AddSingleton(gate);
+        services.AddSingleton(eventSink ?? new CapturingMirrorEventSink());
         services.AddSingleton<IGitExecutableResolver>(new TestGitExecutableResolver());
         services.AddGitCandyGit();
         return services.BuildServiceProvider(validateScopes: true);
+    }
+
+    private sealed class CapturingMirrorEventSink : IRemoteMirrorPushEventSink
+    {
+        public long? RepositoryId { get; private set; }
+
+        public IReadOnlyList<RemoteMirrorRefEvent> Updates { get; private set; } = [];
+
+        public Task EnqueueAsync(
+            long repositoryId,
+            IReadOnlyList<RemoteMirrorRefEvent> updates,
+            CancellationToken cancellationToken = default)
+        {
+            RepositoryId = repositoryId;
+            Updates = updates;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingMirrorEventSink : IRemoteMirrorPushEventSink
+    {
+        public Task EnqueueAsync(
+            long repositoryId,
+            IReadOnlyList<RemoteMirrorRefEvent> updates,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("fixture enqueue failure");
     }
 
     private sealed class TestGitExecutableResolver : IGitExecutableResolver

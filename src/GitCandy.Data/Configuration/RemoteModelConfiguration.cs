@@ -111,5 +111,24 @@ internal static class RemoteModelConfiguration
             entity.HasIndex(item => new { item.ScheduleEnabled, item.IsEnabled, item.Status })
                 .HasDatabaseName("IX_RepositoryMirrors_Schedule_Status");
         });
+
+        builder.Entity<GitCandyRemoteMirrorRefUpdate>(entity =>
+        {
+            entity.ToTable("RemoteMirrorRefUpdates");
+            entity.HasKey(item => new { item.MirrorId, item.ReferenceName });
+            entity.Property(item => item.ReferenceName).HasMaxLength(SchemaLimits.GitRefName);
+            entity.Property(item => item.OldObjectId).IsRequired().HasMaxLength(SchemaLimits.CommitSha);
+            entity.Property(item => item.NewObjectId).IsRequired().HasMaxLength(SchemaLimits.CommitSha);
+            entity.Property(item => item.Generation).IsRequired();
+            entity.Property(item => item.EnqueuedAtUtc).IsRequired();
+            entity.Property(item => item.UpdatedAtUtc).IsRequired();
+            entity.HasOne(item => item.Mirror)
+                .WithMany(mirror => mirror.PendingRefUpdates)
+                .HasForeignKey(item => item.MirrorId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(item => item.UpdatedAtUtc)
+                .HasDatabaseName("IX_RemoteMirrorRefUpdates_UpdatedAtUtc");
+        });
     }
 }

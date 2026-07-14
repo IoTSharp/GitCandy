@@ -57,4 +57,17 @@ public sealed class GitCandyRepositoryMirror
     public DateTime UpdatedAtUtc { get; set; }
     public GitCandyRepository? Repository { get; set; }
     public GitCandyRemoteAccountConnection? Connection { get; set; }
+    public ICollection<GitCandyRemoteMirrorRefUpdate> PendingRefUpdates { get; } = [];
+}
+
+public sealed class GitCandyRemoteMirrorRefUpdate
+{
+    public long MirrorId { get; set; }
+    public string ReferenceName { get; set; } = string.Empty;
+    public string OldObjectId { get; set; } = string.Empty;
+    public string NewObjectId { get; set; } = string.Empty;
+    public long Generation { get; set; }
+    public DateTime EnqueuedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
+    public GitCandyRepositoryMirror? Mirror { get; set; }
 }

@@ -238,6 +238,10 @@ public sealed class GitProcessTransportBackend(
             startInfo.Environment["GIT_PROTOCOL"] = request.ProtocolVersion;
         }
 
+        startInfo.Environment["GIT_CONFIG_COUNT"] = "1";
+        startInfo.Environment["GIT_CONFIG_KEY_0"] = "transfer.hideRefs";
+        startInfo.Environment["GIT_CONFIG_VALUE_0"] = RemoteMirrorReferenceNamespace.Prefix;
+
         if (request.Service == GitTransportService.ReceivePack && !request.AdvertiseRefs)
         {
             _receiveHookLauncher.Configure(startInfo, request);

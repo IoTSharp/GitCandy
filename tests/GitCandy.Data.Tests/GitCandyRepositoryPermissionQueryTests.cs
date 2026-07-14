@@ -3,6 +3,7 @@ using GitCandy.Data.Domain;
 using GitCandy.Data.Identity;
 using GitCandy.Data.Permissions;
 using GitCandy.Data.Sqlite;
+using GitCandy.Remotes;
 using GitCandy.Teams;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -153,6 +154,73 @@ public sealed class GitCandyRepositoryPermissionQueryTests
             isAdministrator: true);
 
         Assert.IsTrue(canWrite);
+    }
+
+    [TestMethod]
+    public async Task CanWriteRepository_WithEnabledPullMirror_DeniesOwnerAndAdministrator()
+    {
+        await using var fixture = await PermissionQueryFixture.CreateAsync();
+        await using (var seedScope = fixture.CreateScope())
+        {
+            var dbContext = seedScope.ServiceProvider.GetRequiredService<GitCandyDbContext>();
+            var repositoryId = await dbContext.Repositories
+                .Where(item => item.NormalizedName == PrivateRepositoryName.ToUpperInvariant())
+                .Select(item => item.Id)
+                .SingleAsync();
+            var connection = new GitCandyRemoteAccountConnection
+            {
+                OwnerKind = RemoteConnectionOwnerKind.User,
+                OwnerUserId = AliceUserId,
+                Provider = RemoteProviderKind.GitHub,
+                ServerUrl = "https://github.com/",
+                ExternalAccountId = "permission-account",
+                AccountKind = RemoteAccountKind.User,
+                Login = "alice",
+                AuthenticationKind = RemoteAuthenticationKind.PersonalAccessToken,
+                CredentialReference = "vault:permission",
+                GrantedScopes = "[\"repo\"]",
+                IsEnabled = true,
+                Status = RemoteConnectionStatus.Healthy,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+            dbContext.RemoteAccountConnections.Add(connection);
+            await dbContext.SaveChangesAsync();
+            dbContext.RepositoryMirrors.Add(new GitCandyRepositoryMirror
+            {
+                RepositoryId = repositoryId,
+                ConnectionId = connection.Id,
+                RemoteRepositoryId = "permission-repository",
+                RemoteOwnerLogin = "upstream",
+                RemoteRepositoryName = "private-demo",
+                RemoteGitUrl = "https://github.com/upstream/private-demo.git",
+                Direction = RemoteMirrorDirection.Pull,
+                Authority = RemoteMirrorAuthority.Remote,
+                RefFilterKind = RemoteMirrorRefFilterKind.AllRefs,
+                DivergencePolicy = RemoteMirrorDivergencePolicy.Stop,
+                IsEnabled = true,
+                Status = RemoteMirrorStatus.Idle,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
+        await using var scope = fixture.CreateScope();
+        var query = scope.ServiceProvider.GetRequiredService<IGitCandyRepositoryPermissionQuery>();
+
+        Assert.IsFalse(await query.CanWriteRepositoryAsync(
+            PrivateRepositoryName,
+            AliceUserId,
+            isAdministrator: false));
+        Assert.IsFalse(await query.CanWriteRepositoryAsync(
+            PrivateRepositoryName,
+            AdminUserId,
+            isAdministrator: true));
+        Assert.IsTrue(await query.CanReadRepositoryAsync(
+            PrivateRepositoryName,
+            AliceUserId,
+            isAdministrator: false));
     }
 
     [TestMethod]

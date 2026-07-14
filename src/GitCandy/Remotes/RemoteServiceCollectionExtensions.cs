@@ -56,6 +56,14 @@ public static class RemoteServiceCollectionExtensions
         }
 
         services.TryAddSingleton<IRemoteCredentialVault, DataProtectionRemoteCredentialVault>();
+        services.TryAddSingleton<IRemoteMirrorPushEventSink, RemoteMirrorPushEventSink>();
+        services.TryAddSingleton<IRemoteMirrorService, RemoteMirrorService>();
+        return services;
+    }
+
+    internal static IServiceCollection AddGitCandyRemoteMirrorEventSink(this IServiceCollection services)
+    {
+        services.TryAddSingleton<IRemoteMirrorPushEventSink, RemoteMirrorPushEventSink>();
         return services;
     }
 

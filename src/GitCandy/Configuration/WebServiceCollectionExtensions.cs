@@ -296,6 +296,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
         services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
+        services.AddGitCandyRemoteMirrorEventSink();
         ConfigureReceiveHook(services, configuration);
         services.AddGitCandyGit();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IGitTransportActivitySink, GitTransportWorkspaceActivitySink>());
@@ -315,6 +316,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddSingleton<IGitCandyApplicationPaths, GitCandyApplicationPaths>();
         services.AddConfiguredGitCandyData(configuration);
         services.AddGitCandyApplicationServices();
+        services.AddGitCandyRemoteMirrorEventSink();
         ConfigureReceiveHook(services, configuration);
         services.AddGitCandyGit();
         return services;
@@ -360,6 +362,7 @@ public static class WebServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, NotificationDeliveryJob>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, ReleaseAssetCleanupJob>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, EnterpriseDirectorySyncJob>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerJob, RemoteMirrorSyncJob>());
 
         services.AddQuartz(options =>
         {

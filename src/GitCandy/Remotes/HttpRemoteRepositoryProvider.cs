@@ -34,7 +34,10 @@ internal abstract class HttpRemoteRepositoryProvider : IRemoteRepositoryProvider
 
     public RemoteProviderCapabilities Capabilities =>
         RemoteProviderCapabilities.AccountConnection
-        | RemoteProviderCapabilities.RepositoryDiscovery;
+        | RemoteProviderCapabilities.RepositoryDiscovery
+        | RemoteProviderCapabilities.RepositoryImport
+        | RemoteProviderCapabilities.PullMirror
+        | RemoteProviderCapabilities.PushMirror;
 
     public abstract IReadOnlySet<RemoteAuthenticationKind> AuthenticationKinds { get; }
 

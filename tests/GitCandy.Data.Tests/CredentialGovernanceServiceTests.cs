@@ -8,6 +8,7 @@ using GitCandy.Data.Sqlite;
 using GitCandy.Governance;
 using GitCandy.Integrations;
 using GitCandy.PullRequests;
+using GitCandy.Remotes;
 using GitCandy.Ssh;
 using System.Net;
 using Microsoft.AspNetCore.Identity;
@@ -20,6 +21,65 @@ namespace GitCandy.Data.Tests;
 [TestClass]
 public sealed class CredentialGovernanceServiceTests
 {
+    [TestMethod]
+    public async Task PushGate_WithEnabledPullMirror_RejectsAllLocalRefUpdates()
+    {
+        await using var fixture = await CredentialFixture.CreateAsync();
+        var connection = new GitCandyRemoteAccountConnection
+        {
+            OwnerKind = RemoteConnectionOwnerKind.User,
+            OwnerUserId = fixture.OwnerId,
+            Provider = RemoteProviderKind.GitHub,
+            ServerUrl = "https://github.com/",
+            ExternalAccountId = "pull-gate-account",
+            AccountKind = RemoteAccountKind.User,
+            Login = "owner",
+            AuthenticationKind = RemoteAuthenticationKind.PersonalAccessToken,
+            CredentialReference = "vault:pull-gate",
+            GrantedScopes = "[\"repo\"]",
+            IsEnabled = true,
+            Status = RemoteConnectionStatus.Healthy,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+        fixture.DbContext.RemoteAccountConnections.Add(connection);
+        await fixture.DbContext.SaveChangesAsync();
+        fixture.DbContext.RepositoryMirrors.Add(new GitCandyRepositoryMirror
+        {
+            RepositoryId = fixture.RepositoryId,
+            ConnectionId = connection.Id,
+            RemoteRepositoryId = "pull-gate-repository",
+            RemoteOwnerLogin = "upstream",
+            RemoteRepositoryName = "repository",
+            RemoteGitUrl = "https://github.com/upstream/repository.git",
+            Direction = RemoteMirrorDirection.Pull,
+            Authority = RemoteMirrorAuthority.Remote,
+            RefFilterKind = RemoteMirrorRefFilterKind.AllRefs,
+            DivergencePolicy = RemoteMirrorDivergencePolicy.Stop,
+            IsEnabled = true,
+            Status = RemoteMirrorStatus.Idle,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+        await fixture.DbContext.SaveChangesAsync();
+        var update = new GitRefUpdate(
+            new string('a', 40),
+            new string('b', 40),
+            "refs/tags/v1");
+
+        var result = await fixture.Services.GetRequiredService<IGitPushGate>().EvaluateAsync(
+            new GitPushGateRequest(
+                fixture.RepositoryId,
+                new GitRefActor("owner", fixture.OwnerId),
+                GitRefOperation.Push,
+                [update]));
+
+        Assert.IsFalse(result.Allowed);
+        StringAssert.Contains(result.Reasons.Single(), "read-only");
+        Assert.IsTrue(await fixture.DbContext.GovernanceAuditEvents.AsNoTracking()
+            .AnyAsync(item => item.Action == "mirror.read-only" && item.Outcome == "denied"));
+    }
+
     [TestMethod]
     public async Task PersonalAccessToken_CreateAuthenticateAndRevoke_StoresOnlyHashAndAuditsLifecycle()
     {

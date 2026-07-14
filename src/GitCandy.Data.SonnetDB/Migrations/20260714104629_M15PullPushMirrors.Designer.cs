@@ -3,14 +3,17 @@ using System;
 using GitCandy.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace GitCandy.Data.SonnetDB.Migrations
 {
     [DbContext(typeof(GitCandyDbContext))]
-    partial class GitCandyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714104629_M15PullPushMirrors")]
+    partial class M15PullPushMirrors
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");

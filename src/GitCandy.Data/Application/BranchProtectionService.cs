@@ -148,6 +148,36 @@ internal sealed class BranchProtectionService(
         }
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        if (await dbContext.RepositoryMirrors.AsNoTracking().AnyAsync(
+                mirror => mirror.RepositoryId == request.RepositoryId
+                    && mirror.Direction == GitCandy.Remotes.RemoteMirrorDirection.Pull
+                    && mirror.IsEnabled,
+                cancellationToken))
+        {
+            var mirrorNow = _timeProvider.GetUtcNow();
+            var mirrorReasons = request.Updates
+                .Select(update => $"{update.ReferenceName}: the repository is managed by a pull mirror and is read-only")
+                .ToArray();
+            if (request.RecordAudit)
+            {
+                foreach (var update in request.Updates)
+                {
+                    AddAudit(
+                        dbContext,
+                        request.RepositoryId,
+                        request.Actor.UserId,
+                        request.Actor.DeployKeyId,
+                        "mirror.read-only",
+                        "denied",
+                        update.ReferenceName,
+                        "pull mirror is authoritative",
+                        mirrorNow);
+                }
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+            return new GitPushGateResult(false, mirrorReasons);
+        }
+
         var rules = await dbContext.BranchProtectionRules.AsNoTracking()
             .Include(rule => rule.RequiredChecks)
             .Where(rule => rule.RepositoryId == request.RepositoryId)

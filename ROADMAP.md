@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- M14 的四级团队治理和企业身份联邦已完成；M15 的 remote account/provider 抽象、Remote/Mirror EF schema、个人绑定与仓库发现 UI、受控 remote sync backend 已完成，当前进入 Pull mirror；M15.5 帮助中心已完成，M15.6-M16 继续按依赖顺序推进。
+- M14 的四级团队治理和企业身份联邦已完成；M15 的 remote account/provider 抽象、Remote/Mirror EF schema、个人绑定与仓库发现 UI、受控 remote sync backend、单向 Pull/Push mirror 执行切片已完成，当前进入持久化 job pipeline；M15.5 帮助中心已完成，M15.6-M16 继续按依赖顺序推进。
 
 ## 已确认的产品决策与冲突处理
 
@@ -55,8 +55,8 @@
 | #161 | ✅ | GitHub/GitLab/Gitee 绑定 UI | provider 配置、用户绑定、仓库发现、测试连接且不回显 token |
 | #162 | ✅ | Remote/mirror EF schema | direction、authority、ref/schedule/divergence/prune、状态和 migration |
 | #163 | ✅ | 受控 remote sync backend | `ArgumentList`/credential helper、流式 I/O、取消、超时、路径和日志脱敏 |
-| #164 | ⬜ | Pull mirror | 初始导入、周期 fetch、ref policy、rename、只读保护和 divergence |
-| #165 | ⬜ | Push mirror | post-receive 入队、事件合并、ref filter、删除和显式 force policy |
+| #164 | ✅ | Pull mirror | 初始导入、周期 fetch、ref policy、rename、只读保护和 divergence |
+| #165 | ✅ | Push mirror | post-receive 入队、事件合并、ref filter、删除和显式 force policy |
 | #166 | ⬜ | 持久化 job pipeline | lease、串行、并发限制、退避、重启恢复和 graceful shutdown |
 | #167 | ⬜ | Webhook 与运维视图 | 验签/去重、周期兜底、状态、暂停/重试/取消和分类错误 |
 | #168 | ⬜ | Provider connectors | GitHub App、GitLab/Gitee OAuth/PAT、rate limit、过期、rename/delete |

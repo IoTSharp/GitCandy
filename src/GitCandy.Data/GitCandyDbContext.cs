@@ -123,6 +123,7 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyEnterpriseProviderEvent> EnterpriseProviderEvents => Set<GitCandyEnterpriseProviderEvent>();
     public DbSet<GitCandyRemoteAccountConnection> RemoteAccountConnections => Set<GitCandyRemoteAccountConnection>();
     public DbSet<GitCandyRepositoryMirror> RepositoryMirrors => Set<GitCandyRepositoryMirror>();
+    public DbSet<GitCandyRemoteMirrorRefUpdate> RemoteMirrorRefUpdates => Set<GitCandyRemoteMirrorRefUpdate>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

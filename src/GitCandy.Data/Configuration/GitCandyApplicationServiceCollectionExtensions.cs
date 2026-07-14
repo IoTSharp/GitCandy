@@ -42,7 +42,7 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<ITeamAuthorizationService, TeamAuthorizationService>();
         services.TryAddScoped<IEnterpriseConnectionService, EnterpriseConnectionService>();
         services.TryAddSingleton<IEnterpriseSecretResolver, UnavailableEnterpriseSecretResolver>();
-        services.TryAddScoped<IRemoteProviderCatalog, RemoteProviderCatalog>();
+        services.TryAddSingleton<IRemoteProviderCatalog, RemoteProviderCatalog>();
         services.TryAddSingleton<IRemoteCredentialVault, UnavailableRemoteCredentialVault>();
         services.TryAddScoped<IRemoteConnectionService, RemoteConnectionService>();
         services.TryAddSingleton<IScimBearerService, ScimBearerService>();

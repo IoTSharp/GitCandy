@@ -2281,6 +2281,42 @@ namespace GitCandy.Data.Sqlite.Migrations
                         });
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteMirrorRefUpdate", b =>
+                {
+                    b.Property<long>("MirrorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReferenceName")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EnqueuedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Generation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("NewObjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OldObjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("MirrorId", "ReferenceName");
+
+                    b.HasIndex("UpdatedAtUtc")
+                        .HasDatabaseName("IX_RemoteMirrorRefUpdates_UpdatedAtUtc");
+
+                    b.ToTable("RemoteMirrorRefUpdates", (string)null);
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRenameEvent", b =>
                 {
                     b.Property<long>("Id")
@@ -4071,6 +4107,17 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("OwnerUser");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteMirrorRefUpdate", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepositoryMirror", "Mirror")
+                        .WithMany("PendingRefUpdates")
+                        .HasForeignKey("MirrorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Mirror");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
                 {
                     b.HasOne("GitCandy.Data.Domain.GitCandyRepository", "ForkNetworkRootEntity")
@@ -4503,6 +4550,11 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("WebhookSubscriptions");
 
                     b.Navigation("WorkItemSequence");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryMirror", b =>
+                {
+                    b.Navigation("PendingRefUpdates");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyTeam", b =>

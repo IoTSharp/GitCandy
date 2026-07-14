@@ -52,7 +52,9 @@ Provider 配置必须显式启用。数据库、企业身份和远程 Git Provid
 
 用户不能提交自定义 endpoint。authenticated API 请求不跟随 redirect，token 只进入授权 header。连接 token 使用 Data Protection key ring 加密到其 `remote-credentials` 子目录，EF Core 只保存 opaque reference；设置页和日志均不回显 token。
 
-当前用户可操作能力仍只有账号连接和仓库发现。受控 sync backend 已作为内部 Git 进程边界内置，但实际 import、pull/push mirror、持久化 job、webhook 与运维视图仍未发布；不要根据 backend、发现列表或数据库表存在就宣称 mirror 可用。仓库 mirror 第一阶段也只处理 Git refs，不包含 LFS、Issues、PR/MR、Wiki、Releases、CI 或 Packages。
+单向 Pull/Push mirror 执行引擎已经内置。Pull 使用隔离 staging refs 执行初始/周期 fetch，并在启用期间把本地仓库设为只读；Push 在本地 receive-pack 成功后只合并并持久化 ref 事件，再由 Quartz 异步推送，不等待远端网络。默认 divergence policy 是停止；`KeepDivergent` 跳过分叉 ref，`OverwriteTarget` 必须显式配置并写审计。删除传播默认关闭。
+
+当前 Web 设置仍只提供账号连接和仓库发现；mirror 配置、暂停、重试、取消、立即同步和分类诊断运维视图属于后续 M15 job/operations 切片。当前 pending ref 表只保护 post-receive 事件不因进程重启丢失；跨实例 lease、指数退避、最大重试和 crash recovery 尚未发布。仓库 mirror 第一阶段只处理 branches/tags 和 Git objects，不包含 LFS、Issues、PR/MR、Wiki、Releases、CI 或 Packages。
 
 ## 变更流程
 

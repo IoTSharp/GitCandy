@@ -16,6 +16,8 @@ if (RemoteGitCredentialHelperCommand.IsRequested(args))
 var openSshRequested = OpenSshCommandLine.IsRequested(args);
 var receiveHookRequested = args.Length == 1
     && string.Equals(args[0], "--git-pre-receive", StringComparison.Ordinal);
+var postReceiveHookRequested = args.Length == 1
+    && string.Equals(args[0], "--git-post-receive", StringComparison.Ordinal);
 var migrationOnlyRequested = args.Length == 1
     && string.Equals(args[0], "--migrate", StringComparison.Ordinal);
 OpenSshInvocation? openSshInvocation = null;
@@ -25,7 +27,7 @@ if (openSshRequested && !OpenSshCommandLine.TryParse(args, out openSshInvocation
     return 2;
 }
 
-var commandModeRequested = openSshRequested || receiveHookRequested;
+var commandModeRequested = openSshRequested || receiveHookRequested || postReceiveHookRequested;
 var builder = commandModeRequested
     ? WebApplication.CreateBuilder(new WebApplicationOptions
     {
@@ -54,7 +56,7 @@ if (openSshRequested)
 {
     builder.Services.AddGitCandyOpenSshCommand(builder.Configuration);
 }
-else if (receiveHookRequested)
+else if (receiveHookRequested || postReceiveHookRequested)
 {
     builder.Services.AddGitCandyReceiveHookCommand(builder.Configuration);
 }
@@ -117,6 +119,42 @@ if (receiveHookRequested)
         {
             Console.Error.WriteLine("GitCandy push gate failed safely.");
             return 1;
+        }
+    }
+    finally
+    {
+        Console.CancelKeyPress -= cancelHandler;
+    }
+}
+
+if (postReceiveHookRequested)
+{
+    Environment.SetEnvironmentVariable("ConnectionStrings__GitCandy", null);
+    Environment.SetEnvironmentVariable("GitCandy__Database__Provider", null);
+    using var cancellation = new CancellationTokenSource();
+    ConsoleCancelEventHandler cancelHandler = (_, eventArgs) =>
+    {
+        eventArgs.Cancel = true;
+        cancellation.Cancel();
+    };
+    Console.CancelKeyPress += cancelHandler;
+    try
+    {
+        await using var scope = app.Services.CreateAsyncScope();
+        try
+        {
+            return await scope.ServiceProvider.GetRequiredService<GitCandy.Git.IGitPostReceiveHookRunner>()
+                .ExecuteAsync(Console.In, Console.Error, cancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            Console.Error.WriteLine("GitCandy mirror enqueue was canceled; the local push remains committed.");
+            return 0;
+        }
+        catch
+        {
+            Console.Error.WriteLine("GitCandy mirror enqueue failed; the local push remains committed.");
+            return 0;
         }
     }
     finally

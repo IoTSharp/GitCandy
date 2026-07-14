@@ -149,6 +149,53 @@ public sealed class RemoteMirrorSchemaTests
             () => fixture.DbContext.SaveChangesAsync());
     }
 
+    [TestMethod]
+    public async Task RemoteMirrorRefUpdate_WithSameMirrorAndReference_PersistsSingleGeneration()
+    {
+        await using var fixture = await RemoteMirrorFixture.CreateAsync();
+        var user = await fixture.CreateUserAsync("pending-ref-owner");
+        var repository = await fixture.CreateRepositoryAsync("pending-ref-repository");
+        var connection = CreateConnection(user.Id);
+        fixture.DbContext.RemoteAccountConnections.Add(connection);
+        await fixture.DbContext.SaveChangesAsync();
+        var mirror = new GitCandyRepositoryMirror
+        {
+            RepositoryId = repository.Id,
+            ConnectionId = connection.Id,
+            RemoteRepositoryId = "pending-ref-remote",
+            RemoteOwnerLogin = "octo-org",
+            RemoteRepositoryName = "pending-ref-repository",
+            RemoteGitUrl = "https://github.com/octo-org/pending-ref-repository.git",
+            Direction = RemoteMirrorDirection.Push,
+            Authority = RemoteMirrorAuthority.GitCandy,
+            RefFilterKind = RemoteMirrorRefFilterKind.AllRefs,
+            DivergencePolicy = RemoteMirrorDivergencePolicy.Stop,
+            IsEnabled = true,
+            Status = RemoteMirrorStatus.Pending,
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        };
+        fixture.DbContext.RepositoryMirrors.Add(mirror);
+        await fixture.DbContext.SaveChangesAsync();
+        fixture.DbContext.RemoteMirrorRefUpdates.Add(new GitCandyRemoteMirrorRefUpdate
+        {
+            MirrorId = mirror.Id,
+            ReferenceName = "refs/heads/main",
+            OldObjectId = new string('0', 40),
+            NewObjectId = new string('a', 40),
+            Generation = 2,
+            EnqueuedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+
+        await fixture.DbContext.SaveChangesAsync();
+        var saved = await fixture.DbContext.RemoteMirrorRefUpdates.AsNoTracking().SingleAsync();
+
+        Assert.AreEqual(mirror.Id, saved.MirrorId);
+        Assert.AreEqual("refs/heads/main", saved.ReferenceName);
+        Assert.AreEqual(2L, saved.Generation);
+    }
+
     private static GitCandyRemoteAccountConnection CreateConnection(string userId) => new()
     {
         OwnerKind = RemoteConnectionOwnerKind.User,

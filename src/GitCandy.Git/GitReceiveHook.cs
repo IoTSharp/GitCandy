@@ -3,6 +3,8 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using GitCandy.Governance;
+using GitCandy.Remotes;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace GitCandy.Git;
@@ -23,6 +25,12 @@ public interface IGitReceiveHookLauncher
 
 /// <summary>Git pre-receive 子命令入口。</summary>
 public interface IGitReceiveHookRunner
+{
+    Task<int> ExecuteAsync(TextReader input, TextWriter error, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Git post-receive 子命令入口；成功 push 后只持久化 mirror ref 事件。</summary>
+public interface IGitPostReceiveHookRunner
 {
     Task<int> ExecuteAsync(TextReader input, TextWriter error, CancellationToken cancellationToken = default);
 }
@@ -89,35 +97,40 @@ internal sealed class GitReceiveHookLauncher(
             }
 
             Directory.CreateDirectory(directory);
-            var hookPath = Path.Combine(directory, "pre-receive");
-            var script = CreateScript(assemblyPath);
-            if (!File.Exists(hookPath) || !string.Equals(File.ReadAllText(hookPath), script, StringComparison.Ordinal))
-            {
-                var temporaryPath = hookPath + ".tmp-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
-                File.WriteAllText(temporaryPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-                File.Move(temporaryPath, hookPath, overwrite: true);
-            }
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(
-                    hookPath,
-                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            WriteHook(directory, "pre-receive", CreateScript(assemblyPath, "--git-pre-receive"));
+            WriteHook(directory, "post-receive", CreateScript(assemblyPath, "--git-post-receive"));
 
             _hookDirectory = directory;
             return directory;
         }
     }
 
-    private static string CreateScript(string assemblyPath)
+    private static void WriteHook(string directory, string hookName, string script)
+    {
+        var hookPath = Path.Combine(directory, hookName);
+        if (!File.Exists(hookPath) || !string.Equals(File.ReadAllText(hookPath), script, StringComparison.Ordinal))
+        {
+            var temporaryPath = hookPath + ".tmp-" + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture);
+            File.WriteAllText(temporaryPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+            File.Move(temporaryPath, hookPath, overwrite: true);
+        }
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(
+                hookPath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
+    private static string CreateScript(string assemblyPath, string commandArgument)
     {
         var applicationName = Path.GetFileNameWithoutExtension(assemblyPath);
         var appHostPath = Path.Combine(
             Path.GetDirectoryName(assemblyPath)!,
             OperatingSystem.IsWindows() ? applicationName + ".exe" : applicationName);
         return File.Exists(appHostPath)
-            ? $"#!/bin/sh\nexec {QuoteForSh(ToGitPath(appHostPath))} --git-pre-receive\n"
-            : $"#!/bin/sh\nexec dotnet {QuoteForSh(ToGitPath(assemblyPath))} --git-pre-receive\n";
+            ? $"#!/bin/sh\nexec {QuoteForSh(ToGitPath(appHostPath))} {commandArgument}\n"
+            : $"#!/bin/sh\nexec dotnet {QuoteForSh(ToGitPath(assemblyPath))} {commandArgument}\n";
     }
 
     private static string ToGitPath(string path)
@@ -155,6 +168,12 @@ internal sealed class GitReceiveHookRunner(IGitPushGate pushGate) : IGitReceiveH
             if (updates.Count >= MaxRefUpdates || !TryParseUpdate(line, out var update))
             {
                 await error.WriteLineAsync("GitCandy push gate received an invalid ref update.");
+                return 1;
+            }
+
+            if (update.ReferenceName.StartsWith(RemoteMirrorReferenceNamespace.Prefix, StringComparison.Ordinal))
+            {
+                await error.WriteLineAsync("GitCandy push rejected: the requested ref namespace is reserved.");
                 return 1;
             }
 
@@ -272,5 +291,92 @@ internal sealed class GitReceiveHookRunner(IGitPushGate pushGate) : IGitReceiveH
     private static string? NullIfEmpty(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+}
+
+internal sealed class GitPostReceiveHookRunner(
+    IRemoteMirrorPushEventSink eventSink,
+    ILogger<GitPostReceiveHookRunner> logger) : IGitPostReceiveHookRunner
+{
+    private const int MaxRefUpdates = 1024;
+    private readonly IRemoteMirrorPushEventSink _eventSink = eventSink;
+    private readonly ILogger<GitPostReceiveHookRunner> _logger = logger;
+
+    public async Task<int> ExecuteAsync(
+        TextReader input,
+        TextWriter error,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        ArgumentNullException.ThrowIfNull(error);
+        if (!long.TryParse(
+                Environment.GetEnvironmentVariable("GITCANDY_REPOSITORY_ID"),
+                NumberStyles.None,
+                CultureInfo.InvariantCulture,
+                out var repositoryId)
+            || repositoryId <= 0)
+        {
+            await error.WriteLineAsync("GitCandy mirror enqueue context is invalid.");
+            return 0;
+        }
+
+        var updates = new List<RemoteMirrorRefEvent>();
+        while (await input.ReadLineAsync(cancellationToken) is string line)
+        {
+            if (updates.Count >= MaxRefUpdates || !TryParseUpdate(line, out var update))
+            {
+                await error.WriteLineAsync("GitCandy mirror enqueue skipped invalid ref updates.");
+                return 0;
+            }
+
+            if (!update.ReferenceName.StartsWith(RemoteMirrorReferenceNamespace.Prefix, StringComparison.Ordinal))
+            {
+                updates.Add(update);
+            }
+        }
+
+        if (updates.Count == 0)
+        {
+            return 0;
+        }
+
+        try
+        {
+            await _eventSink.EnqueueAsync(repositoryId, updates, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Mirror ref events could not be enqueued after a successful push to repository {RepositoryId}.",
+                repositoryId);
+            await error.WriteLineAsync("GitCandy mirror enqueue failed; the local push remains committed.");
+        }
+
+        return 0;
+    }
+
+    private static bool TryParseUpdate(string line, out RemoteMirrorRefEvent update)
+    {
+        var parts = line.Split(' ', 3, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 3
+            || parts[0].Length != parts[1].Length
+            || parts[0].Length is not (40 or 64)
+            || !parts[0].All(Uri.IsHexDigit)
+            || !parts[1].All(Uri.IsHexDigit)
+            || !parts[2].StartsWith("refs/", StringComparison.Ordinal)
+            || parts[2].Length > 255
+            || parts[2].Any(static character => char.IsControl(character) || char.IsWhiteSpace(character)))
+        {
+            update = null!;
+            return false;
+        }
+
+        update = new RemoteMirrorRefEvent(parts[0], parts[1], parts[2]);
+        return true;
     }
 }

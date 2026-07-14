@@ -19,6 +19,9 @@
  - Added the M15 remote account and one-way repository mirror EF schema with stable provider identities, user/team ownership, opaque credential references, ref/schedule/divergence/prune policies, observable status, portable constraints, and SQLite, SQL Server, and SonnetDB migrations.
  - Added M15 GitHub/GitLab/Gitee personal account connections at `/me/remotes` with fixed provider endpoints, encrypted non-echoed credentials, stable account/repository identities, classified connection tests, paginated repository discovery, revocation, and credential audit evidence.
  - Added the M15 controlled remote sync backend for structured Git fetch/push, origin and refspec validation, streaming process I/O, timeout/cancellation, stable error classification, disabled redirects/hooks/global Git configuration, and token delivery through a one-time current-user credential-helper pipe.
+ - Added M15 pull mirrors with isolated staging refs, scheduled and initial fetch, branch/tag filters, fast-forward and divergence policies, optional pruning, remote stable-ID profile updates, default read-only enforcement, status recovery, and force audit evidence.
+ - Added M15 push mirrors with a controlled post-receive bridge, persistent per-mirror/ref event coalescing, asynchronous Quartz wake-up, protected/allow-list/regex filters, optional deletion propagation, keep-divergent behavior, and explicitly audited force updates.
+ - Added SQLite, SQL Server, and SonnetDB `M15PullPushMirrors` migrations for the persistent pending ref event table and generation-based concurrent event protection.
  - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
  - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
  - Added a unified team authorization service, atomic member batches, governance audit history, four-role management UI, and local break-glass TeamOwner protection.
@@ -62,6 +65,8 @@
  - Reorganized `ROADMAP.md` as an active-work-only plan. M0-M12.7 moved to completion history after production and workspace/discovery acceptance.
  - Changed `/` so anonymous visitors see the GitCandy product introduction while authenticated users enter the private `/me` workspace.
  - Changed `git-receive-pack` execution to install a controlled GitCandy `pre-receive` bridge. Git continues to stream and quarantine pack data; only bounded ref updates enter the shared policy service.
+ - Changed `git-receive-pack` execution to install a controlled `post-receive` bridge after the existing gate. Successful pushes only enqueue bounded mirror ref events; remote network failures never extend or roll back the local push.
+ - Pull-mirrored repositories now deny local Web, HTTP Git, built-in SSH, OpenSSH, merge, branch, and tag writes while the remote-authoritative mirror is enabled.
 
 #### Fixed
  - Fixed unchanged team-role submissions so they no longer create misleading no-op governance audit records.

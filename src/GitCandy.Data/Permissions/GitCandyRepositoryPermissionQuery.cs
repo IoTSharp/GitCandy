@@ -111,6 +111,16 @@ public sealed class GitCandyRepositoryPermissionQuery(GitCandyDbContext dbContex
     {
         var repositories = SelectRepositories(repositoryName, repositoryId);
 
+        if (requiresWrite && await repositories.AnyAsync(repository =>
+                _dbContext.RepositoryMirrors.Any(mirror =>
+                    mirror.RepositoryId == repository.Id
+                    && mirror.Direction == GitCandy.Remotes.RemoteMirrorDirection.Pull
+                    && mirror.IsEnabled),
+                cancellationToken))
+        {
+            return false;
+        }
+
         if (isAdministrator && !string.IsNullOrWhiteSpace(userId))
         {
             return await repositories.AnyAsync(cancellationToken);

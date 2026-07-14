@@ -34,9 +34,11 @@ public static class GitCandyGitServiceCollectionExtensions
         services.TryAddScoped<GitCandy.Application.IRepositoryLifecycleService, RepositoryLifecycleService>();
         services.TryAddSingleton<IGitTransportBackend, GitProcessTransportBackend>();
         services.TryAddSingleton<IRemoteRepositorySyncBackend, GitProcessRemoteRepositorySyncBackend>();
+        services.TryAddSingleton<IRemoteMirrorReferenceStore, LibGit2RemoteMirrorReferenceStore>();
         services.TryAddSingleton<IGitExecutableResolver, GitExecutableResolver>();
         services.TryAddSingleton<IGitReceiveHookLauncher, GitReceiveHookLauncher>();
         services.TryAddTransient<IGitReceiveHookRunner, GitReceiveHookRunner>();
+        services.TryAddTransient<IGitPostReceiveHookRunner, GitPostReceiveHookRunner>();
         services.AddOptions<RemoteRepositorySyncOptions>();
         services.AddOptions<RemoteGitCredentialHelperOptions>();
 
