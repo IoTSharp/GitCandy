@@ -194,11 +194,69 @@ public sealed record RemoteRepositoryPage(
     IReadOnlyList<RemoteRepositoryProfile> Repositories,
     string? NextCursor);
 
+/// <summary>可在连接设置页展示的 provider 元数据，不包含任何凭据。</summary>
+public sealed record RemoteProviderDescriptor(
+    RemoteProviderKind Kind,
+    string DisplayName,
+    Uri ServerUrl,
+    RemoteProviderCapabilities Capabilities,
+    IReadOnlySet<RemoteAuthenticationKind> AuthenticationKinds,
+    IReadOnlySet<string> RequiredDiscoveryScopes);
+
+/// <summary>远程账号连接的非敏感只读投影。</summary>
+public sealed record RemoteConnectionSummary(
+    long Id,
+    RemoteProviderKind Provider,
+    Uri ServerUrl,
+    string ExternalAccountId,
+    RemoteAccountKind AccountKind,
+    string Login,
+    string? DisplayName,
+    RemoteAuthenticationKind AuthenticationKind,
+    IReadOnlySet<string> GrantedScopes,
+    bool IsEnabled,
+    RemoteConnectionStatus Status,
+    string? LastErrorCode,
+    DateTimeOffset? LastTestedAt,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+/// <summary>创建个人远程账号连接时使用的一次性凭据输入。</summary>
+public sealed record RemoteUserConnectionRequest(
+    RemoteProviderKind Provider,
+    RemoteAuthenticationKind AuthenticationKind,
+    RemoteSecret Secret,
+    IReadOnlySet<string> GrantedScopes,
+    DateTimeOffset? ExpiresAt = null);
+
 /// <summary>不回显 provider 响应或 secret 的连接诊断。</summary>
 public sealed record RemoteProviderDiagnostic(
     bool Succeeded,
     string Code,
     string Message);
+
+/// <summary>远程连接变更的安全结果；失败时不携带 provider 响应或 secret。</summary>
+public sealed record RemoteConnectionResult(
+    RemoteConnectionSummary? Connection,
+    RemoteProviderDiagnostic Diagnostic);
+
+/// <summary>有界仓库发现结果及其分类诊断。</summary>
+public sealed record RemoteRepositoryDiscoveryResult(
+    RemoteRepositoryPage? Page,
+    RemoteProviderDiagnostic Diagnostic);
+
+/// <summary>远程 provider 请求失败，并携带可安全展示的稳定错误码。</summary>
+public sealed class RemoteProviderException : Exception
+{
+    public RemoteProviderException(string code, string message)
+        : base(message)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        Code = code;
+    }
+
+    public string Code { get; }
+}
 
 /// <summary>opaque secret store 引用；它不是 token、密码或私钥本身。</summary>
 public sealed record RemoteSecretReference
@@ -356,6 +414,8 @@ public interface IRemoteRepositoryProvider
 {
     RemoteProviderKind Kind { get; }
 
+    Uri ServerUrl { get; }
+
     RemoteProviderCapabilities Capabilities { get; }
 
     IReadOnlySet<RemoteAuthenticationKind> AuthenticationKinds { get; }
@@ -387,6 +447,37 @@ public interface IRemoteProviderCatalog
     IReadOnlyList<RemoteProviderKind> AvailableProviders { get; }
 
     IRemoteRepositoryProvider? Get(RemoteProviderKind kind);
+}
+
+/// <summary>个人远程账号连接、诊断和仓库发现的应用用例边界。</summary>
+public interface IRemoteConnectionService
+{
+    IReadOnlyList<RemoteProviderDescriptor> AvailableProviders { get; }
+
+    Task<IReadOnlyList<RemoteConnectionSummary>> GetForUserAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
+
+    Task<RemoteConnectionResult> ConnectUserAsync(
+        string userId,
+        RemoteUserConnectionRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<RemoteProviderDiagnostic?> TestUserConnectionAsync(
+        string userId,
+        long connectionId,
+        CancellationToken cancellationToken = default);
+
+    Task<RemoteRepositoryDiscoveryResult?> DiscoverRepositoriesAsync(
+        string userId,
+        long connectionId,
+        string? cursor,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> DisconnectUserAsync(
+        string userId,
+        long connectionId,
+        CancellationToken cancellationToken = default);
 }
 
 internal static class RemoteIdentityRules

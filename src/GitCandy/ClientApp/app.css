@@ -2075,6 +2075,21 @@ code {
   color: var(--text-muted);
 }
 
+.remote-connection-form .form-actions {
+  margin-left: 206px;
+}
+
+@media (max-width: 760px) {
+  .remote-section-heading > div {
+    display: grid;
+    gap: 4px;
+  }
+
+  .remote-connection-form .form-actions {
+    margin-left: 0;
+  }
+}
+
 @media (max-width: 860px) {
   .workspace-layout {
     grid-template-columns: 1fr;

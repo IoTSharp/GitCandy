@@ -34,9 +34,22 @@ Provider 配置必须显式启用。数据库、企业身份和远程 Git Provid
 
 所有 Provider 使用同一个 EF Core 模型和 ASP.NET Core Identity schema。应用启动前检查并应用 pending migrations；不会自动改写旧 MVC5 数据库。
 
-## 远程 Git Provider 状态
+## 远程 Git Provider
 
-Remote account/provider 抽象和 Remote/Mirror schema 已建立，但 GitHub/GitLab/Gitee 绑定 UI、受控 sync backend 和完整 mirror job 尚未作为当前功能发布。不要根据数据库表存在就宣称 remote import 或 mirror 可用。
+登录用户可从工作台设置进入 `/me/remotes`，连接 GitHub、GitLab 或 Gitee，测试凭据并分页查看该凭据可访问的仓库。当前连接方式接受 PAT 或已有 OAuth access token；交互式 OAuth consent 和完整 GitHub App 安装流程仍在后续切片。
+
+配置位于 `GitCandy:Remotes`：
+
+| 键 | 默认值 | 说明 |
+| --- | --- | --- |
+| `RequestTimeout` | `00:00:20` | 单次 Provider API 请求 timeout，允许 1 秒到 2 分钟 |
+| `{Provider}:Enabled` | `true` | 是否允许用户选择该 Provider |
+| `{Provider}:ServerUrl` | 官方站点 | stable identity 所属站点；自托管实例由管理员固定 |
+| `{Provider}:ApiBaseUrl` | 官方 API | 出站 API origin；只允许 HTTPS，loopback HTTP 仅供测试 |
+
+用户不能提交自定义 endpoint。authenticated API 请求不跟随 redirect，token 只进入授权 header。连接 token 使用 Data Protection key ring 加密到其 `remote-credentials` 子目录，EF Core 只保存 opaque reference；设置页和日志均不回显 token。
+
+当前只发布账号连接和仓库发现。受控 sync backend、实际 import、pull/push mirror、持久化 job、webhook 与运维视图仍未发布；不要根据仓库已经出现在发现列表或数据库表存在就宣称 mirror 可用。仓库 mirror 第一阶段也只处理 Git refs，不包含 LFS、Issues、PR/MR、Wiki、Releases、CI 或 Packages。
 
 ## 变更流程
 

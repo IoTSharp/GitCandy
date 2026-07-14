@@ -147,6 +147,8 @@ Webhook delivery 由 `GitCandy:Webhooks` 配置。生产默认只允许公网 HT
 
 Webhook signing secret 由 Data Protection key ring 加密保存且只在创建页显示一次，因此 `DataProtectionKeysPath` 与数据库必须一致备份/恢复。丢失 key ring 后旧 subscription 无法继续签名，应暂停并重新创建，而不是在日志或配置中回显 secret。
 
+远程账号连接由 `GitCandy:Remotes` 配置。`GitHub`、`GitLab`、`Gitee` 各自提供 `Enabled`、`ServerUrl` 和 `ApiBaseUrl`；正式环境只允许固定 HTTPS origin，loopback HTTP 仅供受控 fixture。`RequestTimeout` 默认 20 秒。用户不能覆盖 endpoint，authenticated request 不跟随 redirect，token 不进入 URL 或日志。连接 token 由 Data Protection 加密保存在 `DataProtectionKeysPath/remote-credentials`，因此该子目录必须与 key ring 和数据库一致备份；丢失 key ring 时应在远端撤销 token 并重新连接。
+
 用户通知的 webhook target 复用相同 SSRF、连接和签名边界；通知邮件复用 `GitCandy:Identity:AccountRecovery:Smtp`。通知偏好不会关闭站内 inbox，只决定额外邮件/webhook 投递。后台投递前会重新检查 repository/team 权限，撤权后的 pending delivery 以 `permission_revoked` 失败结束，不再发送资源标题或 URL。
 
 Release 附件由 `GitCandy:Releases` 控制：`MaxAssetBytes` 默认 100 MiB，`MaxTotalAssetBytes` 默认每个 Release 1 GiB，`MaxAssetsPerRelease` 默认 20，`OrphanRetention` 默认 24 小时。附件流式写入临时文件、计算 SHA-256 后原子提交，物理键只使用 repository/release/asset ID，不使用上传文件名。`CachePath/release-assets` 与 `CachePath/lfs` 一样是不可重建的持久内容，必须与数据库、repository、LFS 和 Data Protection keys 一致备份/恢复；普通 cache 仍可重建。

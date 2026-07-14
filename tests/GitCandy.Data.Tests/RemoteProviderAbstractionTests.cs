@@ -140,6 +140,8 @@ public sealed class RemoteProviderAbstractionTests
     {
         public RemoteProviderKind Kind => RemoteProviderKind.GitHub;
 
+        public Uri ServerUrl { get; } = new("https://github.com/");
+
         public RemoteProviderCapabilities Capabilities =>
             RemoteProviderCapabilities.AccountConnection
             | RemoteProviderCapabilities.RepositoryDiscovery;

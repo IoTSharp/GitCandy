@@ -107,7 +107,7 @@ public sealed class HelpDocumentationTests
         Assert.AreEqual(1, manifest.SchemaVersion);
         Assert.AreEqual("JekyllNet 0.2.5", manifest.Generator);
         Assert.AreEqual("current", manifest.DocumentationVersion);
-        Assert.AreEqual("20260714.1", manifest.AssetVersion);
+        Assert.AreEqual("20260714.2", manifest.AssetVersion);
         Assert.AreEqual(12, manifest.Documents.Count);
 
         var searchDocuments = JsonSerializer.Deserialize<List<SearchDocument>>(

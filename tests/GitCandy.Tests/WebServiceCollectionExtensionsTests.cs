@@ -9,6 +9,7 @@ using GitCandy.Data.Identity;
 using GitCandy.Diagnostics;
 using GitCandy.Git;
 using GitCandy.Profiling;
+using GitCandy.Remotes;
 using GitCandy.Schedules;
 using GitCandy.Ssh;
 using Microsoft.AspNetCore.Authentication;
@@ -138,6 +139,12 @@ public sealed class WebServiceCollectionExtensionsTests
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IMembershipService>());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRepositoryService>());
+            Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRemoteConnectionService>());
+            Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<IRemoteCredentialVault>());
+            CollectionAssert.AreEquivalent(
+                new[] { RemoteProviderKind.GitHub, RemoteProviderKind.GitLab, RemoteProviderKind.Gitee },
+                scope.ServiceProvider.GetRequiredService<IRemoteProviderCatalog>()
+                    .AvailableProviders.ToArray());
             Assert.IsNotNull(scope.ServiceProvider.GetRequiredService<ICurrentUser>());
             var authorizationHandlers = scope.ServiceProvider.GetServices<IAuthorizationHandler>().ToArray();
             Assert.IsTrue(authorizationHandlers.Any(handler => handler is RepositoryAuthorizationHandler));

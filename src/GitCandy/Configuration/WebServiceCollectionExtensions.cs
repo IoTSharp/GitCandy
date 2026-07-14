@@ -25,6 +25,7 @@ using GitCandy.Ssh;
 using GitCandy.Enterprise;
 using GitCandy.Web.Integrations;
 using GitCandy.Web.Enterprise;
+using GitCandy.Web.Remotes;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
@@ -105,6 +106,7 @@ public static class WebServiceCollectionExtensions
 
         services.AddConfiguredGitCandyData(configuration);
         services.TryAddSingleton<IEnterpriseSecretResolver, ConfigurationEnterpriseSecretResolver>();
+        services.AddGitCandyRemoteProviders(configuration);
         services.AddGitCandyApplicationServices();
         ConfigureReceiveHook(services, configuration);
         services.AddGitCandyGit();

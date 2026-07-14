@@ -55,7 +55,7 @@ public sealed class MvcPageSmokeTests
         await using var fixture = await MvcWebFixture.CreateAsync();
         await fixture.SeedRepositoriesAsync();
 
-        foreach (var path in new[] { "/me", "/todos", "/notifications", "/me/repositories", "/me/settings" })
+        foreach (var path in new[] { "/me", "/todos", "/notifications", "/me/repositories", "/me/settings", "/me/remotes" })
         {
             using var response = await fixture.Client.GetAsync(path);
             Assert.AreEqual(HttpStatusCode.Redirect, response.StatusCode, path);
@@ -86,6 +86,14 @@ public sealed class MvcPageSmokeTests
         StringAssert.Contains(dashboard, "Activity feed");
         StringAssert.Contains(dashboard, "Public repositories");
         StringAssert.Contains(await fixture.GetStringAsync("/notifications/preferences"), "Notification delivery");
+        var settings = await fixture.GetStringAsync("/me/settings");
+        StringAssert.Contains(settings, "Remote accounts");
+        var remotes = await fixture.GetStringAsync("/me/remotes");
+        StringAssert.Contains(remotes, "GitHub");
+        StringAssert.Contains(remotes, "GitLab");
+        StringAssert.Contains(remotes, "Gitee");
+        StringAssert.Contains(remotes, "name=\"Form.Secret\"");
+        StringAssert.Contains(remotes, "value=\"\"");
         var administratorView = await fixture.GetStringAsync("/profile-user?tab=repositories");
         Assert.IsFalse(administratorView.Contains("private-repository", StringComparison.Ordinal));
         Assert.IsFalse(administratorView.Contains("profile-user@example.com", StringComparison.OrdinalIgnoreCase));

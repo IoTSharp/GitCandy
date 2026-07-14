@@ -14,6 +14,7 @@ import {
   CircleCheck,
   CircleCheckBig,
   CircleDot,
+  CircleHelp,
   Clock3,
   Clipboard,
   Code2,
@@ -314,6 +315,36 @@ function initializeCodeViews() {
   });
 }
 
+function initializeRemoteConnectionForm() {
+  const provider = document.querySelector("[data-remote-provider-select]");
+  const authentication = document.querySelector("[data-remote-authentication-select]");
+  const scopes = document.querySelector("[data-remote-scope-input]");
+  if (!(provider instanceof HTMLSelectElement)
+      || !(authentication instanceof HTMLSelectElement)
+      || !(scopes instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const synchronizeAuthentication = () => {
+    const selectedProvider = provider.selectedOptions[0];
+    const allowed = new Set((selectedProvider?.dataset.authenticationKinds ?? "").split(","));
+    [...authentication.options].forEach((option) => {
+      const available = allowed.has(option.value);
+      option.disabled = !available;
+      option.hidden = !available;
+    });
+    if (authentication.selectedOptions[0]?.disabled) {
+      authentication.value = [...authentication.options].find((option) => !option.disabled)?.value ?? "";
+    }
+  };
+
+  provider.addEventListener("change", () => {
+    synchronizeAuthentication();
+    scopes.value = provider.selectedOptions[0]?.dataset.defaultScopes ?? "";
+  });
+  synchronizeAuthentication();
+}
+
 createIcons({
   icons: {
     Activity,
@@ -331,6 +362,7 @@ createIcons({
     CircleCheck,
     CircleCheckBig,
     CircleDot,
+    CircleHelp,
     Clock3,
     Clipboard,
     Code2,
@@ -400,3 +432,4 @@ initializeLandingPage();
 initializeCopyButtons();
 initializeConfirmations();
 initializeCodeViews();
+initializeRemoteConnectionForm();

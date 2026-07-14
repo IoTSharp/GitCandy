@@ -1,0 +1,88 @@
+@model RemoteConnectionIndexViewModel
+@{ ViewData["Title"] = "Remote accounts"; }
+<header class="page-heading">
+    <div>
+        <h1>Remote accounts</h1>
+        <p>Connect GitHub, GitLab, or Gitee to discover repositories for import and one-way mirrors.</p>
+    </div>
+    <div class="page-actions"><a asp-controller="Workspace" asp-action="Settings" class="btn"><i data-lucide="arrow-left"></i> Settings</a></div>
+</header>
+
+@if (TempData["Message"] is string message) { <div class="alert alert-success" role="status">@message</div> }
+@if (TempData["Error"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+
+<section class="workspace-section" aria-labelledby="connected-accounts-title">
+    <div class="section-heading remote-section-heading"><div><h2 id="connected-accounts-title">Connected accounts</h2><p>Tokens are encrypted at rest and never shown after submission.</p></div></div>
+    @if (Model.Connections.Count == 0)
+    {
+        <div class="empty-state"><div><i data-lucide="plug-zap"></i><h2>No remote accounts connected</h2></div></div>
+    }
+    else
+    {
+        <div class="table-responsive"><table class="table">
+            <thead><tr><th scope="col">Account</th><th scope="col">Provider</th><th scope="col">Access</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <tbody>
+            @foreach (var connection in Model.Connections)
+            {
+                <tr>
+                    <td><strong>@connection.Login</strong>@if (!string.IsNullOrWhiteSpace(connection.DisplayName)) { <div class="entity-meta">@connection.DisplayName</div> }<div class="entity-meta">ID @connection.ExternalAccountId</div></td>
+                    <td>@connection.Provider<div class="entity-meta">@connection.ServerUrl.Host</div></td>
+                    <td>@connection.AuthenticationKind<div class="entity-meta">@string.Join(", ", connection.GrantedScopes)</div></td>
+                    <td><span class="status-badge">@connection.Status</span>@if (!string.IsNullOrWhiteSpace(connection.LastErrorCode)) { <div class="entity-meta">@connection.LastErrorCode</div> }</td>
+                    <td class="text-right"><div class="inline-actions">
+                        <a asp-action="Index" asp-route-connectionId="@connection.Id" class="icon-button" aria-label="Browse repositories for @connection.Login" data-tooltip="Browse repositories"><i data-lucide="folder-tree"></i></a>
+                        <form asp-action="Test" asp-route-connectionId="@connection.Id" method="post"><button type="submit" class="icon-button" aria-label="Test @connection.Login" data-tooltip="Test connection"><i data-lucide="plug-zap"></i></button></form>
+                        <form asp-action="Disconnect" asp-route-connectionId="@connection.Id" method="post" data-confirm="Disconnect @connection.Login and revoke its stored credential?"><button type="submit" class="icon-button" aria-label="Disconnect @connection.Login" data-tooltip="Disconnect"><i data-lucide="trash-2"></i></button></form>
+                    </div></td>
+                </tr>
+            }
+            </tbody>
+        </table></div>
+    }
+</section>
+
+@if (Model.SelectedConnection is { } selected)
+{
+    var selectedConnectionId = selected.Id;
+    <section class="workspace-section" aria-labelledby="remote-repositories-title">
+        <div class="section-heading remote-section-heading"><div><h2 id="remote-repositories-title">Repositories available to @selected.Login</h2><p>Only Git repository refs will be eligible for the first mirror phase; project metadata and LFS are separate.</p></div></div>
+        @if (Model.Discovery is { Diagnostic.Succeeded: false } failedDiscovery)
+        {
+            <div class="alert alert-danger" role="alert">@failedDiscovery.Diagnostic.Message <span class="entity-meta">@failedDiscovery.Diagnostic.Code</span></div>
+        }
+        else if (Model.Discovery?.Page is { } page && page.Repositories.Count == 0)
+        {
+            <div class="empty-state"><div><i data-lucide="search-x"></i><h2>No repositories available</h2></div></div>
+        }
+        else if (Model.Discovery?.Page is { } repositoryPage)
+        {
+            <div class="table-responsive"><table class="table">
+                <thead><tr><th scope="col">Repository</th><th scope="col">Visibility</th><th scope="col">Default branch</th><th scope="col">Stable ID</th></tr></thead>
+                <tbody>@foreach (var repository in repositoryPage.Repositories) { <tr><td><a href="@repository.WebUrl" target="_blank" rel="noopener noreferrer">@repository.FullName</a></td><td><span class="status-badge @(repository.IsPrivate ? "status-private" : "status-public")">@(repository.IsPrivate ? "Private" : "Public")</span></td><td>@(repository.DefaultBranch ?? "-")</td><td><code>@repository.Identity.ExternalId</code></td></tr> }</tbody>
+            </table></div>
+            @if (!string.IsNullOrWhiteSpace(repositoryPage.NextCursor))
+            {
+                <div class="form-actions"><a asp-action="Index" asp-route-connectionId="@selectedConnectionId" asp-route-cursor="@repositoryPage.NextCursor" class="btn">Next page <i data-lucide="arrow-right"></i></a></div>
+            }
+        }
+    </section>
+}
+
+<section class="workspace-section" aria-labelledby="connect-account-title">
+    <div class="section-heading remote-section-heading"><div><h2 id="connect-account-title">Connect an account</h2><p>The provider endpoint is fixed by the administrator. Supply only a least-privilege credential and its granted scopes.</p></div></div>
+    @if (Model.Providers.Count == 0)
+    {
+        <div class="alert alert-warning" role="alert">No remote providers are enabled.</div>
+    }
+    else
+    {
+        <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+        <form asp-action="Connect" method="post" class="form-horizontal remote-connection-form" autocomplete="off">
+            <div class="form-group"><label asp-for="Form.Provider" class="control-label"></label><div><select asp-for="Form.Provider" class="form-control" data-remote-provider-select>@foreach (var provider in Model.Providers) { <option value="@provider.Kind" data-authentication-kinds="@string.Join(",", provider.AuthenticationKinds.Order())" data-default-scopes="@string.Join(", ", provider.RequiredDiscoveryScopes.Order(StringComparer.Ordinal))">@provider.DisplayName - @provider.ServerUrl.Host</option> }</select></div></div>
+            <div class="form-group"><label asp-for="Form.AuthenticationKind" class="control-label"></label><div><select asp-for="Form.AuthenticationKind" class="form-control" data-remote-authentication-select><option value="PersonalAccessToken">Personal access token</option><option value="OAuth">OAuth access token</option></select><p class="form-hint">Only methods supported by the selected provider are accepted.</p></div></div>
+            <div class="form-group"><label for="remote-secret" class="control-label">Token</label><div><input id="remote-secret" name="Form.Secret" type="password" value="" maxlength="16384" autocomplete="new-password" required /><span asp-validation-for="Form.Secret" class="text-danger"></span></div></div>
+            <div class="form-group"><label asp-for="Form.GrantedScopes" class="control-label"></label><div><input asp-for="Form.GrantedScopes" class="form-control" data-remote-scope-input /><span asp-validation-for="Form.GrantedScopes" class="text-danger"></span><p class="form-hint">Comma-separated. GitHub: repo. GitLab: read_api. Gitee: user_info, projects.</p></div></div>
+            <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="link"></i> Connect and test</button></div>
+        </form>
+    }
+</section>

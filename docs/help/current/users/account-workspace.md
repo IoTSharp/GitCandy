@@ -39,3 +39,9 @@ canonical: docs/help/current/users/account-workspace.md
 ## SSH key 与 PAT
 
 用户 SSH key 用于内置 SSH Git transport，PAT 用于 API 或 Git HTTP。PAT scope 为 `api:read`、`api:write`、`git:read`、`git:write`；写 scope 自动包含对应读 scope。撤销凭据后，后续认证立即失败。
+
+## 远程账号
+
+工作台设置中的 **Remote accounts** 打开 `/me/remotes`。你可以连接 GitHub、GitLab 或 Gitee，测试 credential，并查看当前账号有权访问的远程仓库。Token 只在提交时使用，之后不会显示；需要替换时先撤销旧连接和远端 token，再创建新连接。
+
+使用最小 scope：GitHub 仓库发现通常需要 `repo`，GitLab 需要 `read_api`，Gitee 需要 `user_info, projects`。远程仓库出现在列表中不表示已经导入或镜像；当前页面只完成账号连接与发现，Git refs 同步由后续 mirror 功能提供。
