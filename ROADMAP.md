@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- M14 的四级团队治理、企业连接、Microsoft Entra ID/SCIM、企业微信/飞书/钉钉、目录对账与同步停用已完成；当前进入 M15 remote/mirror，M15.5-M16 继续按依赖顺序推进。
+- M14 的四级团队治理、企业连接、Microsoft Entra ID/SCIM、企业微信/飞书/钉钉、目录对账与同步停用已完成；M15 的 remote account/provider 抽象已完成，当前进入绑定与设置 UI，M15.5-M16 继续按依赖顺序推进。
 
 ## 已确认的产品决策与冲突处理
 
@@ -40,11 +40,11 @@
 
 ## 当前实施顺序
 
-1. `#160-#169`：remote account、GitHub/GitLab/Gitee 连接、单向 pull/push mirror、持久化 job 与故障验收。
+1. `#161-#169`：GitHub/GitLab/Gitee 连接、单向 pull/push mirror、持久化 job 与故障验收。
 2. M15.5 文档体系在相关产品契约稳定后实施。
 3. M15.6 Registry 完成后接入 Packages 实际数据；M16 最后接入知识库和 MCP。
 
-## ⬜ Milestone 15：远程账号连接与单向 Mirror
+## 🚧 Milestone 15：远程账号连接与单向 Mirror
 
 目标：绑定 GitHub/GitLab/Gitee 账号，通过可观测、可取消、可审计的后台 job 完成导入、单向 pull 和单向 push。
 
@@ -52,7 +52,6 @@
 
 | 编号 | 状态 | 主题 | 验收重点 |
 | --- | --- | --- | --- |
-| #160 | ⬜ | Remote account/provider 抽象 | 用户/组织连接、稳定 remote ID、最小 scope、secret 轮换和撤销 |
 | #161 | ⬜ | GitHub/GitLab/Gitee 绑定 UI | provider 配置、用户绑定、仓库发现、测试连接且不回显 token |
 | #162 | ⬜ | Remote/mirror EF schema | direction、authority、ref/schedule/divergence/prune、状态和 migration |
 | #163 | ⬜ | 受控 remote sync backend | `ArgumentList`/credential helper、流式 I/O、取消、超时、路径和日志脱敏 |

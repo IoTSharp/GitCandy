@@ -15,6 +15,7 @@ using GitCandy.Releases;
 using GitCandy.Search;
 using GitCandy.Teams;
 using GitCandy.Enterprise;
+using GitCandy.Remotes;
 
 namespace GitCandy.Data.Configuration;
 
@@ -41,6 +42,8 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddScoped<ITeamAuthorizationService, TeamAuthorizationService>();
         services.TryAddScoped<IEnterpriseConnectionService, EnterpriseConnectionService>();
         services.TryAddSingleton<IEnterpriseSecretResolver, UnavailableEnterpriseSecretResolver>();
+        services.TryAddScoped<IRemoteProviderCatalog, RemoteProviderCatalog>();
+        services.TryAddSingleton<IRemoteCredentialVault, UnavailableRemoteCredentialVault>();
         services.TryAddSingleton<IScimBearerService, ScimBearerService>();
         services.TryAddSingleton<IEnterpriseEventReceiptService, EnterpriseEventReceiptService>();
         services.TryAddScoped<IRepositoryService, RepositoryService>();
