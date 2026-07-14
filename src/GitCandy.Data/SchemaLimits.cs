@@ -60,4 +60,10 @@ internal static class SchemaLimits
     public const int SecretReference = 512;
     public const int EnterpriseGroupName = 256;
     public const int EnterpriseEventId = 256;
+    public const int RemoteExternalId = 256;
+    public const int RemoteLogin = 256;
+    public const int RemoteServerUrl = 512;
+    public const int RemoteGrantedScopes = 2000;
+    public const int RemoteRefFilter = 2000;
+    public const int TimeZoneId = 100;
 }

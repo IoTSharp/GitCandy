@@ -34,6 +34,59 @@ public enum RemoteAuthenticationKind
     Ssh
 }
 
+/// <summary>远程账号连接的健康状态。</summary>
+public enum RemoteConnectionStatus
+{
+    NotTested,
+    Healthy,
+    Failed,
+    Revoked,
+    Disabled
+}
+
+/// <summary>仓库镜像的数据流向；第一阶段只允许单向同步。</summary>
+public enum RemoteMirrorDirection
+{
+    Pull,
+    Push
+}
+
+/// <summary>仓库镜像中具有最终解释权的一侧。</summary>
+public enum RemoteMirrorAuthority
+{
+    GitCandy,
+    Remote
+}
+
+/// <summary>仓库镜像选择 Git refs 的方式。</summary>
+public enum RemoteMirrorRefFilterKind
+{
+    AllRefs,
+    ProtectedBranches,
+    AllowList,
+    RegularExpression
+}
+
+/// <summary>检测到目标 ref 与权威侧分叉时的处理策略。</summary>
+public enum RemoteMirrorDivergencePolicy
+{
+    Stop,
+    KeepDivergent,
+    OverwriteTarget
+}
+
+/// <summary>仓库镜像最近一次可观测运行状态。</summary>
+public enum RemoteMirrorStatus
+{
+    Pending,
+    Idle,
+    Synchronizing,
+    Succeeded,
+    Diverged,
+    Failed,
+    Paused
+}
+
 /// <summary>远程 provider 可提供的能力。</summary>
 [Flags]
 public enum RemoteProviderCapabilities

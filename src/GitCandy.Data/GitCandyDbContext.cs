@@ -121,6 +121,8 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
     public DbSet<GitCandyEnterpriseGroup> EnterpriseGroups => Set<GitCandyEnterpriseGroup>();
     public DbSet<GitCandyEnterpriseGroupMember> EnterpriseGroupMembers => Set<GitCandyEnterpriseGroupMember>();
     public DbSet<GitCandyEnterpriseProviderEvent> EnterpriseProviderEvents => Set<GitCandyEnterpriseProviderEvent>();
+    public DbSet<GitCandyRemoteAccountConnection> RemoteAccountConnections => Set<GitCandyRemoteAccountConnection>();
+    public DbSet<GitCandyRepositoryMirror> RepositoryMirrors => Set<GitCandyRepositoryMirror>();
 
     /// <inheritdoc />
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -156,6 +158,7 @@ public sealed class GitCandyDbContext : IdentityDbContext<GitCandyUser>
         builder.ConfigureGovernanceModel();
         builder.ConfigureTeamGovernanceModel();
         builder.ConfigureEnterpriseModel();
+        builder.ConfigureRemoteModel();
         builder.ConfigureIntegrationModel();
         builder.ConfigureReleaseModel();
 

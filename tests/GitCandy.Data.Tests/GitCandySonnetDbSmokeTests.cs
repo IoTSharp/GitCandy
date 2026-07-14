@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using GitCandy.Workspace;
+using GitCandy.Remotes;
 
 namespace GitCandy.Data.Tests;
 
@@ -99,6 +100,47 @@ public sealed class GitCandySonnetDbSmokeTests
                 repository.NormalizedName == "SONNETREPOSITORY"));
             Assert.AreEqual(1, await dbContext.RepositoryStars.CountAsync());
             Assert.AreEqual(1, await dbContext.Todos.CountAsync());
+
+            var remoteConnection = new GitCandyRemoteAccountConnection
+            {
+                OwnerKind = RemoteConnectionOwnerKind.User,
+                OwnerUserId = sonnetUser.Id,
+                Provider = RemoteProviderKind.Gitee,
+                ServerUrl = "https://gitee.com/",
+                ExternalAccountId = "gitee-account-1",
+                AccountKind = RemoteAccountKind.User,
+                Login = "sonnet-user",
+                AuthenticationKind = RemoteAuthenticationKind.OAuth,
+                CredentialReference = "vault:remote/sonnet-user",
+                GrantedScopes = "[\"projects\"]",
+                IsEnabled = true,
+                Status = RemoteConnectionStatus.Healthy,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+            dbContext.RemoteAccountConnections.Add(remoteConnection);
+            await dbContext.SaveChangesAsync();
+            dbContext.RepositoryMirrors.Add(new GitCandyRepositoryMirror
+            {
+                RepositoryId = repository.Id,
+                ConnectionId = remoteConnection.Id,
+                RemoteRepositoryId = "gitee-repository-1",
+                RemoteOwnerLogin = "sonnet-user",
+                RemoteRepositoryName = "sonnet-repository",
+                RemoteGitUrl = "https://gitee.com/sonnet-user/sonnet-repository.git",
+                Direction = RemoteMirrorDirection.Push,
+                Authority = RemoteMirrorAuthority.GitCandy,
+                RefFilterKind = RemoteMirrorRefFilterKind.ProtectedBranches,
+                ScheduleEnabled = false,
+                DivergencePolicy = RemoteMirrorDivergencePolicy.Stop,
+                IsEnabled = true,
+                Status = RemoteMirrorStatus.Idle,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+            Assert.AreEqual(1, await dbContext.RemoteAccountConnections.CountAsync());
+            Assert.AreEqual(1, await dbContext.RepositoryMirrors.CountAsync());
 
             var team = new GitCandyTeam
             {

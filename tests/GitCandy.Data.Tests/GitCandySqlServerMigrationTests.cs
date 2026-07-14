@@ -82,6 +82,9 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE TABLE [NotificationDeliveries]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [Releases]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [ReleaseAssets]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [RemoteAccountConnections]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [RepositoryMirrors]");
+        StringAssert.Contains(migrationSql, "[ServerUrl] nvarchar(512) NOT NULL");
         StringAssert.Contains(migrationSql, "[EventType] nvarchar(24) NOT NULL DEFAULT N'Issue'");
         StringAssert.Contains(migrationSql, "[RequiredApprovals] int NOT NULL");
         StringAssert.Contains(migrationSql, "[RequireCodeOwnerReviews] bit NOT NULL");
@@ -106,6 +109,13 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_CommitChecks_Repository_Sha_Kind_Context]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_WebhookSubscriptions_RepositoryId_Name]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_Releases_Repository_Tag]");
+        StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_RemoteAccountConnections_StableIdentity]");
+        StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_RepositoryMirrors_Target_Direction]");
+        StringAssert.Contains(migrationSql, "CK_RemoteAccountConnections_Owner");
+        StringAssert.Contains(migrationSql, "CK_RepositoryMirrors_DirectionAuthority");
+        StringAssert.Contains(migrationSql, "CK_RepositoryMirrors_ScheduleInterval");
+        StringAssert.Contains(migrationSql, "CK_RepositoryMirrors_ScheduleConfiguration");
+        StringAssert.Contains(migrationSql, "CK_RepositoryMirrors_RefFilter");
         StringAssert.Contains(migrationSql, "[Role] nvarchar(20) NOT NULL DEFAULT N'Member'");
         StringAssert.Contains(
             migrationSql,

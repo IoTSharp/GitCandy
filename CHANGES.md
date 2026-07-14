@@ -12,6 +12,7 @@
  - Completed M14 with four-level team governance, enterprise connection management, Microsoft Entra ID and SCIM 2.0, WeCom/Feishu/DingTalk adapters, bounded directory reconciliation, deprovisioning, and security acceptance fixtures.
 
 #### Added
+ - Added the M15 remote account and one-way repository mirror EF schema with stable provider identities, user/team ownership, opaque credential references, ref/schedule/divergence/prune policies, observable status, portable constraints, and SQLite, SQL Server, and SonnetDB migrations.
  - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
  - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
  - Added a unified team authorization service, atomic member batches, governance audit history, four-role management UI, and local break-glass TeamOwner protection.
@@ -203,6 +204,7 @@
  - Removed Bootstrap 3, bootstrap-switch, jQuery 2, Glyphicons, marked, the legacy highlight.js bundle, and their production static references after the M9 visual regression pass.
 
 #### Migration
+ - M15 #162 adds empty `RemoteAccountConnections` and `RepositoryMirrors` tables without importing accounts or starting synchronization. Back up the database before upgrading; rollback requires restoring that backup with the previous application version so remote configuration is not silently discarded. See [the M15 #162 migration record](docs/migration/m15-162-remote-mirror-schema.md).
  - M14 #150 replaces `UserTeamRoles.IsAdministrator` with a required named role. Existing administrators become TeamOwners and existing non-administrators become Members; downgrade maps only TeamOwner back to administrator and loses Leader/DeputyLeader distinctions. Back up the database before upgrading; see [the M14 #150 migration record](docs/migration/m14-150-team-governance-roles.md).
  - M13 collaboration extensions add `NotificationPreferences`, `NotificationDeliveries`, `Releases`, and `ReleaseAssets`, and backfill existing unified notifications as `Issue` events. Release assets are stored under `CachePath/release-assets` and must be backed up with the database; rollback requires restoring the pre-upgrade database/cache backup with the previous application version.
  - The M12 #134 migrations add nullable Pull Request assignees plus reviewer-request and immutable review-history tables. Existing Pull Requests remain unassigned with no requested reviewers; back up the database before upgrade and restore that backup with the previous application version to roll back. See [the M12 #134 migration record](docs/migration/m12-134-pull-request-review-status.md).
