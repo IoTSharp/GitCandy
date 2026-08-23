@@ -56,6 +56,41 @@ public sealed class RemoteMirrorServiceTests
     }
 
     [TestMethod]
+    public async Task SynchronizeAsync_WithPullFastForward_UpdatesBranch()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Pull);
+        var localTarget = new string('a', 40);
+        var remoteTarget = new string('b', 40);
+        fixture.References.LocalReferences["refs/heads/main"] = localTarget;
+        fixture.References.RemoteReferences["refs/heads/main"] = remoteTarget;
+        fixture.References.Ancestors.Add((localTarget, remoteTarget));
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(RemoteMirrorStatus.Succeeded, result.Status);
+        Assert.AreEqual(remoteTarget, fixture.References.LocalReferences["refs/heads/main"]);
+    }
+
+    [TestMethod]
+    public async Task SynchronizeAsync_WithPullMovedTagAndStop_PreservesLocalTagAndRecordsDivergence()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Pull);
+        var localTarget = new string('a', 40);
+        var remoteTarget = new string('b', 40);
+        fixture.References.LocalReferences["refs/tags/v1"] = localTarget;
+        fixture.References.RemoteReferences["refs/tags/v1"] = remoteTarget;
+        fixture.References.Ancestors.Add((localTarget, remoteTarget));
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(RemoteMirrorStatus.Diverged, result.Status);
+        Assert.AreEqual(RemoteMirrorErrorCodes.Diverged, result.ErrorCode);
+        Assert.AreEqual(localTarget, fixture.References.LocalReferences["refs/tags/v1"]);
+    }
+
+    [TestMethod]
     public async Task SynchronizeAsync_WithPushOverwrite_UsesForceAndConsumesMergedRefEvent()
     {
         await using var fixture = await MirrorFixture.CreateAsync(
@@ -99,6 +134,78 @@ public sealed class RemoteMirrorServiceTests
         Assert.IsTrue(await verification.GovernanceAuditEvents.AsNoTracking()
             .AnyAsync(item => item.Action == "mirror.push.force"
                 && item.ReferenceName == "refs/heads/main"));
+    }
+
+    [TestMethod]
+    public async Task SynchronizeAsync_WithPushMovedTagAndStop_DoesNotPushTag()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Push);
+        var remoteTarget = new string('a', 40);
+        var localTarget = new string('b', 40);
+        fixture.References.RemoteReferences["refs/tags/v1"] = remoteTarget;
+        fixture.References.LocalReferences["refs/tags/v1"] = localTarget;
+        fixture.References.Ancestors.Add((remoteTarget, localTarget));
+        await fixture.EnqueueAsync("refs/tags/v1", remoteTarget, localTarget);
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(RemoteMirrorStatus.Diverged, result.Status);
+        Assert.AreEqual(RemoteMirrorErrorCodes.Diverged, result.ErrorCode);
+        Assert.IsFalse(fixture.Backend.Requests.Any(item =>
+            item.Operation == RemoteRepositorySyncOperation.Push));
+    }
+
+    [TestMethod]
+    public async Task SynchronizeAsync_WithPushPruneAndRemoteOnlyReference_DeletesRemoteReference()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Push);
+        fixture.References.RemoteReferences["refs/heads/removed"] = new string('a', 40);
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsTrue(result.Succeeded);
+        var push = fixture.Backend.Requests.Single(item =>
+            item.Operation == RemoteRepositorySyncOperation.Push);
+        var deletion = push.RefSpecs.Single();
+        Assert.IsTrue(deletion.IsDelete);
+        Assert.AreEqual("refs/heads/removed", deletion.DestinationReference);
+    }
+
+    [TestMethod]
+    public async Task SynchronizeAsync_WithPushPruneDisabled_PreservesRemoteOnlyReference()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(
+            RemoteMirrorDirection.Push,
+            prune: false);
+        fixture.References.RemoteReferences["refs/heads/remote-only"] = new string('a', 40);
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsFalse(fixture.Backend.Requests.Any(item =>
+            item.Operation == RemoteRepositorySyncOperation.Push));
+    }
+
+    [TestMethod]
+    public async Task SynchronizeAsync_WithPushPruneBeyondBackendLimit_UsesBoundedBatches()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Push);
+        for (var index = 0; index < 1025; index++)
+        {
+            fixture.References.RemoteReferences[$"refs/heads/removed-{index:D4}"] = new string('a', 40);
+        }
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsTrue(result.Succeeded);
+        var pushes = fixture.Backend.Requests
+            .Where(item => item.Operation == RemoteRepositorySyncOperation.Push)
+            .ToArray();
+        Assert.AreEqual(2, pushes.Length);
+        Assert.AreEqual(1024, pushes[0].RefSpecs.Count);
+        Assert.AreEqual(1, pushes[1].RefSpecs.Count);
+        Assert.IsTrue(pushes.SelectMany(item => item.RefSpecs).All(item => item.IsDelete));
     }
 
     [TestMethod]
@@ -168,9 +275,29 @@ public sealed class RemoteMirrorServiceTests
         public long RepositoryId { get; }
         public IDbContextFactory<GitCandyDbContext> DbContextFactory { get; }
 
+        public async Task EnqueueAsync(
+            string referenceName,
+            string oldObjectId,
+            string newObjectId)
+        {
+            await using var dbContext = CreateDbContext();
+            dbContext.RemoteMirrorRefUpdates.Add(new GitCandyRemoteMirrorRefUpdate
+            {
+                MirrorId = MirrorId,
+                ReferenceName = referenceName,
+                OldObjectId = oldObjectId,
+                NewObjectId = newObjectId,
+                Generation = 1,
+                EnqueuedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            });
+            await dbContext.SaveChangesAsync();
+        }
+
         public static async Task<MirrorFixture> CreateAsync(
             RemoteMirrorDirection direction,
-            RemoteMirrorDivergencePolicy divergencePolicy = RemoteMirrorDivergencePolicy.Stop)
+            RemoteMirrorDivergencePolicy divergencePolicy = RemoteMirrorDivergencePolicy.Stop,
+            bool prune = true)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -230,7 +357,7 @@ public sealed class RemoteMirrorServiceTests
                     : RemoteMirrorAuthority.GitCandy,
                 RefFilterKind = RemoteMirrorRefFilterKind.AllRefs,
                 DivergencePolicy = divergencePolicy,
-                Prune = true,
+                Prune = prune,
                 IsEnabled = true,
                 Status = RemoteMirrorStatus.Pending,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -282,6 +409,7 @@ public sealed class RemoteMirrorServiceTests
     {
         public Dictionary<string, string> LocalReferences { get; } = new(StringComparer.Ordinal);
         public Dictionary<string, string> RemoteReferences { get; } = new(StringComparer.Ordinal);
+        public HashSet<(string Ancestor, string Descendant)> Ancestors { get; } = [];
 
         public IReadOnlyDictionary<string, string> ReadReferences(
             GitRepositoryContext repository,
@@ -310,7 +438,8 @@ public sealed class RemoteMirrorServiceTests
             GitRepositoryContext repository,
             string ancestorObjectId,
             string descendantObjectId,
-            CancellationToken cancellationToken = default) => false;
+            CancellationToken cancellationToken = default) =>
+            Ancestors.Contains((ancestorObjectId, descendantObjectId));
 
         public void ApplyUpdates(
             GitRepositoryContext repository,

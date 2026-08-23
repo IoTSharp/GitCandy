@@ -13,7 +13,8 @@
 - Pull 只更新 `refs/heads/*` 和 `refs/tags/*`。`Stop` 在任何分叉时不修改正式 refs，`KeepDivergent` 跳过分叉 ref，`OverwriteTarget` 才覆盖目标并写 `mirror.pull.force` 审计；`Prune` 关闭时不删除本地 ref。
 - 启用 Pull mirror 后，EF 权限查询和统一 push gate 都拒绝本地写入，管理员也不能绕过。Web merge、分支/标签删除、HTTP Git、内置 SSH 和 OpenSSH 复用同一判断。
 - receive-pack 继续先执行受控 `pre-receive` gate；成功后执行 `post-receive` 子命令。后者不访问远端网络，只把 ref 创建、更新、删除按 `(MirrorId, ReferenceName)` 合并到 `RemoteMirrorRefUpdates` 并递增 generation。
-- Push 后台执行重新读取当前本地 ref 和远端 staging ref，处理 stale/合并事件。删除只在 `Prune` 开启时传播；non-fast-forward 默认停止，`KeepDivergent` 保留远端分叉，`OverwriteTarget` 使用显式 force refspec 并写 `mirror.push.force` 审计。
+- Push 后台执行重新读取当前本地 ref 和远端 staging ref，处理 stale/合并事件。删除只在 `Prune` 开启时传播，初始对账也会分批删除过滤范围内的远端独有 ref；non-fast-forward 默认停止，`KeepDivergent` 保留远端分叉，`OverwriteTarget` 使用显式 force refspec 并写 `mirror.push.force` 审计。
+- fast-forward 只适用于 branch；已有 tag 的目标一旦变化，Pull/Push 都必须进入 divergence policy，不能把 tag 移动静默当作 branch fast-forward。
 - Quartz `remote-mirror-sync` 每 5 秒唤醒 pending Push，并检查到期 Pull。单个进程内同一 mirror 串行；跨实例 lease、重试次数、退避和 crash recovery 由 #166 增加。
 
 ## 数据与兼容性

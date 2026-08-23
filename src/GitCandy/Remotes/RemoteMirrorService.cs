@@ -23,6 +23,7 @@ public sealed class RemoteMirrorService(
     ILogger<RemoteMirrorService> logger) : IRemoteMirrorService, IDisposable
 {
     private const int MaxBatchSize = 100;
+    private const int MaxReferencesPerOperation = 1024;
     private const string HeadPrefix = "refs/heads/";
     private const string TagPrefix = "refs/tags/";
     private readonly IDbContextFactory<GitCandyDbContext> _dbContextFactory = dbContextFactory;
@@ -411,7 +412,12 @@ public sealed class RemoteMirrorService(
                 updates.Add(new RemoteMirrorReferenceUpdate(reference.Key, reference.Value));
             }
             else if (!string.Equals(localTarget, reference.Value, StringComparison.OrdinalIgnoreCase)
-                && !_referenceStore.IsAncestor(repository, localTarget, reference.Value, cancellationToken))
+                && !IsFastForward(
+                    repository,
+                    reference.Key,
+                    localTarget,
+                    reference.Value,
+                    cancellationToken))
             {
                 divergent.Add(reference.Key);
                 if (mirror.DivergencePolicy == RemoteMirrorDivergencePolicy.OverwriteTarget)
@@ -477,6 +483,7 @@ public sealed class RemoteMirrorService(
         var forced = new List<string>();
         var consumed = new List<PendingRefSnapshot>();
         var pushCandidates = new List<PendingRefSnapshot>();
+        var handledReferences = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var pending in mirror.PendingReferences)
         {
@@ -486,6 +493,7 @@ public sealed class RemoteMirrorService(
                 consumed.Add(pending);
                 continue;
             }
+            handledReferences.Add(pending.ReferenceName);
 
             local.TryGetValue(pending.ReferenceName, out var localTarget);
             remote.TryGetValue(pending.ReferenceName, out var remoteTarget);
@@ -515,7 +523,12 @@ public sealed class RemoteMirrorService(
                 consumed.Add(pending);
                 continue;
             }
-            if (_referenceStore.IsAncestor(repository, remoteTarget, localTarget, cancellationToken))
+            if (IsFastForward(
+                    repository,
+                    pending.ReferenceName,
+                    remoteTarget,
+                    localTarget,
+                    cancellationToken))
             {
                 pushSpecs.Add(new RemoteRepositorySyncRefSpec(
                     pending.ReferenceName,
@@ -540,6 +553,15 @@ public sealed class RemoteMirrorService(
             }
         }
 
+        if (mirror.Prune)
+        {
+            pushSpecs.AddRange(remote.Keys
+                .Where(reference => filter.Matches(reference)
+                    && !local.ContainsKey(reference)
+                    && !handledReferences.Contains(reference))
+                .Select(RemoteRepositorySyncRefSpec.Delete));
+        }
+
         if (divergent.Count > 0 && mirror.DivergencePolicy == RemoteMirrorDivergencePolicy.Stop)
         {
             return await CompleteAsync(
@@ -556,14 +578,17 @@ public sealed class RemoteMirrorService(
 
         if (pushSpecs.Count > 0)
         {
-            var request = new RemoteRepositorySyncRequest(
-                repository,
-                mirror.Provider,
-                mirror.ProviderServerUrl,
-                mirror.RemoteGitUrl,
-                RemoteRepositorySyncOperation.Push,
-                pushSpecs);
-            await _syncBackend.ExecuteAsync(request, credential, cancellationToken);
+            foreach (var batch in pushSpecs.Chunk(MaxReferencesPerOperation))
+            {
+                var request = new RemoteRepositorySyncRequest(
+                    repository,
+                    mirror.Provider,
+                    mirror.ProviderServerUrl,
+                    mirror.RemoteGitUrl,
+                    RemoteRepositorySyncOperation.Push,
+                    batch);
+                await _syncBackend.ExecuteAsync(request, credential, cancellationToken);
+            }
             consumed.AddRange(pushCandidates);
         }
 
@@ -755,7 +780,7 @@ public sealed class RemoteMirrorService(
             entity.PendingRefUpdates
                 .OrderBy(item => item.UpdatedAtUtc)
                 .ThenBy(item => item.ReferenceName, StringComparer.Ordinal)
-                .Take(1024)
+                .Take(MaxReferencesPerOperation)
                 .Select(item => new PendingRefSnapshot(
                     item.ReferenceName,
                     item.OldObjectId,
@@ -776,6 +801,21 @@ public sealed class RemoteMirrorService(
             references[item.Key] = item.Value;
         }
         return references;
+    }
+
+    private bool IsFastForward(
+        GitRepositoryContext repository,
+        string referenceName,
+        string currentObjectId,
+        string targetObjectId,
+        CancellationToken cancellationToken)
+    {
+        return referenceName.StartsWith(HeadPrefix, StringComparison.Ordinal)
+            && _referenceStore.IsAncestor(
+                repository,
+                currentObjectId,
+                targetObjectId,
+                cancellationToken);
     }
 
     private IReadOnlyDictionary<string, string> ReadStagedReferences(

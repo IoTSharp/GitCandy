@@ -69,6 +69,7 @@
  - Pull-mirrored repositories now deny local Web, HTTP Git, built-in SSH, OpenSSH, merge, branch, and tag writes while the remote-authoritative mirror is enabled.
 
 #### Fixed
+ - Fixed one-way mirror ref policy so moving an existing tag is always classified as divergence instead of a branch-like fast-forward, and push-mirror pruning now removes filtered remote-only refs in bounded batches during initial reconciliation.
  - Fixed unchanged team-role submissions so they no longer create misleading no-op governance audit records.
  - Fixed the enterprise connection and connection-test Lucide icons so the new team and enterprise pages render without browser console warnings.
  - Added full `CHECK` constraint support to the bundled SonnetDB source dependency, including EF migration DDL, existing-row validation, INSERT/UPDATE enforcement, schema persistence, rollback, and restart recovery, so M14 team roles use the same database constraint across all supported runtime providers.
