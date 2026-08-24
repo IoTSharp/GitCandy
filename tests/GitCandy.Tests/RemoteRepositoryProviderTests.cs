@@ -83,6 +83,61 @@ public sealed class RemoteRepositoryProviderTests
         Assert.AreEqual(0, fixture.RedirectTargetRequests);
     }
 
+    [TestMethod]
+    public async Task GitHubProvider_WithAppCredentialAndRateLimit_ClassifiesRetryTime()
+    {
+        await using var fixture = await ProviderApiFixture.CreateAsync();
+        var configuration = fixture.CreateConfiguration();
+        configuration["GitCandy:Remotes:GitHub:ApiBaseUrl"] = $"{fixture.BaseAddress}rate-api";
+        configuration["GitCandy:Remotes:GitLab:Enabled"] = "false";
+        configuration["GitCandy:Remotes:Gitee:Enabled"] = "false";
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddGitCandyRemoteProviders(configuration);
+        await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var provider = serviceProvider.GetRequiredService<IRemoteRepositoryProvider>();
+        Assert.IsTrue(provider.AuthenticationKinds.Contains(RemoteAuthenticationKind.App));
+        var credential = new RemoteCredential(
+            RemoteAuthenticationKind.App,
+            new RemoteSecret(ProviderApiFixture.Secret),
+            ["repo"],
+            DateTimeOffset.UtcNow.AddHours(1));
+
+        var diagnostic = await provider.TestAsync(CreateContext(provider, credential), credential);
+
+        Assert.IsFalse(diagnostic.Succeeded);
+        Assert.AreEqual("rate_limited", diagnostic.Code);
+        Assert.IsNotNull(diagnostic.RetryAt);
+    }
+
+    [TestMethod]
+    public async Task GitLabAndGiteeProviders_WithOAuthCredential_UseProviderAuthorizationHeaders()
+    {
+        await using var fixture = await ProviderApiFixture.CreateAsync();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddGitCandyRemoteProviders(fixture.CreateConfiguration());
+        await using var serviceProvider = services.BuildServiceProvider(validateScopes: true);
+        var providers = serviceProvider.GetServices<IRemoteRepositoryProvider>()
+            .ToDictionary(provider => provider.Kind);
+        foreach (var kind in new[] { RemoteProviderKind.GitLab, RemoteProviderKind.Gitee })
+        {
+            var provider = providers[kind];
+            var credential = new RemoteCredential(
+                RemoteAuthenticationKind.OAuth,
+                new RemoteSecret(ProviderApiFixture.Secret),
+                provider.GetRequiredScopes(RemoteAccountKind.User, RemoteRepositoryOperations.Discover));
+            _ = await provider.TestAsync(CreateContext(provider, credential), credential);
+        }
+
+        Assert.AreEqual(
+            $"Bearer {ProviderApiFixture.Secret}",
+            fixture.ObservedRequests[RemoteProviderKind.GitLab].Authorization);
+        Assert.AreEqual(
+            $"token {ProviderApiFixture.Secret}",
+            fixture.ObservedRequests[RemoteProviderKind.Gitee].Authorization);
+    }
+
     private static RemoteAccountConnectionContext CreateContext(
         IRemoteRepositoryProvider provider,
         RemoteCredential credential) => new(
@@ -177,6 +232,16 @@ public sealed class RemoteRepositoryProviderTests
             {
                 RedirectTargetRequests++;
                 return Results.StatusCode(StatusCodes.Status500InternalServerError);
+            });
+            _app.MapGet("/rate-api/user", (HttpContext context) =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                context.Response.Headers["X-RateLimit-Remaining"] = "0";
+                context.Response.Headers["X-RateLimit-Reset"] = DateTimeOffset.UtcNow
+                    .AddMinutes(1)
+                    .ToUnixTimeSeconds()
+                    .ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return Task.CompletedTask;
             });
         }
 

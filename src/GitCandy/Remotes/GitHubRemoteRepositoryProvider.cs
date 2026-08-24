@@ -15,6 +15,7 @@ internal sealed class GitHubRemoteRepositoryProvider(
         new HashSet<RemoteAuthenticationKind>
         {
             RemoteAuthenticationKind.OAuth,
+            RemoteAuthenticationKind.App,
             RemoteAuthenticationKind.PersonalAccessToken
         };
 

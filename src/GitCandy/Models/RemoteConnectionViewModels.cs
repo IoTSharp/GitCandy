@@ -11,6 +11,8 @@ public sealed class RemoteConnectionIndexViewModel
 
     public RemoteConnectionFormViewModel Form { get; init; } = new();
 
+    public RemoteCredentialRotationViewModel Rotation { get; init; } = new();
+
     public long? SelectedConnectionId { get; init; }
 
     public RemoteRepositoryDiscoveryResult? Discovery { get; init; }
@@ -37,4 +39,30 @@ public sealed class RemoteConnectionFormViewModel
     [Required, StringLength(2048)]
     [Display(Name = "Granted scopes")]
     public string GrantedScopes { get; set; } = "repo";
+
+    [Display(Name = "Credential expires at (UTC)")]
+    public DateTimeOffset? ExpiresAt { get; set; }
+
+    [StringLength(512)]
+    [Display(Name = "Webhook secret reference")]
+    public string? WebhookSecretReference { get; set; }
+}
+
+public sealed class RemoteCredentialRotationViewModel
+{
+    [Required]
+    [Display(Name = "Authentication method")]
+    public RemoteAuthenticationKind AuthenticationKind { get; set; } =
+        RemoteAuthenticationKind.PersonalAccessToken;
+
+    [Required, StringLength(16384)]
+    [DataType(DataType.Password)]
+    public string Secret { get; set; } = string.Empty;
+
+    [Required, StringLength(2048)]
+    [Display(Name = "Granted scopes")]
+    public string GrantedScopes { get; set; } = "repo";
+
+    [Display(Name = "Credential expires at (UTC)")]
+    public DateTimeOffset? ExpiresAt { get; set; }
 }

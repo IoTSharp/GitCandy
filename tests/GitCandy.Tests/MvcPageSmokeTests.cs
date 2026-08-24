@@ -211,6 +211,7 @@ public sealed class MvcPageSmokeTests
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/deploy-keys\"");
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/branch-rules\"");
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/webhooks\"");
+        StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/settings/mirrors\"");
         StringAssert.Contains(repositoryHtml, "href=\"/m5-admin/m5-repository/releases\"");
         Assert.IsFalse(repositoryHtml.Contains("/git/m5-repository.git", StringComparison.Ordinal));
 
@@ -274,6 +275,9 @@ public sealed class MvcPageSmokeTests
         webhooksHtml = await fixture.GetStringAsync(webhooksPath);
         StringAssert.Contains(webhooksHtml, "external-ci");
         Assert.IsFalse(webhooksHtml.Contains("whsec_", StringComparison.Ordinal));
+        var mirrorsHtml = await fixture.GetStringAsync("/m5-admin/m5-repository/settings/mirrors");
+        StringAssert.Contains(mirrorsHtml, "Repository mirrors");
+        StringAssert.Contains(mirrorsHtml, "/me/remotes");
         StringAssert.Contains(
             await fixture.GetStringAsync("/m5-admin/m5-repository/settings/audit"),
             "rule.save");

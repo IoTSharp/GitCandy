@@ -10,7 +10,7 @@ audience: developers
 public: true
 archived: false
 version: current
-updated: 2026-07-14
+updated: 2026-08-24
 canonical: docs/help/current/developers/webhooks.md
 ---
 
@@ -46,3 +46,21 @@ Replay 创建新的 delivery 并记录原 delivery ID；它不会重用已完成
 只允许受支持的 HTTP(S) 目标。GitCandy 在连接前执行 DNS/地址策略以阻止 loopback、link-local、保留地址和不允许的内部目标；重定向、DNS rebinding、timeout 和响应大小也必须留在边界内。
 
 接收方应快速返回 2xx，把耗时工作写入自己的队列。不要让 GitCandy 的重试成为接收方业务事务的唯一幂等机制。
+
+## Remote provider 回调
+
+远程 mirror 的入站 provider 回调与上述仓库出站 Webhook 是两套独立协议。连接 owner 先在 `/me/remotes` 为连接设置 `env:` 或 `config:` webhook secret reference，再把以下 HTTPS 地址登记到对应 provider：
+
+```text
+https://git.example.com/remote-events/{connectionId}/{provider}
+```
+
+`provider` 为 `GitHub`、`GitLab` 或 `Gitee`，不区分大小写。请求体最多 1 MiB；必须携带以下 provider 原生请求头：
+
+| Provider | 验证头 | Delivery / event 头 |
+| --- | --- | --- |
+| GitHub | `X-Hub-Signature-256: sha256=...` | `X-GitHub-Delivery`、`X-GitHub-Event` |
+| GitLab | `X-Gitlab-Token` | `X-Gitlab-Event-UUID`（可回退到 `X-Gitlab-Webhook-UUID`）、`X-Gitlab-Event` |
+| Gitee | `X-Gitee-Token` | `X-Gitee-Delivery`、`X-Gitee-Event` |
+
+未配置 secret reference 返回 404，运行账户无法解析 reference 返回 503，验签失败返回 401，超限返回 413。GitCandy 按连接与 delivery ID 去重；收据只记录 delivery ID、event type、接收时间和 payload SHA-256，不保存请求体、signature 或 token。push/rename/delete 事件用于低延迟 Pull 入队、stable-ID rename 和远程删除停用；周期同步仍负责漏事件对账。

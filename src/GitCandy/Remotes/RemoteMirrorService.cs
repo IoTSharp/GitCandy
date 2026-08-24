@@ -18,11 +18,11 @@ public sealed class RemoteMirrorService(
     IRemoteRepositorySyncBackend syncBackend,
     IRemoteMirrorReferenceStore referenceStore,
     IRemoteMirrorPushEventSink pushEventSink,
+    IRemoteMirrorJobQueue jobQueue,
     IGitRepositoryPathResolver pathResolver,
     TimeProvider timeProvider,
     ILogger<RemoteMirrorService> logger) : IRemoteMirrorService, IDisposable
 {
-    private const int MaxBatchSize = 100;
     private const int MaxReferencesPerOperation = 1024;
     private const string HeadPrefix = "refs/heads/";
     private const string TagPrefix = "refs/tags/";
@@ -32,6 +32,7 @@ public sealed class RemoteMirrorService(
     private readonly IRemoteRepositorySyncBackend _syncBackend = syncBackend;
     private readonly IRemoteMirrorReferenceStore _referenceStore = referenceStore;
     private readonly IRemoteMirrorPushEventSink _pushEventSink = pushEventSink;
+    private readonly IRemoteMirrorJobQueue _jobQueue = jobQueue;
     private readonly IGitRepositoryPathResolver _pathResolver = pathResolver;
     private readonly TimeProvider _timeProvider = timeProvider;
     private readonly ILogger<RemoteMirrorService> _logger = logger;
@@ -71,6 +72,16 @@ public sealed class RemoteMirrorService(
                 out _)
             || !MatchesConnection(connection, registration.RemoteRepository.Identity)
             || !TryCreateRemoteGitUrl(connection, registration.RemoteRepository, out var remoteGitUrl))
+        {
+            return Failure(null, RemoteMirrorErrorCodes.InvalidConfiguration);
+        }
+
+        var duplicateMirror = await dbContext.RepositoryMirrors.AsNoTracking()
+            .AnyAsync(item => item.RepositoryId == registration.RepositoryId
+                && item.ConnectionId == registration.ConnectionId
+                && item.RemoteRepositoryId == registration.RemoteRepository.Identity.ExternalId,
+                cancellationToken);
+        if (duplicateMirror)
         {
             return Failure(null, RemoteMirrorErrorCodes.InvalidConfiguration);
         }
@@ -144,7 +155,11 @@ public sealed class RemoteMirrorService(
             }
         }
 
-        return await SynchronizeAsync(mirror.Id, cancellationToken);
+        await _jobQueue.EnqueueAsync(
+            mirror.Id,
+            RemoteMirrorJobTrigger.Initial,
+            cancellationToken: cancellationToken);
+        return new RemoteMirrorOperationResult(mirror.Id, true, RemoteMirrorStatus.Pending);
     }
 
     public async Task<RemoteMirrorOperationResult> SynchronizeAsync(
@@ -280,51 +295,6 @@ public sealed class RemoteMirrorService(
         {
             gate.Release();
         }
-    }
-
-    public async Task<IReadOnlyList<RemoteMirrorOperationResult>> SynchronizeDuePullMirrorsAsync(
-        int limit,
-        CancellationToken cancellationToken = default)
-    {
-        limit = Math.Clamp(limit, 1, MaxBatchSize);
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var candidates = await dbContext.RepositoryMirrors.AsNoTracking()
-            .Where(item => item.Direction == RemoteMirrorDirection.Pull
-                && item.IsEnabled
-                && item.ScheduleEnabled
-                && item.ScheduleIntervalMinutes != null
-                && item.Status != RemoteMirrorStatus.Paused)
-            .OrderBy(item => item.LastAttemptedAtUtc)
-            .Select(item => new { item.Id, item.LastAttemptedAtUtc, item.ScheduleIntervalMinutes })
-            .Take(limit * 4)
-            .ToArrayAsync(cancellationToken);
-        var dueIds = candidates
-            .Where(item => item.LastAttemptedAtUtc is null
-                || item.LastAttemptedAtUtc.Value.AddMinutes(item.ScheduleIntervalMinutes!.Value) <= now)
-            .Take(limit)
-            .Select(item => item.Id)
-            .ToArray();
-        return await SynchronizeManyAsync(dueIds, cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<RemoteMirrorOperationResult>> ProcessPendingPushMirrorsAsync(
-        int limit,
-        CancellationToken cancellationToken = default)
-    {
-        limit = Math.Clamp(limit, 1, MaxBatchSize);
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var mirrorIds = await dbContext.RemoteMirrorRefUpdates.AsNoTracking()
-            .Where(item => item.Mirror != null
-                && item.Mirror.IsEnabled
-                && item.Mirror.Direction == RemoteMirrorDirection.Push
-                && item.Mirror.Status != RemoteMirrorStatus.Paused)
-            .OrderBy(item => item.UpdatedAtUtc)
-            .Select(item => item.MirrorId)
-            .Distinct()
-            .Take(limit)
-            .ToArrayAsync(cancellationToken);
-        return await SynchronizeManyAsync(mirrorIds, cancellationToken);
     }
 
     public async Task<bool> UpdateRemoteProfileAsync(
@@ -836,19 +806,6 @@ public sealed class RemoteMirrorService(
             }
         }
         return references;
-    }
-
-    private async Task<IReadOnlyList<RemoteMirrorOperationResult>> SynchronizeManyAsync(
-        IEnumerable<long> mirrorIds,
-        CancellationToken cancellationToken)
-    {
-        var results = new List<RemoteMirrorOperationResult>();
-        foreach (var mirrorId in mirrorIds)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            results.Add(await SynchronizeAsync(mirrorId, cancellationToken));
-        }
-        return results;
     }
 
     private async Task<GitRepositoryContext?> CreateRepositoryContextAsync(

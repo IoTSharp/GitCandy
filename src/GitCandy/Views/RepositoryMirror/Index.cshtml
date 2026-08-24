@@ -1,0 +1,62 @@
+@model RepositoryMirrorIndexViewModel
+@{ ViewData["Title"] = $"Mirrors - {Model.RepositoryName}"; }
+<header class="page-heading">
+    <div><h1>Repository mirrors</h1><p>One-way Git ref synchronization for @Model.RepositoryName.</p></div>
+    <div class="page-actions"><a href="@Model.CanonicalRepositoryPath" class="btn"><i data-lucide="arrow-left"></i> Repository</a></div>
+</header>
+@if (TempData["Message"] is string message) { <div class="alert alert-success" role="status">@message</div> }
+<h2>Configured mirrors</h2>
+@if (Model.Mirrors.Count == 0)
+{
+    <div class="empty-state"><div><i data-lucide="refresh-cw"></i><h2>No mirrors configured</h2></div></div>
+}
+else
+{
+    <div class="table-responsive mirror-table"><table class="table"><thead><tr><th>Remote</th><th>Direction</th><th>Policy</th><th>Status</th><th>Job</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+    @foreach (var mirror in Model.Mirrors)
+    {
+        var job = Model.GetJob(mirror.Id);
+        <tr>
+            <td><strong>@mirror.Provider / @mirror.RemoteFullName</strong><div class="entity-meta"><code>@mirror.RemoteRepositoryId</code></div></td>
+            <td>@mirror.Direction@if (mirror.ScheduleEnabled) { <div class="entity-meta">Every @mirror.ScheduleIntervalMinutes min</div> }</td>
+            <td>@mirror.RefFilterKind / @mirror.DivergencePolicy<div class="entity-meta">Prune @(mirror.Prune ? "on" : "off")</div></td>
+            <td><span class="status-badge">@mirror.Status</span>@if (!string.IsNullOrWhiteSpace(mirror.LastErrorCode)) { <div class="entity-meta">@mirror.LastErrorCode</div> }</td>
+            <td>@if (job is not null) { <span class="status-badge">@job.State</span><div class="entity-meta">Attempt @job.AttemptCount / @job.Triggers</div> }</td>
+            <td class="text-right"><div class="inline-actions">
+                <form action="@(Model.CanonicalRepositoryPath)/settings/mirrors/@mirror.Id/sync" method="post">@Html.AntiForgeryToken()<button class="icon-button" type="submit" aria-label="Synchronize @mirror.RemoteFullName" data-tooltip="Synchronize"><i data-lucide="refresh-cw"></i></button></form>
+                <form action="@(Model.CanonicalRepositoryPath)/settings/mirrors/@mirror.Id/pause?value=@mirror.IsEnabled.ToString().ToLowerInvariant()" method="post">@Html.AntiForgeryToken()<button class="icon-button" type="submit" aria-label="@(mirror.IsEnabled ? "Pause" : "Resume") @mirror.RemoteFullName" data-tooltip="@(mirror.IsEnabled ? "Pause" : "Resume")"><i data-lucide="@(mirror.IsEnabled ? "pause" : "play")"></i></button></form>
+                @if (job?.State == RemoteMirrorJobState.Leased || job?.State == RemoteMirrorJobState.Pending) { <form action="@(Model.CanonicalRepositoryPath)/settings/mirrors/jobs/@job.JobId/cancel" method="post">@Html.AntiForgeryToken()<button class="icon-button" type="submit" aria-label="Cancel mirror job" data-tooltip="Cancel"><i data-lucide="square"></i></button></form> }
+                @if (job?.State == RemoteMirrorJobState.Failed || job?.State == RemoteMirrorJobState.Canceled) { <form action="@(Model.CanonicalRepositoryPath)/settings/mirrors/jobs/@job.JobId/retry" method="post">@Html.AntiForgeryToken()<button class="icon-button" type="submit" aria-label="Retry mirror job" data-tooltip="Retry"><i data-lucide="rotate-cw"></i></button></form> }
+                <form action="@(Model.CanonicalRepositoryPath)/settings/mirrors/@mirror.Id/delete" method="post" data-confirm="Delete this mirror configuration?">@Html.AntiForgeryToken()<button class="icon-button" type="submit" aria-label="Delete @mirror.RemoteFullName mirror" data-tooltip="Delete"><i data-lucide="trash-2"></i></button></form>
+            </div></td>
+        </tr>
+    }
+    </tbody></table></div>
+}
+<h2>Add mirror</h2>
+@if (Model.Connections.Count == 0)
+{
+    <div class="alert alert-warning" role="alert">Connect a remote account from <a href="/me/remotes">Remote accounts</a> first.</div>
+}
+else
+{
+    <form action="@(Model.CanonicalRepositoryPath)/settings/mirrors" method="post" class="account-form">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+        <div class="form-field"><label asp-for="Form.ConnectionId"></label><select asp-for="Form.ConnectionId">@foreach (var connection in Model.Connections.Where(item => item.IsEnabled)) { <option value="@connection.Id">@connection.Provider / @connection.Login</option> }</select><span asp-validation-for="Form.ConnectionId"></span></div>
+        <div class="form-field"><label asp-for="Form.RemoteRepositoryId"></label><input asp-for="Form.RemoteRepositoryId" /><span asp-validation-for="Form.RemoteRepositoryId"></span></div>
+        <div class="form-field"><label asp-for="Form.RemoteOwner"></label><input asp-for="Form.RemoteOwner" /><span asp-validation-for="Form.RemoteOwner"></span></div>
+        <div class="form-field"><label asp-for="Form.RemoteRepositoryName"></label><input asp-for="Form.RemoteRepositoryName" /><span asp-validation-for="Form.RemoteRepositoryName"></span></div>
+        <div class="form-field"><label asp-for="Form.RemoteWebUrl"></label><input asp-for="Form.RemoteWebUrl" type="url" /><span asp-validation-for="Form.RemoteWebUrl"></span></div>
+        <div class="form-field"><label asp-for="Form.Direction"></label><select asp-for="Form.Direction" asp-items="Html.GetEnumSelectList<RemoteMirrorDirection>()"></select></div>
+        <div class="form-field"><label asp-for="Form.RefFilterKind"></label><select asp-for="Form.RefFilterKind" asp-items="Html.GetEnumSelectList<RemoteMirrorRefFilterKind>()"></select></div>
+        <div class="form-field"><label asp-for="Form.RefFilterPattern"></label><textarea asp-for="Form.RefFilterPattern" rows="3"></textarea></div>
+        <div class="form-field"><label asp-for="Form.ScheduleIntervalMinutes"></label><input asp-for="Form.ScheduleIntervalMinutes" type="number" min="5" max="10080" /></div>
+        <div class="form-field"><label asp-for="Form.DivergencePolicy"></label><select asp-for="Form.DivergencePolicy" asp-items="Html.GetEnumSelectList<RemoteMirrorDivergencePolicy>()"></select></div>
+        <div class="mirror-options">
+            <label><input asp-for="Form.Prune" /> @Html.DisplayNameFor(model => model.Form.Prune)</label>
+            <label><input asp-for="Form.ConfirmForce" /> @Html.DisplayNameFor(model => model.Form.ConfirmForce)</label>
+        </div>
+        <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="plus"></i> Add mirror</button></div>
+    </form>
+}

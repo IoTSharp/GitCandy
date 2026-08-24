@@ -11,6 +11,7 @@
  - Completed M12.7 with the private `/me` workspace, actionable Todos, unified notifications, versioned activity Feed, public profiles, Stars, public metrics, and explainable repository discovery.
  - Completed M14 with four-level team governance, enterprise connection management, Microsoft Entra ID and SCIM 2.0, WeCom/Feishu/DingTalk adapters, bounded directory reconciliation, deprovisioning, and security acceptance fixtures.
  - Completed M15.5 with a versioned `/help` center, full Markdown inventory, current user/operator/developer guidance, offline search/theme assets, safe static routing, and build/package quality gates.
+ - Completed M15 remote account connections and one-way mirrors with durable jobs, provider webhooks, owner operations, credential lifecycle, failure recovery, and three-provider acceptance fixtures.
 
 #### Added
  - Added an anonymous, PathBase-compatible `/help` center generated at build time from 13 canonical Markdown guides covering accounts, workspace, repositories, Git/LFS, collaboration, security, providers, deployment, recovery, API, webhooks, MCP availability, and architecture.
@@ -22,6 +23,9 @@
  - Added M15 pull mirrors with isolated staging refs, scheduled and initial fetch, branch/tag filters, fast-forward and divergence policies, optional pruning, remote stable-ID profile updates, default read-only enforcement, status recovery, and force audit evidence.
  - Added M15 push mirrors with a controlled post-receive bridge, persistent per-mirror/ref event coalescing, asynchronous Quartz wake-up, protected/allow-list/regex filters, optional deletion propagation, keep-divergent behavior, and explicitly audited force updates.
  - Added SQLite, SQL Server, and SonnetDB `M15PullPushMirrors` migrations for the persistent pending ref event table and generation-based concurrent event protection.
+ - Added M15 durable mirror jobs with generation coalescing, optimistic leases, instance concurrency limits, exponential backoff, restart recovery, graceful cancellation, and SQLite/SQL Server/SonnetDB migrations.
+ - Added repository-owner mirror operations at `/{namespace}/{repository}/settings/mirrors` and signed GitHub/GitLab/Gitee callbacks at `/remote-events/{connectionId}/{provider}` with bounded payloads, delivery deduplication, rename/delete handling, and periodic Pull reconciliation.
+ - Added GitHub App installation-token metadata, GitLab/Gitee OAuth/PAT coverage, credential expiration and rotation, provider rate-limit reset diagnostics, and a database-enforced ban on first-phase bidirectional mirrors.
  - Added the M14 four-level `TeamOwner`, `Leader`, `DeputyLeader`, and `Member` governance model, an explicit team permission matrix, and last-TeamOwner removal/demotion protection.
  - Added SQLite, SQL Server, and SonnetDB `M14TeamGovernanceRoles` migrations plus legacy-role backfill, provider schema checks, migration SQL, and governance invariant coverage.
  - Added a unified team authorization service, atomic member batches, governance audit history, four-role management UI, and local break-glass TeamOwner protection.

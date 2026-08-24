@@ -69,6 +69,7 @@ M12.6 的远程生产部署、真实外部 DNS/TLS、Web/Git HTTP/SSH/LFS、生�
 | M12.7 个人工作台与仓库发现 | `#139M-#139W` | `/me`、Todo、统一通知、版本化 Feed、工作恢复、公开个人页、Stars/Packages 边界、隐私指标、推荐快照、`/explore` 和桌面/移动验收完成 | [M12.7 workspace/discovery acceptance](../migration/m12-7-workspace-discovery.md) |
 | M13 合并治理与外部集成 | `#140-#149` | PAT/deploy key、versioned webhook、status/check、branch protection、required check/review、CODEOWNERS、通知外投、审计、Release/search 和外部 CI gate 总验收完成 | [machine credentials/push gate](../migration/m13-140-143-machine-credentials-push-gate.md)、[webhook/check](../migration/m13-141-143-webhooks-checks-required-gate.md)、[CODEOWNERS](../migration/m13-144-codeowners-required-reviews.md)、[M13 final acceptance](../migration/m13-145-149-collaboration-extensions-external-ci.md) |
 | M14 团队治理与企业身份联邦 | `#150-#159` | 四级团队角色、统一授权、企业连接、Entra ID/SCIM、企业微信/飞书/钉钉、目录对账、同步停用和安全 fixture 总验收完成 | [team role baseline](../migration/m14-150-team-governance-roles.md)、[M14 final acceptance](../migration/m14-151-159-enterprise-identity.md) |
+| M15 远程账号连接与单向 Mirror | `#160-#169` | 三 provider 账号、受控 Git backend、单向 Pull/Push、durable job、验签去重、owner 运维、凭据生命周期、故障恢复和双向禁用完成 | [remote accounts](../migration/m15-161-remote-account-connections.md)、[Pull/Push](../migration/m15-164-165-pull-push-mirrors.md)、[M15 final acceptance](../migration/m15-166-169-remote-mirror-operations.md) |
 | M15.5 帮助中心与全量文档发布 | `#169A-#169H` | 全量 inventory、13 篇 current canonical 指南、JekyllNet 静态生成、离线主题/搜索、安全路由、多产物打包和桌面/移动验收完成 | [M15.5 help-center acceptance](../migration/m15-5-help-center.md)、运行时 `/help/` |
 
 ## M13 验收切片
@@ -97,9 +98,22 @@ M14 已整体退出活动路线图；登录联邦、目录供应和团队治理�
 | `#155-#157` | 企业微信 `userid`、飞书租户级 `user_id`、钉钉 `unionId` 稳定绑定，登录、目录分页、操作级 token 和 provider event 去重完成 | [M14 final acceptance](../migration/m14-151-159-enterprise-identity.md)、`DomesticEnterpriseProviderTests` |
 | `#158-#159` | 15 分钟有界对账、游标恢复、连接级故障隔离、缺失用户停用、session/PAT/SSH 撤销、签名/时间窗/大小/限流/去重和安全 fixture 完成 | [M14 final acceptance](../migration/m14-151-159-enterprise-identity.md)、`ScimProvisioningTests`、`EnterpriseLoginSecurityTests` |
 
+## M15 验收切片
+
+M15 已整体退出活动路线图；账号连接、Git wire backend 和 job orchestration 保持独立边界：
+
+| 编号 | 完成结论 | 证据入口 |
+| --- | --- | --- |
+| `#161-#163` | GitHub/GitLab/Gitee 连接与发现、opaque encrypted credential、stable identity、Remote/Mirror schema，以及唯一受控 Git process backend 完成 | [remote accounts](../migration/m15-161-remote-account-connections.md)、[schema](../migration/m15-162-remote-mirror-schema.md)、[sync backend](../migration/m15-163-remote-sync-backend.md) |
+| `#164-#165` | Pull remote authority/read-only/ref policy/divergence/prune 与 Push post-receive/generation/force/delete propagation 完成 | [Pull/Push mirrors](../migration/m15-164-165-pull-push-mirrors.md)、`RemoteMirrorServiceTests` |
+| `#166` | EF durable job、generation coalescing、lease、单 remote 串行、实例并发、退避、重启恢复和 graceful shutdown 完成 | [M15 final acceptance](../migration/m15-166-169-remote-mirror-operations.md)、`RemoteMirrorJobQueueTests`、`RemoteMirrorJobDispatcherTests` |
+| `#167` | 三 provider callback 验签/限流/大小限制/去重、周期兜底，以及 owner 状态/暂停/同步/取消/重试/删除 UI 完成 | [M15 final acceptance](../migration/m15-166-169-remote-mirror-operations.md)、`RemoteProviderEventTests`、MVC smoke |
+| `#168` | GitHub App token、GitLab/Gitee OAuth/PAT、到期/轮换、rate-limit reset、stable-ID rename/delete 完成 | [M15 final acceptance](../migration/m15-166-169-remote-mirror-operations.md)、`RemoteRepositoryProviderTests`、`RemoteConnectionServiceTests` |
+| `#169` | 三 provider fixture、凭据撤销、并发/恢复、1024+ ref bounded batch 和数据库拒绝双向 mirror 完成；双向 go/no-go 为不开放 | [M15 final acceptance](../migration/m15-166-169-remote-mirror-operations.md)、`RemoteMirrorSchemaTests`、`RemoteMirrorServiceTests` |
+
 ## M15.5 验收切片
 
-M15.5 是独立文档发布切片，不表示 M15 remote mirror 已完成：
+M15.5 是独立文档发布切片；其完成证据不与 M15 remote mirror 混用：
 
 | 编号 | 完成结论 | 证据入口 |
 | --- | --- | --- |

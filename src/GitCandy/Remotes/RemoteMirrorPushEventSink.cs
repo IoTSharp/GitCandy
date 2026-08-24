@@ -9,9 +9,11 @@ namespace GitCandy.Web.Remotes;
 /// <summary>将成功 push 的 ref 更新按 mirror/ref 合并到持久化 pending 表。</summary>
 public sealed class RemoteMirrorPushEventSink(
     IDbContextFactory<GitCandyDbContext> dbContextFactory,
+    IRemoteMirrorJobQueue jobQueue,
     TimeProvider timeProvider) : IRemoteMirrorPushEventSink
 {
     private readonly IDbContextFactory<GitCandyDbContext> _dbContextFactory = dbContextFactory;
+    private readonly IRemoteMirrorJobQueue _jobQueue = jobQueue;
     private readonly TimeProvider _timeProvider = timeProvider;
 
     public async Task EnqueueAsync(
@@ -119,6 +121,15 @@ public sealed class RemoteMirrorPushEventSink(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        foreach (var mirrorId in mirrors
+            .Where(item => item.Status == RemoteMirrorStatus.Pending)
+            .Select(item => item.Id))
+        {
+            await _jobQueue.EnqueueAsync(
+                mirrorId,
+                RemoteMirrorJobTrigger.Push,
+                cancellationToken: cancellationToken);
+        }
     }
 
     private static bool IsValidObjectId(string objectId) =>

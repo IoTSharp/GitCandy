@@ -1,3 +1,4 @@
+using GitCandy.Application;
 using GitCandy.Data;
 using GitCandy.Data.Domain;
 using GitCandy.Git;
@@ -16,7 +17,8 @@ public sealed class RemoteMirrorServiceTests
     public async Task EnqueueAsync_WithRepeatedReference_MergesLatestEventAndIncrementsGeneration()
     {
         await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Push);
-        var sink = new RemoteMirrorPushEventSink(fixture.DbContextFactory, TimeProvider.System);
+        var queue = new RemoteMirrorJobQueue(fixture.DbContextFactory, TimeProvider.System);
+        var sink = new RemoteMirrorPushEventSink(fixture.DbContextFactory, queue, TimeProvider.System);
         var first = new RemoteMirrorRefEvent(
             new string('0', 40),
             new string('a', 40),
@@ -188,6 +190,20 @@ public sealed class RemoteMirrorServiceTests
     }
 
     [TestMethod]
+    public async Task SynchronizeAsync_WithRevokedCredential_StopsBeforeRemoteProcessAndClassifiesFailure()
+    {
+        await using var fixture = await MirrorFixture.CreateAsync(
+            RemoteMirrorDirection.Pull,
+            credentialAvailable: false);
+
+        var result = await fixture.Service.SynchronizeAsync(fixture.MirrorId);
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(RemoteMirrorErrorCodes.CredentialUnavailable, result.ErrorCode);
+        Assert.AreEqual(0, fixture.Backend.Requests.Count);
+    }
+
+    [TestMethod]
     public async Task SynchronizeAsync_WithPushPruneBeyondBackendLimit_UsesBoundedBatches()
     {
         await using var fixture = await MirrorFixture.CreateAsync(RemoteMirrorDirection.Push);
@@ -297,7 +313,8 @@ public sealed class RemoteMirrorServiceTests
         public static async Task<MirrorFixture> CreateAsync(
             RemoteMirrorDirection direction,
             RemoteMirrorDivergencePolicy divergencePolicy = RemoteMirrorDivergencePolicy.Stop,
-            bool prune = true)
+            bool prune = true,
+            bool credentialAvailable = true)
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -370,13 +387,15 @@ public sealed class RemoteMirrorServiceTests
             var references = new FakeReferenceStore();
             var backend = new FakeSyncBackend();
             var provider = new FakeRemoteProvider();
+            var queue = new RemoteMirrorJobQueue(factory, TimeProvider.System);
             var service = new RemoteMirrorService(
                 factory,
                 new FakeProviderCatalog(provider),
-                new FakeCredentialVault(),
+                new FakeCredentialVault(credentialAvailable),
                 backend,
                 references,
                 new NoopPushEventSink(),
+                queue,
                 new FakePathResolver(),
                 TimeProvider.System,
                 NullLogger<RemoteMirrorService>.Instance);
@@ -504,15 +523,17 @@ public sealed class RemoteMirrorServiceTests
         public IRemoteRepositoryProvider? Get(RemoteProviderKind kind) => kind == provider.Kind ? provider : null;
     }
 
-    private sealed class FakeCredentialVault : IRemoteCredentialVault
+    private sealed class FakeCredentialVault(bool credentialAvailable) : IRemoteCredentialVault
     {
         public Task<RemoteCredentialMetadata> StoreAsync(RemoteConnectionOwner owner, RemoteCredential credential, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public ValueTask<RemoteCredential?> ResolveAsync(RemoteSecretReference reference, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult<RemoteCredential?>(new RemoteCredential(
-                RemoteAuthenticationKind.PersonalAccessToken,
-                new RemoteSecret("fixture-secret"),
-                ["repo"]));
+            ValueTask.FromResult(credentialAvailable
+                ? new RemoteCredential(
+                    RemoteAuthenticationKind.PersonalAccessToken,
+                    new RemoteSecret("fixture-secret"),
+                    ["repo"])
+                : null);
 
         public Task<RemoteCredentialMetadata?> RotateAsync(RemoteSecretReference reference, RemoteCredential replacement, CancellationToken cancellationToken = default) => throw new NotSupportedException();
         public Task<bool> RevokeAsync(RemoteSecretReference reference, CancellationToken cancellationToken = default) => throw new NotSupportedException();

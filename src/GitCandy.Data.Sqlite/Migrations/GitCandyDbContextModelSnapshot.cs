@@ -2199,6 +2199,9 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("CredentialExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("CredentialReference")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -2263,6 +2266,10 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("WebhookSecretReference")
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerTeamId", "IsEnabled")
@@ -2278,6 +2285,87 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.ToTable("RemoteAccountConnections", null, t =>
                         {
                             t.HasCheckConstraint("CK_RemoteAccountConnections_Owner", "(OwnerKind = 'User' AND OwnerUserId IS NOT NULL AND OwnerTeamId IS NULL) OR (OwnerKind = 'Team' AND OwnerUserId IS NULL AND OwnerTeamId IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteMirrorJob", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("AvailableAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CancellationRequestedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastCompletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastStartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LeaseExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LeaseOwner")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("MirrorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ProcessedGeneration")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("RequestedGeneration")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Triggers")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaseExpiresAtUtc")
+                        .HasDatabaseName("IX_RemoteMirrorJobs_LeaseExpiresAtUtc");
+
+                    b.HasIndex("MirrorId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RemoteMirrorJobs_MirrorId");
+
+                    b.HasIndex("State", "AvailableAtUtc")
+                        .HasDatabaseName("IX_RemoteMirrorJobs_State_AvailableAtUtc");
+
+                    b.ToTable("RemoteMirrorJobs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RemoteMirrorJobs_AttemptCount", "AttemptCount >= 0");
+
+                            t.HasCheckConstraint("CK_RemoteMirrorJobs_Generation", "RequestedGeneration >= 1 AND ProcessedGeneration >= 0 AND ProcessedGeneration <= RequestedGeneration");
+
+                            t.HasCheckConstraint("CK_RemoteMirrorJobs_Lease", "(State = 'Leased' AND LeaseOwner IS NOT NULL AND LeaseExpiresAtUtc IS NOT NULL) OR (State <> 'Leased' AND LeaseOwner IS NULL AND LeaseExpiresAtUtc IS NULL)");
                         });
                 });
 
@@ -2315,6 +2403,50 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .HasDatabaseName("IX_RemoteMirrorRefUpdates_UpdatedAtUtc");
 
                     b.ToTable("RemoteMirrorRefUpdates", (string)null);
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteProviderEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("ConnectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DeliveryId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivedAtUtc")
+                        .HasDatabaseName("IX_RemoteProviderEvents_ReceivedAtUtc");
+
+                    b.HasIndex("ConnectionId", "DeliveryId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RemoteProviderEvents_Connection_Delivery");
+
+                    b.ToTable("RemoteProviderEvents", (string)null);
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRenameEvent", b =>
@@ -2685,12 +2817,12 @@ namespace GitCandy.Data.Sqlite.Migrations
 
                     b.HasIndex("ConnectionId");
 
-                    b.HasIndex("ScheduleEnabled", "IsEnabled", "Status")
-                        .HasDatabaseName("IX_RepositoryMirrors_Schedule_Status");
-
-                    b.HasIndex("RepositoryId", "ConnectionId", "RemoteRepositoryId", "Direction")
+                    b.HasIndex("RepositoryId", "ConnectionId", "RemoteRepositoryId")
                         .IsUnique()
                         .HasDatabaseName("IX_RepositoryMirrors_Target_Direction");
+
+                    b.HasIndex("ScheduleEnabled", "IsEnabled", "Status")
+                        .HasDatabaseName("IX_RepositoryMirrors_Schedule_Status");
 
                     b.ToTable("RepositoryMirrors", null, t =>
                         {
@@ -4107,6 +4239,17 @@ namespace GitCandy.Data.Sqlite.Migrations
                     b.Navigation("OwnerUser");
                 });
 
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteMirrorJob", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRepositoryMirror", "Mirror")
+                        .WithOne("Job")
+                        .HasForeignKey("GitCandy.Data.Domain.GitCandyRemoteMirrorJob", "MirrorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Mirror");
+                });
+
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteMirrorRefUpdate", b =>
                 {
                     b.HasOne("GitCandy.Data.Domain.GitCandyRepositoryMirror", "Mirror")
@@ -4116,6 +4259,17 @@ namespace GitCandy.Data.Sqlite.Migrations
                         .IsRequired();
 
                     b.Navigation("Mirror");
+                });
+
+            modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteProviderEvent", b =>
+                {
+                    b.HasOne("GitCandy.Data.Domain.GitCandyRemoteAccountConnection", "Connection")
+                        .WithMany("ProviderEvents")
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Connection");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
@@ -4525,6 +4679,8 @@ namespace GitCandy.Data.Sqlite.Migrations
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRemoteAccountConnection", b =>
                 {
                     b.Navigation("Mirrors");
+
+                    b.Navigation("ProviderEvents");
                 });
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepository", b =>
@@ -4554,6 +4710,8 @@ namespace GitCandy.Data.Sqlite.Migrations
 
             modelBuilder.Entity("GitCandy.Data.Domain.GitCandyRepositoryMirror", b =>
                 {
+                    b.Navigation("Job");
+
                     b.Navigation("PendingRefUpdates");
                 });
 

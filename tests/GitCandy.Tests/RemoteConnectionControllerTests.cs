@@ -73,6 +73,13 @@ public sealed class RemoteConnectionControllerTests
             CancellationToken cancellationToken = default) =>
             Task.FromResult<RemoteProviderDiagnostic?>(null);
 
+        public Task<RemoteProviderDiagnostic?> RotateUserCredentialAsync(
+            string userId,
+            long connectionId,
+            RemoteCredential replacement,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<RemoteProviderDiagnostic?>(null);
+
         public Task<RemoteRepositoryDiscoveryResult?> DiscoverRepositoriesAsync(
             string userId,
             long connectionId,

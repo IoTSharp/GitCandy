@@ -219,7 +219,9 @@ public sealed record RemoteConnectionSummary(
     string? LastErrorCode,
     DateTimeOffset? LastTestedAt,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    DateTimeOffset? CredentialExpiresAt = null,
+    bool WebhookConfigured = false);
 
 /// <summary>创建个人远程账号连接时使用的一次性凭据输入。</summary>
 public sealed record RemoteUserConnectionRequest(
@@ -227,13 +229,15 @@ public sealed record RemoteUserConnectionRequest(
     RemoteAuthenticationKind AuthenticationKind,
     RemoteSecret Secret,
     IReadOnlySet<string> GrantedScopes,
-    DateTimeOffset? ExpiresAt = null);
+    DateTimeOffset? ExpiresAt = null,
+    string? WebhookSecretReference = null);
 
 /// <summary>不回显 provider 响应或 secret 的连接诊断。</summary>
 public sealed record RemoteProviderDiagnostic(
     bool Succeeded,
     string Code,
-    string Message);
+    string Message,
+    DateTimeOffset? RetryAt = null);
 
 /// <summary>远程连接变更的安全结果；失败时不携带 provider 响应或 secret。</summary>
 public sealed record RemoteConnectionResult(
@@ -468,6 +472,12 @@ public interface IRemoteConnectionService
         long connectionId,
         CancellationToken cancellationToken = default);
 
+    Task<RemoteProviderDiagnostic?> RotateUserCredentialAsync(
+        string userId,
+        long connectionId,
+        RemoteCredential replacement,
+        CancellationToken cancellationToken = default);
+
     Task<RemoteRepositoryDiscoveryResult?> DiscoverRepositoriesAsync(
         string userId,
         long connectionId,
@@ -477,6 +487,42 @@ public interface IRemoteConnectionService
     Task<bool> DisconnectUserAsync(
         string userId,
         long connectionId,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>从宿主 secret store 解析 provider webhook secret reference。</summary>
+public interface IRemoteSecretResolver
+{
+    ValueTask<RemoteSecret?> ResolveAsync(
+        string secretReference,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>验签、去重后交给 provider event 应用服务的安全事件。</summary>
+public sealed record RemoteProviderEvent(
+    long ConnectionId,
+    RemoteProviderKind Provider,
+    string DeliveryId,
+    string EventType,
+    ReadOnlyMemory<byte> Payload);
+
+/// <summary>provider event 接收结果，不包含 payload 或签名。</summary>
+public sealed record RemoteProviderEventResult(
+    bool Accepted,
+    bool Duplicate,
+    int EnqueuedMirrorCount,
+    string Code);
+
+/// <summary>provider webhook 去重、rename/delete 生命周期和 Pull 入队边界。</summary>
+public interface IRemoteProviderEventService
+{
+    Task<string?> GetWebhookSecretReferenceAsync(
+        long connectionId,
+        RemoteProviderKind provider,
+        CancellationToken cancellationToken = default);
+
+    Task<RemoteProviderEventResult> ProcessAsync(
+        RemoteProviderEvent remoteEvent,
         CancellationToken cancellationToken = default);
 }
 

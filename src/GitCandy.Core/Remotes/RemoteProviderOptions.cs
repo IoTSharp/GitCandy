@@ -7,6 +7,8 @@ public sealed class RemoteProviderOptions
 
     public TimeSpan RequestTimeout { get; set; } = TimeSpan.FromSeconds(20);
 
+    public RemoteMirrorJobOptions Jobs { get; set; } = new();
+
     public RemoteProviderEndpointOptions GitHub { get; set; } = new()
     {
         ServerUrl = "https://github.com",
@@ -32,6 +34,24 @@ public sealed class RemoteProviderOptions
         RemoteProviderKind.Gitee => Gitee,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unsupported remote provider.")
     };
+}
+
+/// <summary>持久化 mirror worker 的实例级资源和重试边界。</summary>
+public sealed class RemoteMirrorJobOptions
+{
+    public int MaxConcurrentJobs { get; set; } = 2;
+
+    public int DispatchBatchSize { get; set; } = 10;
+
+    public int MaxAttempts { get; set; } = 5;
+
+    public TimeSpan LeaseDuration { get; set; } = TimeSpan.FromMinutes(35);
+
+    public TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(15);
+
+    public TimeSpan MaximumRetryDelay { get; set; } = TimeSpan.FromMinutes(15);
+
+    public double RetryJitterRatio { get; set; } = 0.2;
 }
 
 /// <summary>由管理员固定的 provider Web/API 端点，普通用户不能覆盖。</summary>

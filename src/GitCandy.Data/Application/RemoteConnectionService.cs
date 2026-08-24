@@ -65,6 +65,8 @@ internal sealed class RemoteConnectionService(
         if (!Enum.IsDefined(request.Provider)
             || !Enum.IsDefined(request.AuthenticationKind)
             || request.Secret.Value.Length > MaximumSecretLength
+            || request.ExpiresAt <= _timeProvider.GetUtcNow()
+            || !IsValidSecretReference(request.WebhookSecretReference)
             || !_providerCatalog.AvailableProviders.Contains(request.Provider))
         {
             return FailedConnection("invalid_connection", "The remote connection settings are invalid.");
@@ -176,6 +178,8 @@ internal sealed class RemoteConnectionService(
             DisplayName = NullIfWhiteSpace(account.DisplayName),
             AuthenticationKind = credential.AuthenticationKind,
             CredentialReference = metadata.Reference.Value,
+            CredentialExpiresAtUtc = metadata.ExpiresAt?.UtcDateTime,
+            WebhookSecretReference = NullIfWhiteSpace(request.WebhookSecretReference),
             GrantedScopes = serializedScopes,
             IsEnabled = true,
             Status = RemoteConnectionStatus.Healthy,
@@ -238,6 +242,80 @@ internal sealed class RemoteConnectionService(
             $"Provider={connection.Provider}; code={diagnostic.Code}.");
         await _dbContext.SaveChangesAsync(cancellationToken);
         return diagnostic;
+    }
+
+    public async Task<RemoteProviderDiagnostic?> RotateUserCredentialAsync(
+        string userId,
+        long connectionId,
+        RemoteCredential replacement,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(userId);
+        ArgumentNullException.ThrowIfNull(replacement);
+        var connection = await FindUserConnectionAsync(userId, connectionId, cancellationToken);
+        if (connection is null)
+        {
+            return null;
+        }
+
+        var provider = _providerCatalog.Get(connection.Provider);
+        if (provider is null || !provider.AuthenticationKinds.Contains(replacement.AuthenticationKind))
+        {
+            return new RemoteProviderDiagnostic(false, "provider_unavailable", "The selected authentication method is unavailable.");
+        }
+        var scope = RemoteScopePolicy.Validate(
+            replacement.GrantedScopes,
+            provider.GetRequiredScopes(connection.AccountKind, RemoteRepositoryOperations.Discover));
+        if (!scope.Satisfied)
+        {
+            return new RemoteProviderDiagnostic(
+                false,
+                "missing_scopes",
+                $"The credential is missing required scopes: {string.Join(", ", scope.MissingScopes)}.");
+        }
+
+        var serializedScopes = SerializeScopes(replacement.GrantedScopes);
+        if (replacement.Secret.Value.Length > MaximumSecretLength
+            || replacement.AuthenticationKind == RemoteAuthenticationKind.App
+                && replacement.ExpiresAt is null
+            || serializedScopes.Length > SchemaLimits.RemoteGrantedScopes
+            || replacement.ExpiresAt <= _timeProvider.GetUtcNow())
+        {
+            return new RemoteProviderDiagnostic(false, "invalid_credential", "The replacement credential metadata is invalid.");
+        }
+
+        var context = ToContext(connection);
+        var diagnostic = await TestProviderAsync(provider, context, replacement, cancellationToken);
+        if (!diagnostic.Succeeded)
+        {
+            return diagnostic;
+        }
+
+        var metadata = await _credentialVault.RotateAsync(
+            new RemoteSecretReference(connection.CredentialReference),
+            replacement,
+            cancellationToken);
+        if (metadata is null)
+        {
+            return new RemoteProviderDiagnostic(false, "credential_store_unavailable", "The remote credential could not be rotated securely.");
+        }
+
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        connection.AuthenticationKind = replacement.AuthenticationKind;
+        connection.GrantedScopes = serializedScopes;
+        connection.CredentialExpiresAtUtc = metadata.ExpiresAt?.UtcDateTime;
+        connection.Status = RemoteConnectionStatus.Healthy;
+        connection.LastErrorCode = null;
+        connection.LastTestedAtUtc = now;
+        connection.UpdatedAtUtc = now;
+        AddAudit(
+            connection.Id,
+            userId,
+            "remote.connection.rotate",
+            "succeeded",
+            $"Provider={connection.Provider}; account={connection.ExternalAccountId}.");
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return new RemoteProviderDiagnostic(true, "rotated", "The remote credential was rotated.");
     }
 
     public async Task<RemoteRepositoryDiscoveryResult?> DiscoverRepositoriesAsync(
@@ -353,7 +431,10 @@ internal sealed class RemoteConnectionService(
         var credential = await ResolveCredentialAsync(connection, cancellationToken);
         if (credential is null)
         {
-            return new RemoteProviderDiagnostic(false, "credential_unavailable", "The remote credential is unavailable or expired.");
+            return connection.CredentialExpiresAtUtc is DateTime expiresAt
+                && expiresAt <= _timeProvider.GetUtcNow().UtcDateTime
+                ? new RemoteProviderDiagnostic(false, "credential_expired", "The remote credential expired and must be rotated.")
+                : new RemoteProviderDiagnostic(false, "credential_unavailable", "The remote credential is unavailable or revoked.");
         }
 
         var context = ToContext(connection);
@@ -395,6 +476,12 @@ internal sealed class RemoteConnectionService(
         GitCandyRemoteAccountConnection connection,
         CancellationToken cancellationToken)
     {
+        if (connection.CredentialExpiresAtUtc is DateTime expiresAt
+            && expiresAt <= _timeProvider.GetUtcNow().UtcDateTime)
+        {
+            return null;
+        }
+
         RemoteCredential? credential;
         try
         {
@@ -407,8 +494,8 @@ internal sealed class RemoteConnectionService(
             return null;
         }
 
-        return credential?.ExpiresAt is DateTimeOffset expiresAt
-            && expiresAt <= _timeProvider.GetUtcNow()
+        return credential?.ExpiresAt is DateTimeOffset credentialExpiresAt
+            && credentialExpiresAt <= _timeProvider.GetUtcNow()
                 ? null
                 : credential;
     }
@@ -530,7 +617,9 @@ internal sealed class RemoteConnectionService(
         connection.LastErrorCode,
         ToDateTimeOffset(connection.LastTestedAtUtc),
         ToDateTimeOffset(connection.CreatedAtUtc)!.Value,
-        ToDateTimeOffset(connection.UpdatedAtUtc)!.Value);
+        ToDateTimeOffset(connection.UpdatedAtUtc)!.Value,
+        ToDateTimeOffset(connection.CredentialExpiresAtUtc),
+        !string.IsNullOrWhiteSpace(connection.WebhookSecretReference));
 
     private static string SerializeScopes(IReadOnlySet<string> scopes) =>
         JsonSerializer.Serialize(scopes.Order(StringComparer.Ordinal));
@@ -577,6 +666,32 @@ internal sealed class RemoteConnectionService(
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static bool IsValidSecretReference(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        var normalized = value.Trim();
+        if (normalized.Length > SchemaLimits.SecretReference)
+        {
+            return false;
+        }
+        var separator = normalized.IndexOf(':', StringComparison.Ordinal);
+        if (separator <= 0 || separator == normalized.Length - 1)
+        {
+            return false;
+        }
+        var scheme = normalized[..separator];
+        var key = normalized[(separator + 1)..];
+        return string.Equals(scheme, "env", StringComparison.OrdinalIgnoreCase)
+            ? key.All(static character => char.IsAsciiLetterOrDigit(character) || character == '_')
+            : string.Equals(scheme, "config", StringComparison.OrdinalIgnoreCase)
+                && !key.Contains("..", StringComparison.Ordinal)
+                && !key.Any(char.IsControl);
+    }
 
     private static DateTimeOffset? ToDateTimeOffset(DateTime? value) => value is null
         ? null

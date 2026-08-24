@@ -663,6 +663,26 @@ input[type="radio"] {
   width: min(100%, 680px);
 }
 
+.mirror-table {
+  contain: paint;
+}
+
+.mirror-options {
+  display: grid;
+  gap: 10px;
+}
+
+.mirror-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.mirror-options input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 .form-horizontal .form-group {
   display: grid;
   grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);

@@ -84,6 +84,8 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE TABLE [ReleaseAssets]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [RemoteAccountConnections]");
         StringAssert.Contains(migrationSql, "CREATE TABLE [RepositoryMirrors]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [RemoteMirrorJobs]");
+        StringAssert.Contains(migrationSql, "CREATE TABLE [RemoteProviderEvents]");
         StringAssert.Contains(migrationSql, "[ServerUrl] nvarchar(512) NOT NULL");
         StringAssert.Contains(migrationSql, "[EventType] nvarchar(24) NOT NULL DEFAULT N'Issue'");
         StringAssert.Contains(migrationSql, "[RequiredApprovals] int NOT NULL");
@@ -111,6 +113,8 @@ public sealed class GitCandySqlServerMigrationTests
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_Releases_Repository_Tag]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_RemoteAccountConnections_StableIdentity]");
         StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_RepositoryMirrors_Target_Direction]");
+        StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_RemoteMirrorJobs_MirrorId]");
+        StringAssert.Contains(migrationSql, "CREATE UNIQUE INDEX [IX_RemoteProviderEvents_Connection_Delivery]");
         StringAssert.Contains(migrationSql, "CK_RemoteAccountConnections_Owner");
         StringAssert.Contains(migrationSql, "CK_RepositoryMirrors_DirectionAuthority");
         StringAssert.Contains(migrationSql, "CK_RepositoryMirrors_ScheduleInterval");

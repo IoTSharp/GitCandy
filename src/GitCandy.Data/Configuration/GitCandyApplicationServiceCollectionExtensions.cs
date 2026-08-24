@@ -45,6 +45,7 @@ public static class GitCandyApplicationServiceCollectionExtensions
         services.TryAddSingleton<IRemoteProviderCatalog, RemoteProviderCatalog>();
         services.TryAddSingleton<IRemoteCredentialVault, UnavailableRemoteCredentialVault>();
         services.TryAddScoped<IRemoteConnectionService, RemoteConnectionService>();
+        services.TryAddSingleton<IRemoteMirrorJobQueue, RemoteMirrorJobQueue>();
         services.TryAddSingleton<IScimBearerService, ScimBearerService>();
         services.TryAddSingleton<IEnterpriseEventReceiptService, EnterpriseEventReceiptService>();
         services.TryAddScoped<IRepositoryService, RepositoryService>();

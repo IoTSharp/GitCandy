@@ -26,8 +26,7 @@ public sealed class RemoteConnectionServiceTests
         Assert.IsNotNull(result.Connection);
         Assert.AreEqual("octocat", result.Connection.Login);
         Assert.IsFalse(typeof(RemoteConnectionSummary).GetProperties().Any(property =>
-            property.Name.Contains("Credential", StringComparison.OrdinalIgnoreCase)
-            || property.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase)
+            property.Name.Contains("SecretReference", StringComparison.OrdinalIgnoreCase)
             || property.Name.Contains("Token", StringComparison.OrdinalIgnoreCase)));
 
         fixture.DbContext.ChangeTracker.Clear();
@@ -57,6 +56,65 @@ public sealed class RemoteConnectionServiceTests
             result.Connection.Id));
         Assert.IsTrue(fixture.Vault.Revoked);
         Assert.AreEqual(0, await fixture.DbContext.RemoteAccountConnections.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task RotateUserCredentialAsync_WithShortLivedReplacement_UpdatesExpiryWithoutChangingReference()
+    {
+        await using var fixture = await RemoteConnectionFixture.CreateAsync();
+        var connected = await fixture.Service.ConnectUserAsync(
+            fixture.User.Id,
+            new RemoteUserConnectionRequest(
+                RemoteProviderKind.GitHub,
+                RemoteAuthenticationKind.PersonalAccessToken,
+                new RemoteSecret("first-token"),
+                new HashSet<string>(["repo"], StringComparer.Ordinal)));
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(45);
+
+        var diagnostic = await fixture.Service.RotateUserCredentialAsync(
+            fixture.User.Id,
+            connected.Connection!.Id,
+            new RemoteCredential(
+                RemoteAuthenticationKind.PersonalAccessToken,
+                new RemoteSecret("replacement-token"),
+                new HashSet<string>(["repo"], StringComparer.Ordinal),
+                expiresAt));
+
+        Assert.IsNotNull(diagnostic);
+        Assert.IsTrue(diagnostic.Succeeded);
+        Assert.IsTrue(fixture.Vault.Rotated);
+        fixture.DbContext.ChangeTracker.Clear();
+        var entity = await fixture.DbContext.RemoteAccountConnections.SingleAsync();
+        Assert.AreEqual("vault:remote-fixture", entity.CredentialReference);
+        Assert.IsNotNull(entity.CredentialExpiresAtUtc);
+        Assert.AreEqual(expiresAt.ToUnixTimeSeconds(), new DateTimeOffset(
+            DateTime.SpecifyKind(entity.CredentialExpiresAtUtc.Value, DateTimeKind.Utc)).ToUnixTimeSeconds());
+    }
+
+    [TestMethod]
+    public async Task RotateUserCredentialAsync_WithAppTokenMissingExpiry_RejectsBeforeCredentialStorage()
+    {
+        await using var fixture = await RemoteConnectionFixture.CreateAsync();
+        var connected = await fixture.Service.ConnectUserAsync(
+            fixture.User.Id,
+            new RemoteUserConnectionRequest(
+                RemoteProviderKind.GitHub,
+                RemoteAuthenticationKind.PersonalAccessToken,
+                new RemoteSecret("first-token"),
+                new HashSet<string>(["repo"], StringComparer.Ordinal)));
+
+        var diagnostic = await fixture.Service.RotateUserCredentialAsync(
+            fixture.User.Id,
+            connected.Connection!.Id,
+            new RemoteCredential(
+                RemoteAuthenticationKind.App,
+                new RemoteSecret("installation-token"),
+                new HashSet<string>(["repo"], StringComparer.Ordinal)));
+
+        Assert.IsNotNull(diagnostic);
+        Assert.IsFalse(diagnostic.Succeeded);
+        Assert.AreEqual("invalid_credential", diagnostic.Code);
+        Assert.IsFalse(fixture.Vault.Rotated);
     }
 
     [TestMethod]
@@ -169,6 +227,8 @@ public sealed class RemoteConnectionServiceTests
 
         public bool Revoked { get; private set; }
 
+        public bool Rotated { get; private set; }
+
         public Task<RemoteCredentialMetadata> StoreAsync(
             RemoteConnectionOwner owner,
             RemoteCredential credential,
@@ -197,8 +257,19 @@ public sealed class RemoteConnectionServiceTests
         public Task<RemoteCredentialMetadata?> RotateAsync(
             RemoteSecretReference reference,
             RemoteCredential replacement,
-            CancellationToken cancellationToken = default) =>
-            Task.FromResult<RemoteCredentialMetadata?>(null);
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Rotated = true;
+            _credential = replacement;
+            return Task.FromResult<RemoteCredentialMetadata?>(new RemoteCredentialMetadata(
+                reference,
+                replacement.AuthenticationKind,
+                replacement.GrantedScopes,
+                DateTimeOffset.UtcNow,
+                replacement.ExpiresAt,
+                null));
+        }
 
         public Task<bool> RevokeAsync(
             RemoteSecretReference reference,
@@ -222,7 +293,8 @@ public sealed class RemoteConnectionServiceTests
             | RemoteProviderCapabilities.RepositoryDiscovery;
 
         public IReadOnlySet<RemoteAuthenticationKind> AuthenticationKinds { get; } =
-            new HashSet<RemoteAuthenticationKind>([RemoteAuthenticationKind.PersonalAccessToken]);
+            new HashSet<RemoteAuthenticationKind>(
+                [RemoteAuthenticationKind.App, RemoteAuthenticationKind.PersonalAccessToken]);
 
         public IReadOnlySet<string> GetRequiredScopes(
             RemoteAccountKind accountKind,

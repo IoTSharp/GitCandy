@@ -56,7 +56,7 @@ internal abstract class HttpRemoteRepositoryProvider : IRemoteRepositoryProvider
         using var response = await SendAsync(request, cancellationToken);
         return response.IsSuccessStatusCode
             ? new RemoteProviderDiagnostic(true, "ok", $"Connected to {ProviderDisplayName(Kind)}.")
-            : ToDiagnostic(response.StatusCode);
+            : ToDiagnostic(response);
     }
 
     public async Task<RemoteAccountProfile?> GetAccountAsync(
@@ -66,7 +66,7 @@ internal abstract class HttpRemoteRepositoryProvider : IRemoteRepositoryProvider
     {
         using var request = CreateRequest(HttpMethod.Get, AccountPath, credential);
         using var response = await SendAsync(request, cancellationToken);
-        EnsureSuccess(response.StatusCode);
+        EnsureSuccess(response);
         using var document = await ReadJsonAsync(response.Content, cancellationToken);
         return ParseAccount(document.RootElement);
     }
@@ -83,7 +83,7 @@ internal abstract class HttpRemoteRepositoryProvider : IRemoteRepositoryProvider
             CreateRepositoriesPath(pageNumber),
             credential);
         using var response = await SendAsync(request, cancellationToken);
-        EnsureSuccess(response.StatusCode);
+        EnsureSuccess(response);
         using var document = await ReadJsonAsync(response.Content, cancellationToken);
         if (document.RootElement.ValueKind != JsonValueKind.Array)
         {
@@ -287,28 +287,84 @@ internal abstract class HttpRemoteRepositoryProvider : IRemoteRepositoryProvider
         return page;
     }
 
-    private static void EnsureSuccess(HttpStatusCode statusCode)
+    private static void EnsureSuccess(HttpResponseMessage response)
     {
-        if ((int)statusCode is >= 200 and < 300)
+        if (response.IsSuccessStatusCode)
         {
             return;
         }
 
-        var diagnostic = ToDiagnostic(statusCode);
+        var diagnostic = ToDiagnostic(response);
         throw new RemoteProviderException(diagnostic.Code, diagnostic.Message);
     }
 
-    private static RemoteProviderDiagnostic ToDiagnostic(HttpStatusCode statusCode) => statusCode switch
+    private static RemoteProviderDiagnostic ToDiagnostic(HttpResponseMessage response)
     {
-        HttpStatusCode.Unauthorized => new(false, "credential_rejected", "The remote provider rejected the credential."),
-        HttpStatusCode.Forbidden => new(false, "access_forbidden", "The credential cannot access the requested provider resource."),
-        HttpStatusCode.NotFound => new(false, "remote_not_found", "The configured provider endpoint was not found."),
-        HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => new(false, "timeout", "The remote provider request timed out."),
-        HttpStatusCode.TooManyRequests => new(false, "rate_limited", "The remote provider rate limit was reached."),
-        >= HttpStatusCode.InternalServerError => new(false, "remote_unavailable", "The remote provider is temporarily unavailable."),
-        >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest => new(false, "redirect_rejected", "The remote provider redirected an authenticated API request."),
-        _ => new(false, "provider_error", "The remote provider rejected the request.")
-    };
+        var statusCode = response.StatusCode;
+        var retryAt = GetRetryAt(response);
+        var rateLimited = statusCode == HttpStatusCode.TooManyRequests
+            || statusCode == HttpStatusCode.Forbidden
+                && TryGetHeader(response, "X-RateLimit-Remaining", out var remaining)
+                && string.Equals(remaining, "0", StringComparison.Ordinal);
+        if (rateLimited)
+        {
+            return new RemoteProviderDiagnostic(
+                false,
+                "rate_limited",
+                "The remote provider rate limit was reached.",
+                retryAt);
+        }
+
+        return statusCode switch
+        {
+            HttpStatusCode.Unauthorized => new(false, "credential_rejected", "The remote provider rejected the credential."),
+            HttpStatusCode.Forbidden => new(false, "access_forbidden", "The credential cannot access the requested provider resource."),
+            HttpStatusCode.NotFound => new(false, "remote_not_found", "The configured provider endpoint was not found."),
+            HttpStatusCode.RequestTimeout or HttpStatusCode.GatewayTimeout => new(false, "timeout", "The remote provider request timed out.", retryAt),
+            >= HttpStatusCode.InternalServerError => new(false, "remote_unavailable", "The remote provider is temporarily unavailable.", retryAt),
+            >= HttpStatusCode.MultipleChoices and < HttpStatusCode.BadRequest => new(false, "redirect_rejected", "The remote provider redirected an authenticated API request."),
+            _ => new(false, "provider_error", "The remote provider rejected the request.")
+        };
+    }
+
+    private static DateTimeOffset? GetRetryAt(HttpResponseMessage response)
+    {
+        if (response.Headers.RetryAfter?.Date is DateTimeOffset retryDate)
+        {
+            return retryDate.ToUniversalTime();
+        }
+        if (response.Headers.RetryAfter?.Delta is TimeSpan retryDelay)
+        {
+            return DateTimeOffset.UtcNow.Add(retryDelay);
+        }
+        if (TryGetHeader(response, "X-RateLimit-Reset", out var reset)
+            && long.TryParse(reset, NumberStyles.None, CultureInfo.InvariantCulture, out var unixSeconds))
+        {
+            try
+            {
+                return DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private static bool TryGetHeader(
+        HttpResponseMessage response,
+        string name,
+        out string? value)
+    {
+        value = null;
+        if (!response.Headers.TryGetValues(name, out var values))
+        {
+            return false;
+        }
+        value = values.FirstOrDefault();
+        return value is not null;
+    }
 
     private static Uri NormalizeApiBaseUrl(string value)
     {

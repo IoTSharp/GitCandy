@@ -17,6 +17,8 @@ public sealed class GitCandyRemoteAccountConnection
     public string? DisplayName { get; set; }
     public RemoteAuthenticationKind AuthenticationKind { get; set; }
     public string CredentialReference { get; set; } = string.Empty;
+    public DateTime? CredentialExpiresAtUtc { get; set; }
+    public string? WebhookSecretReference { get; set; }
     public string GrantedScopes { get; set; } = "[]";
     public bool IsEnabled { get; set; }
     public RemoteConnectionStatus Status { get; set; }
@@ -27,6 +29,7 @@ public sealed class GitCandyRemoteAccountConnection
     public GitCandyUser? OwnerUser { get; set; }
     public GitCandyTeam? OwnerTeam { get; set; }
     public ICollection<GitCandyRepositoryMirror> Mirrors { get; } = [];
+    public ICollection<GitCandyRemoteProviderEvent> ProviderEvents { get; } = [];
 }
 
 public sealed class GitCandyRepositoryMirror
@@ -58,6 +61,7 @@ public sealed class GitCandyRepositoryMirror
     public GitCandyRepository? Repository { get; set; }
     public GitCandyRemoteAccountConnection? Connection { get; set; }
     public ICollection<GitCandyRemoteMirrorRefUpdate> PendingRefUpdates { get; } = [];
+    public GitCandyRemoteMirrorJob? Job { get; set; }
 }
 
 public sealed class GitCandyRemoteMirrorRefUpdate
@@ -70,4 +74,38 @@ public sealed class GitCandyRemoteMirrorRefUpdate
     public DateTime EnqueuedAtUtc { get; set; }
     public DateTime UpdatedAtUtc { get; set; }
     public GitCandyRepositoryMirror? Mirror { get; set; }
+}
+
+public sealed class GitCandyRemoteMirrorJob
+{
+    public long Id { get; set; }
+    public long MirrorId { get; set; }
+    public RemoteMirrorJobState State { get; set; }
+    public RemoteMirrorJobTrigger Triggers { get; set; }
+    public long RequestedGeneration { get; set; }
+    public long ProcessedGeneration { get; set; }
+    public int AttemptCount { get; set; }
+    public DateTime AvailableAtUtc { get; set; }
+    public string? LeaseOwner { get; set; }
+    public DateTime? LeaseExpiresAtUtc { get; set; }
+    public DateTime? CancellationRequestedAtUtc { get; set; }
+    public string? LastErrorCode { get; set; }
+    public DateTime? LastStartedAtUtc { get; set; }
+    public DateTime? LastCompletedAtUtc { get; set; }
+    public DateTime CreatedAtUtc { get; set; }
+    public DateTime UpdatedAtUtc { get; set; }
+    public long Version { get; set; }
+    public GitCandyRepositoryMirror? Mirror { get; set; }
+}
+
+public sealed class GitCandyRemoteProviderEvent
+{
+    public long Id { get; set; }
+    public long ConnectionId { get; set; }
+    public RemoteProviderKind Provider { get; set; }
+    public string DeliveryId { get; set; } = string.Empty;
+    public string EventType { get; set; } = string.Empty;
+    public string PayloadHash { get; set; } = string.Empty;
+    public DateTime ReceivedAtUtc { get; set; }
+    public GitCandyRemoteAccountConnection? Connection { get; set; }
 }

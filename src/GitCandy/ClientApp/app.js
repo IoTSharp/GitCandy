@@ -54,6 +54,7 @@ import {
   Pencil,
   Play,
   PlugZap,
+  RefreshCw,
   RotateCcw,
   RotateCw,
   Radio,
@@ -345,6 +346,21 @@ function initializeRemoteConnectionForm() {
   synchronizeAuthentication();
 }
 
+function initializeRemoteCredentialRotation() {
+  const form = document.querySelector("[data-remote-rotation-form]");
+  const connection = document.querySelector("[data-remote-rotation-action]");
+  if (!(form instanceof HTMLFormElement) || !(connection instanceof HTMLSelectElement)) {
+    return;
+  }
+
+  const updateAction = () => {
+    const template = form.dataset.actionTemplate ?? "";
+    form.action = template.replace("{connectionId}", encodeURIComponent(connection.value));
+  };
+  connection.addEventListener("change", updateAction);
+  updateAction();
+}
+
 createIcons({
   icons: {
     Activity,
@@ -402,6 +418,7 @@ createIcons({
     Pencil,
     Play,
     PlugZap,
+    RefreshCw,
     RotateCcw,
     RotateCw,
     Radio,
@@ -433,3 +450,4 @@ initializeCopyButtons();
 initializeConfirmations();
 initializeCodeViews();
 initializeRemoteConnectionForm();
+initializeRemoteCredentialRotation();

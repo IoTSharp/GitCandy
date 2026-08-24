@@ -59,6 +59,10 @@ public sealed class RemoteConnectionController(
         {
             ModelState.AddModelError("Form.GrantedScopes", "At least one granted scope is required.");
         }
+        if (model.AuthenticationKind == RemoteAuthenticationKind.App && model.ExpiresAt is null)
+        {
+            ModelState.AddModelError("Form.ExpiresAt", "GitHub App installation tokens require an expiration time.");
+        }
 
         if (!ModelState.IsValid)
         {
@@ -74,7 +78,9 @@ public sealed class RemoteConnectionController(
                 model.Provider,
                 model.AuthenticationKind,
                 new RemoteSecret(model.Secret),
-                scopes),
+                scopes,
+                model.ExpiresAt,
+                model.WebhookSecretReference),
             cancellationToken);
         if (!result.Diagnostic.Succeeded)
         {
@@ -87,6 +93,41 @@ public sealed class RemoteConnectionController(
 
         TempData["Message"] = result.Diagnostic.Message;
         return RedirectToAction(nameof(Index), new { connectionId = result.Connection!.Id });
+    }
+
+    [HttpPost("{connectionId:long}/rotate")]
+    public async Task<IActionResult> Rotate(
+        long connectionId,
+        [Bind(Prefix = "Rotation")] RemoteCredentialRotationViewModel model,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(currentUser.UserId))
+        {
+            return Challenge();
+        }
+        var scopes = ParseScopes(model.GrantedScopes);
+        if (!ModelState.IsValid || scopes.Count == 0
+            || model.AuthenticationKind == RemoteAuthenticationKind.App && model.ExpiresAt is null)
+        {
+            TempData["Error"] = "The replacement credential, scopes, or expiration are invalid.";
+            return RedirectToAction(nameof(Index), new { connectionId });
+        }
+
+        var diagnostic = await connectionService.RotateUserCredentialAsync(
+            currentUser.UserId,
+            connectionId,
+            new RemoteCredential(
+                model.AuthenticationKind,
+                new RemoteSecret(model.Secret),
+                scopes,
+                model.ExpiresAt),
+            cancellationToken);
+        if (diagnostic is null)
+        {
+            return NotFound();
+        }
+        TempData[diagnostic.Succeeded ? "Message" : "Error"] = diagnostic.Message;
+        return RedirectToAction(nameof(Index), new { connectionId });
     }
 
     [HttpPost("{connectionId:long}/test")]
@@ -148,6 +189,8 @@ public sealed class RemoteConnectionController(
                 Provider = attempted.Provider,
                 AuthenticationKind = attempted.AuthenticationKind,
                 GrantedScopes = attempted.GrantedScopes,
+                ExpiresAt = attempted.ExpiresAt,
+                WebhookSecretReference = attempted.WebhookSecretReference,
                 Secret = string.Empty
             },
             null,

@@ -25,6 +25,7 @@ internal static class RemoteModelConfiguration
             entity.Property(item => item.DisplayName).HasMaxLength(SchemaLimits.UserDisplayName);
             entity.Property(item => item.AuthenticationKind).HasConversion<string>().IsRequired().HasMaxLength(32);
             entity.Property(item => item.CredentialReference).IsRequired().HasMaxLength(SchemaLimits.SecretReference);
+            entity.Property(item => item.WebhookSecretReference).HasMaxLength(SchemaLimits.SecretReference);
             entity.Property(item => item.GrantedScopes).IsRequired().HasMaxLength(SchemaLimits.RemoteGrantedScopes);
             entity.Property(item => item.IsEnabled).IsRequired();
             entity.Property(item => item.Status).HasConversion<string>().IsRequired().HasMaxLength(24);
@@ -103,8 +104,7 @@ internal static class RemoteModelConfiguration
                 {
                     item.RepositoryId,
                     item.ConnectionId,
-                    item.RemoteRepositoryId,
-                    item.Direction
+                    item.RemoteRepositoryId
                 })
                 .HasDatabaseName("IX_RepositoryMirrors_Target_Direction")
                 .IsUnique();
@@ -129,6 +129,71 @@ internal static class RemoteModelConfiguration
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(item => item.UpdatedAtUtc)
                 .HasDatabaseName("IX_RemoteMirrorRefUpdates_UpdatedAtUtc");
+        });
+
+        builder.Entity<GitCandyRemoteMirrorJob>(entity =>
+        {
+            entity.ToTable("RemoteMirrorJobs", table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_RemoteMirrorJobs_Generation",
+                    "RequestedGeneration >= 1 AND ProcessedGeneration >= 0 "
+                    + "AND ProcessedGeneration <= RequestedGeneration");
+                table.HasCheckConstraint(
+                    "CK_RemoteMirrorJobs_AttemptCount",
+                    "AttemptCount >= 0");
+                table.HasCheckConstraint(
+                    "CK_RemoteMirrorJobs_Lease",
+                    "(State = 'Leased' AND LeaseOwner IS NOT NULL AND LeaseExpiresAtUtc IS NOT NULL) OR "
+                    + "(State <> 'Leased' AND LeaseOwner IS NULL AND LeaseExpiresAtUtc IS NULL)");
+            });
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).ValueGeneratedOnAdd();
+            entity.Property(item => item.State).HasConversion<string>().IsRequired().HasMaxLength(16);
+            entity.Property(item => item.Triggers).HasConversion<int>().IsRequired();
+            entity.Property(item => item.RequestedGeneration).IsRequired();
+            entity.Property(item => item.ProcessedGeneration).IsRequired();
+            entity.Property(item => item.AttemptCount).IsRequired();
+            entity.Property(item => item.AvailableAtUtc).IsRequired();
+            entity.Property(item => item.LeaseOwner).HasMaxLength(SchemaLimits.RemoteLeaseOwner);
+            entity.Property(item => item.LastErrorCode).HasMaxLength(SchemaLimits.WebhookErrorCode);
+            entity.Property(item => item.CreatedAtUtc).IsRequired();
+            entity.Property(item => item.UpdatedAtUtc).IsRequired();
+            entity.Property(item => item.Version).IsConcurrencyToken().IsRequired();
+            entity.HasOne(item => item.Mirror)
+                .WithOne(mirror => mirror.Job)
+                .HasForeignKey<GitCandyRemoteMirrorJob>(item => item.MirrorId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(item => item.MirrorId)
+                .HasDatabaseName("IX_RemoteMirrorJobs_MirrorId")
+                .IsUnique();
+            entity.HasIndex(item => new { item.State, item.AvailableAtUtc })
+                .HasDatabaseName("IX_RemoteMirrorJobs_State_AvailableAtUtc");
+            entity.HasIndex(item => item.LeaseExpiresAtUtc)
+                .HasDatabaseName("IX_RemoteMirrorJobs_LeaseExpiresAtUtc");
+        });
+
+        builder.Entity<GitCandyRemoteProviderEvent>(entity =>
+        {
+            entity.ToTable("RemoteProviderEvents");
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.Id).ValueGeneratedOnAdd();
+            entity.Property(item => item.Provider).HasConversion<string>().IsRequired().HasMaxLength(16);
+            entity.Property(item => item.DeliveryId).IsRequired().HasMaxLength(SchemaLimits.RemoteDeliveryId);
+            entity.Property(item => item.EventType).IsRequired().HasMaxLength(SchemaLimits.RemoteEventType);
+            entity.Property(item => item.PayloadHash).IsRequired().HasMaxLength(SchemaLimits.Sha256Hash);
+            entity.Property(item => item.ReceivedAtUtc).IsRequired();
+            entity.HasOne(item => item.Connection)
+                .WithMany(connection => connection.ProviderEvents)
+                .HasForeignKey(item => item.ConnectionId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(item => new { item.ConnectionId, item.DeliveryId })
+                .HasDatabaseName("IX_RemoteProviderEvents_Connection_Delivery")
+                .IsUnique();
+            entity.HasIndex(item => item.ReceivedAtUtc)
+                .HasDatabaseName("IX_RemoteProviderEvents_ReceivedAtUtc");
         });
     }
 }

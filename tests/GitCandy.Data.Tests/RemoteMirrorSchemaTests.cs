@@ -196,6 +196,52 @@ public sealed class RemoteMirrorSchemaTests
         Assert.AreEqual(2L, saved.Generation);
     }
 
+    [TestMethod]
+    public async Task RemoteMirrorSchema_WithOppositeDirectionsForSameTarget_RejectsBidirectionalMirror()
+    {
+        await using var fixture = await RemoteMirrorFixture.CreateAsync();
+        var user = await fixture.CreateUserAsync("bidirectional-owner");
+        var repository = await fixture.CreateRepositoryAsync("bidirectional-repository");
+        var connection = CreateConnection(user.Id);
+        fixture.DbContext.RemoteAccountConnections.Add(connection);
+        await fixture.DbContext.SaveChangesAsync();
+        fixture.DbContext.RepositoryMirrors.Add(CreateMirror(
+            repository.Id,
+            connection.Id,
+            RemoteMirrorDirection.Pull));
+        await fixture.DbContext.SaveChangesAsync();
+        fixture.DbContext.RepositoryMirrors.Add(CreateMirror(
+            repository.Id,
+            connection.Id,
+            RemoteMirrorDirection.Push));
+
+        await Assert.ThrowsExactlyAsync<DbUpdateException>(
+            () => fixture.DbContext.SaveChangesAsync());
+    }
+
+    private static GitCandyRepositoryMirror CreateMirror(
+        long repositoryId,
+        long connectionId,
+        RemoteMirrorDirection direction) => new()
+    {
+        RepositoryId = repositoryId,
+        ConnectionId = connectionId,
+        RemoteRepositoryId = "same-stable-target",
+        RemoteOwnerLogin = "octo-org",
+        RemoteRepositoryName = "same-target",
+        RemoteGitUrl = "https://github.com/octo-org/same-target.git",
+        Direction = direction,
+        Authority = direction == RemoteMirrorDirection.Pull
+            ? RemoteMirrorAuthority.Remote
+            : RemoteMirrorAuthority.GitCandy,
+        RefFilterKind = RemoteMirrorRefFilterKind.AllRefs,
+        DivergencePolicy = RemoteMirrorDivergencePolicy.Stop,
+        IsEnabled = true,
+        Status = RemoteMirrorStatus.Pending,
+        CreatedAtUtc = DateTime.UtcNow,
+        UpdatedAtUtc = DateTime.UtcNow
+    };
+
     private static GitCandyRemoteAccountConnection CreateConnection(string userId) => new()
     {
         OwnerKind = RemoteConnectionOwnerKind.User,

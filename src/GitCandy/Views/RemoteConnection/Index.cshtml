@@ -27,7 +27,7 @@
                 <tr>
                     <td><strong>@connection.Login</strong>@if (!string.IsNullOrWhiteSpace(connection.DisplayName)) { <div class="entity-meta">@connection.DisplayName</div> }<div class="entity-meta">ID @connection.ExternalAccountId</div></td>
                     <td>@connection.Provider<div class="entity-meta">@connection.ServerUrl.Host</div></td>
-                    <td>@connection.AuthenticationKind<div class="entity-meta">@string.Join(", ", connection.GrantedScopes)</div></td>
+                    <td>@connection.AuthenticationKind<div class="entity-meta">@string.Join(", ", connection.GrantedScopes)</div>@if (connection.CredentialExpiresAt is DateTimeOffset expiresAt) { <div class="entity-meta">Expires @expiresAt.ToString("u")</div> }@if (connection.WebhookConfigured) { <div class="entity-meta">Webhook configured</div> }</td>
                     <td><span class="status-badge">@connection.Status</span>@if (!string.IsNullOrWhiteSpace(connection.LastErrorCode)) { <div class="entity-meta">@connection.LastErrorCode</div> }</td>
                     <td class="text-right"><div class="inline-actions">
                         <a asp-action="Index" asp-route-connectionId="@connection.Id" class="icon-button" aria-label="Browse repositories for @connection.Login" data-tooltip="Browse repositories"><i data-lucide="folder-tree"></i></a>
@@ -38,6 +38,14 @@
             }
             </tbody>
         </table></div>
+        <details><summary>Rotate a credential</summary><form asp-action="Rotate" asp-route-connectionId="@Model.Connections[0].Id" method="post" class="remote-connection-form" autocomplete="off" data-remote-rotation-form data-action-template="/me/remotes/{connectionId}/rotate">
+            <div class="form-group"><label for="rotation-connection">Account</label><div><select id="rotation-connection" data-remote-rotation-action>@foreach (var connection in Model.Connections) { <option value="@connection.Id">@connection.Provider / @connection.Login</option> }</select></div></div>
+            <div class="form-group"><label asp-for="Rotation.AuthenticationKind"></label><div><select asp-for="Rotation.AuthenticationKind"><option value="PersonalAccessToken">Personal access token</option><option value="OAuth">OAuth access token</option><option value="App">GitHub App installation token</option></select></div></div>
+            <div class="form-group"><label asp-for="Rotation.Secret"></label><div><input asp-for="Rotation.Secret" type="password" value="" autocomplete="new-password" required /></div></div>
+            <div class="form-group"><label asp-for="Rotation.GrantedScopes"></label><div><input asp-for="Rotation.GrantedScopes" /></div></div>
+            <div class="form-group"><label asp-for="Rotation.ExpiresAt"></label><div><input asp-for="Rotation.ExpiresAt" type="datetime-local" /></div></div>
+            <div class="form-actions"><button type="submit" class="btn"><i data-lucide="key-round"></i> Rotate</button></div>
+        </form></details>
     }
 </section>
 
@@ -79,9 +87,11 @@
         <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
         <form asp-action="Connect" method="post" class="form-horizontal remote-connection-form" autocomplete="off">
             <div class="form-group"><label asp-for="Form.Provider" class="control-label"></label><div><select asp-for="Form.Provider" class="form-control" data-remote-provider-select>@foreach (var provider in Model.Providers) { <option value="@provider.Kind" data-authentication-kinds="@string.Join(",", provider.AuthenticationKinds.Order())" data-default-scopes="@string.Join(", ", provider.RequiredDiscoveryScopes.Order(StringComparer.Ordinal))">@provider.DisplayName - @provider.ServerUrl.Host</option> }</select></div></div>
-            <div class="form-group"><label asp-for="Form.AuthenticationKind" class="control-label"></label><div><select asp-for="Form.AuthenticationKind" class="form-control" data-remote-authentication-select><option value="PersonalAccessToken">Personal access token</option><option value="OAuth">OAuth access token</option></select><p class="form-hint">Only methods supported by the selected provider are accepted.</p></div></div>
+            <div class="form-group"><label asp-for="Form.AuthenticationKind" class="control-label"></label><div><select asp-for="Form.AuthenticationKind" class="form-control" data-remote-authentication-select><option value="PersonalAccessToken">Personal access token</option><option value="OAuth">OAuth access token</option><option value="App">GitHub App installation token</option></select><p class="form-hint">Only methods supported by the selected provider are accepted.</p></div></div>
             <div class="form-group"><label for="remote-secret" class="control-label">Token</label><div><input id="remote-secret" name="Form.Secret" type="password" value="" maxlength="16384" autocomplete="new-password" required /><span asp-validation-for="Form.Secret" class="text-danger"></span></div></div>
             <div class="form-group"><label asp-for="Form.GrantedScopes" class="control-label"></label><div><input asp-for="Form.GrantedScopes" class="form-control" data-remote-scope-input /><span asp-validation-for="Form.GrantedScopes" class="text-danger"></span><p class="form-hint">Comma-separated. GitHub: repo. GitLab: read_api. Gitee: user_info, projects.</p></div></div>
+            <div class="form-group"><label asp-for="Form.ExpiresAt" class="control-label"></label><div><input asp-for="Form.ExpiresAt" type="datetime-local" /><span asp-validation-for="Form.ExpiresAt" class="text-danger"></span><p class="form-hint">Required for short-lived GitHub App installation tokens.</p></div></div>
+            <div class="form-group"><label asp-for="Form.WebhookSecretReference" class="control-label"></label><div><input asp-for="Form.WebhookSecretReference" placeholder="env:GITCANDY_REMOTE_WEBHOOK_SECRET" autocomplete="off" /><span asp-validation-for="Form.WebhookSecretReference" class="text-danger"></span></div></div>
             <div class="form-actions"><button type="submit" class="btn btn-primary"><i data-lucide="link"></i> Connect and test</button></div>
         </form>
     }

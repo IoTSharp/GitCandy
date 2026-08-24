@@ -66,4 +66,7 @@ internal static class SchemaLimits
     public const int RemoteGrantedScopes = 2000;
     public const int RemoteRefFilter = 2000;
     public const int TimeZoneId = 100;
+    public const int RemoteLeaseOwner = 128;
+    public const int RemoteDeliveryId = 128;
+    public const int RemoteEventType = 128;
 }

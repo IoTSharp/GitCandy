@@ -10,7 +10,7 @@ audience: operators
 public: true
 archived: false
 version: current
-updated: 2026-07-14
+updated: 2026-08-24
 canonical: docs/help/current/operations/recovery-troubleshooting.md
 ---
 
@@ -21,7 +21,7 @@ GitCandy 状态跨数据库、bare repositories、LFS、Data Protection keys、S
 ## 一致性备份
 
 1. 记录应用版本、database provider、最后 migration 和配置摘要。
-2. 停止写流量或停止服务，等待 Git transport 与后台 job 退出。
+2. 停止写流量或停止服务，等待 Git transport 与后台 job graceful shutdown；未完成的 mirror lease 会释放并在恢复后重新认领。
 3. 备份数据库、repositories、LFS/cache 中不可重建对象、Data Protection keys、SSH host key 和生产配置。
 4. 对备份生成校验和并保存在独立故障域。
 5. 定期在隔离目录运行 `tools/operations/Invoke-RecoveryRehearsal.ps1` 或等价流程。
@@ -30,7 +30,7 @@ Cache 中可重建内容可以排除，但必须明确区分 LFS/Release 等持�
 
 ## 恢复与回滚
 
-先部署与备份版本相同的应用，恢复所有状态并执行 migration-only/readiness 检查，再开放 Web、HTTP Git 和 SSH。至少验证登录、公私有权限、clone、fetch、push、LFS 和后台队列。
+先部署与备份版本相同的应用，恢复所有状态并执行 migration-only/readiness 检查，再开放 Web、HTTP Git 和 SSH。至少验证登录、公私有权限、clone、fetch、push、LFS 和后台队列。对 mirror 还要核对数据库中的 pending generation 与仓库当前 refs：只恢复数据库可能重放已不存在的 ref，只恢复仓库会丢失尚未发送的 Push 事件。
 
 Schema 变更后只回退二进制通常不安全。回滚应恢复变更前的完整快照；不能通过删除 migration history 伪造旧 schema。
 
@@ -51,3 +51,7 @@ Schema 变更后只回退二进制通常不安全。回滚应恢复变更前的�
 | readiness 失败 | 数据库连接、pending migration、状态目录权限 |
 | `/help` 404 | 发布包是否包含 `wwwroot/help`，生成步骤是否成功 |
 | Webhook 重试 | delivery 分类错误、DNS/SSRF policy、目标 TLS 与响应码 |
+| Mirror job 一直 Pending | scheduler 是否运行、`Jobs:MaxConcurrentJobs`、`AvailableAtUtc` 和远端 rate-limit 时间 |
+| Mirror job 一直 Leased | Git operation timeout、进程是否仍存活；超过 lease 后下一次唤醒会恢复，不要直接改数据库 |
+| Mirror permanent failure | owner 设置页的分类错误；修复 credential、权限、remote delete 或 divergence 后再 Retry |
+| Provider callback 401/404/503 | 原生签名头、连接 provider、secret reference 是否存在并能由运行账户解析 |

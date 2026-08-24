@@ -19,9 +19,13 @@ public static class RemoteServiceCollectionExtensions
 
         var section = configuration.GetSection(RemoteProviderOptions.SectionName);
         var configured = section.Get<RemoteProviderOptions>() ?? new RemoteProviderOptions();
+        var operationTimeout = section.GetValue<TimeSpan?>("OperationTimeout") ?? TimeSpan.FromMinutes(30);
         services.AddOptions<RemoteProviderOptions>()
             .Bind(section)
             .Validate(ValidateOptions, "Remote provider endpoints and timeout are invalid.")
+            .Validate(
+                options => options.Jobs.LeaseDuration > operationTimeout,
+                "Remote mirror Jobs:LeaseDuration must be greater than OperationTimeout.")
             .ValidateOnStart();
         services.AddHttpClient(HttpClientName, static (serviceProvider, client) =>
             {
@@ -56,8 +60,13 @@ public static class RemoteServiceCollectionExtensions
         }
 
         services.TryAddSingleton<IRemoteCredentialVault, DataProtectionRemoteCredentialVault>();
+        services.TryAddSingleton<IRemoteSecretResolver, ConfigurationRemoteSecretResolver>();
         services.TryAddSingleton<IRemoteMirrorPushEventSink, RemoteMirrorPushEventSink>();
         services.TryAddSingleton<IRemoteMirrorService, RemoteMirrorService>();
+        services.TryAddSingleton<IRemoteMirrorJobDispatcher, RemoteMirrorJobDispatcher>();
+        services.TryAddSingleton<IRemoteMirrorManagementService, RemoteMirrorManagementService>();
+        services.TryAddSingleton<IRemoteProviderEventService, RemoteProviderEventService>();
+        services.TryAddSingleton<RemoteProviderWebhookSignatureValidator>();
         return services;
     }
 
@@ -70,6 +79,16 @@ public static class RemoteServiceCollectionExtensions
     private static bool ValidateOptions(RemoteProviderOptions options) =>
         options.RequestTimeout >= TimeSpan.FromSeconds(1)
         && options.RequestTimeout <= TimeSpan.FromMinutes(2)
+        && options.Jobs.MaxConcurrentJobs is >= 1 and <= 32
+        && options.Jobs.DispatchBatchSize is >= 1 and <= 100
+        && options.Jobs.MaxAttempts is >= 1 and <= 20
+        && options.Jobs.LeaseDuration >= TimeSpan.FromSeconds(30)
+        && options.Jobs.LeaseDuration <= TimeSpan.FromHours(24)
+        && options.Jobs.InitialRetryDelay >= TimeSpan.Zero
+        && options.Jobs.InitialRetryDelay <= TimeSpan.FromHours(1)
+        && options.Jobs.MaximumRetryDelay >= options.Jobs.InitialRetryDelay
+        && options.Jobs.MaximumRetryDelay <= TimeSpan.FromHours(24)
+        && options.Jobs.RetryJitterRatio is >= 0 and <= 1
         && ValidateEndpoint(options.GitHub)
         && ValidateEndpoint(options.GitLab)
         && ValidateEndpoint(options.Gitee);

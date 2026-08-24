@@ -1,6 +1,6 @@
 # GitCandy 活动产品路线图
 
-更新日期：2026-07-14
+更新日期：2026-08-24
 
 本文件只维护尚未完成的工作。已经退出活动路线图的 M0-M12.7、验收结论和专题文档入口见 [已完成里程碑索引](docs/roadmap/completed-milestones.md)；重组前的完整路线图见 [2026-07-13 历史快照](docs/roadmap/roadmap-archive-2026-07-13.md)。
 
@@ -19,7 +19,7 @@
 - 默认运行数据库仍是 SQLite；SQL Server 保留 migration SQL 路径；SonnetDB 只由专用配置显式启用。
 - GitCandy 继续采用单进程 host：Web UI、Git Smart HTTP、内置 SSH、Quartz 和后台入口共同启动和停止。
 - Git HTTP/SSH 继续复用统一 repository resolver、权限和 `IGitTransportBackend`，不能在业务层新增散落的进程调用。
-- M14 的四级团队治理和企业身份联邦已完成；M15 的 remote account/provider 抽象、Remote/Mirror EF schema、个人绑定与仓库发现 UI、受控 remote sync backend、单向 Pull/Push mirror 执行切片已完成，当前进入持久化 job pipeline；M15.5 帮助中心已完成，M15.6-M16 继续按依赖顺序推进。
+- M14 的四级团队治理和企业身份联邦、M15 远程账号与单向 mirror、M15.5 帮助中心均已完成并迁入完成索引；当前从 M15.6 OCI Registry 开始继续按依赖顺序推进。
 
 ## 已确认的产品决策与冲突处理
 
@@ -40,29 +40,8 @@
 
 ## 当前实施顺序
 
-1. `#164-#169`：单向 pull/push mirror、持久化 job、provider connector 完整生命周期与故障验收。
-2. M15.6 Registry 完成后接入 Packages 实际数据。
-3. M16 最后接入知识库和 MCP。
-
-## 🚧 Milestone 15：远程账号连接与单向 Mirror
-
-目标：绑定 GitHub/GitLab/Gitee 账号，通过可观测、可取消、可审计的后台 job 完成导入、单向 pull 和单向 push。
-
-第一阶段只同步 Git refs，不隐式同步 LFS、Issues、PR/MR、Wiki、Releases、CI 或 Packages。Pull 以远端为权威并默认禁止本地 push；Push 在本地成功后异步入队；divergent ref 默认停止告警，双向 mirror 默认禁用。
-
-| 编号 | 状态 | 主题 | 验收重点 |
-| --- | --- | --- | --- |
-| #161 | ✅ | GitHub/GitLab/Gitee 绑定 UI | provider 配置、用户绑定、仓库发现、测试连接且不回显 token |
-| #162 | ✅ | Remote/mirror EF schema | direction、authority、ref/schedule/divergence/prune、状态和 migration |
-| #163 | ✅ | 受控 remote sync backend | `ArgumentList`/credential helper、流式 I/O、取消、超时、路径和日志脱敏 |
-| #164 | ✅ | Pull mirror | 初始导入、周期 fetch、ref policy、rename、只读保护和 divergence |
-| #165 | ✅ | Push mirror | post-receive 入队、事件合并、ref filter、删除和显式 force policy |
-| #166 | ⬜ | 持久化 job pipeline | lease、串行、并发限制、退避、重启恢复和 graceful shutdown |
-| #167 | ⬜ | Webhook 与运维视图 | 验签/去重、周期兜底、状态、暂停/重试/取消和分类错误 |
-| #168 | ⬜ | Provider connectors | GitHub App、GitLab/Gitee OAuth/PAT、rate limit、过期、rename/delete |
-| #169 | ⬜ | Mirror 故障与规模验证 | 三 provider fixture、凭据撤销、并发、大仓库、恢复和双向 go/no-go |
-
-详细设计见 [企业仓库路线设计](docs/product/enterprise-repository-roadmap.md)。
+1. M15.6 Registry 完成后接入 Packages 实际数据。
+2. M16 最后接入知识库和 MCP。
 
 ## ⬜ Milestone 15.6：SonnetDB-backed OCI Container Registry
 

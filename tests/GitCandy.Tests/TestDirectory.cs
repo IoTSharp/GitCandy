@@ -2,6 +2,7 @@ namespace GitCandy.Tests;
 
 internal static class TestDirectory
 {
+    private const int DeleteAttempts = 10;
     private static readonly string TestRoot = Path.GetFullPath(
         Path.Combine(Path.GetTempPath(), "GitCandy.Tests"));
 
@@ -35,7 +36,20 @@ internal static class TestDirectory
                 }
             }
 
-            Directory.Delete(fullPath, recursive: true);
+            for (var attempt = 1; attempt <= DeleteAttempts; attempt++)
+            {
+                try
+                {
+                    Directory.Delete(fullPath, recursive: true);
+                    break;
+                }
+                catch (Exception exception) when (
+                    (exception is IOException or UnauthorizedAccessException)
+                    && attempt < DeleteAttempts)
+                {
+                    Thread.Sleep(TimeSpan.FromMilliseconds(50 * attempt));
+                }
+            }
         }
     }
 }

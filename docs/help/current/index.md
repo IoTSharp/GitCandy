@@ -10,7 +10,7 @@ audience: all
 public: true
 archived: false
 version: current
-updated: 2026-07-14
+updated: 2026-08-24
 canonical: docs/help/current/index.md
 ---
 
@@ -25,11 +25,11 @@ GitCandy 是单进程、自托管的 Git 服务。一个 ASP.NET Core host 同�
 - Git Smart HTTP、内置 SSH、clone/fetch/push、协议 v2 和基本 Git LFS transfer。
 - Issue、Pull Request、行内 review、required review、commit check、Webhook 与通知。
 - 私人 `/me` 工作台、Todo、通知、Feed、公开个人页和公开仓库发现。
+- GitHub/GitLab/Gitee 远程账号、仓库发现、单向 Pull/Push mirror、持久化重试任务与 provider webhook 对账。
 - Docker Compose、Linux systemd 和 Windows Service 三类正式部署。
 
 ## 尚未作为当前能力发布
 
-- GitHub/GitLab/Gitee 远程账号绑定、连接测试和仓库发现已可用，受控 sync backend 已内置；实际 import 和可运维 mirror job 仍属于 Milestone 15 的后续切片。
 - OCI Container Registry 与真实 Packages 数据属于 Milestone 15.6。
 - 文档知识库、Agent Memory 与 MCP host 属于 Milestone 16。
 - 外部 OpenSSH 只是可选适配；默认 SSH 路线仍是随主进程启动的内置服务。
